@@ -1,0 +1,103 @@
+import React, { useMemo } from 'react';
+
+// ─────────────────────────────────────────────────────────────────
+// ChalkBoard — where the tutor writes out working step by step.
+// Opens automatically when the tutor calls update_chalkboard_notes or
+// write_live_note. Each line is "written" in turn, so the board keeps pace
+// with the explanation instead of appearing all at once.
+// ─────────────────────────────────────────────────────────────────
+
+interface Props {
+  title?: string;
+  lines: string[];
+  formula?: string;
+  liveNotes: string[];
+}
+
+const CHALK = '#F4F1E6';
+const YELLOW = '#FFE08A';
+const PINK = '#FFB3C1';
+const BLUE = '#A9D8FF';
+
+/** Maths typed by the model, made to look hand-written: 2 x 3 → 2 × 3, -> → →, sqrt(x) → √x */
+function chalkify(s: string): string {
+  return s
+    .replace(/(\d)\s*[xX*]\s*(?=\d|\()/g, '$1 × ')
+    .replace(/->|=>/g, '→')
+    .replace(/sqrt\s*\(([^)]+)\)/gi, '√$1')
+    .replace(/\^2\b/g, '²').replace(/\^3\b/g, '³')
+    .replace(/\s{2,}/g, ' ');
+}
+
+/** "Step 1: …" → coloured label + text; "Example: …" likewise. */
+function splitLabel(line: string): { label?: string; text: string } {
+  const m = line.match(/^\s*((?:Step\s*\d+|Example|Answer|Rule|Check|Note|Remember)\s*[:.)-])\s*(.*)$/i);
+  return m ? { label: m[1].replace(/[.)-]$/, ':'), text: m[2] } : { text: line };
+}
+
+export const ChalkBoard: React.FC<Props> = ({ title, lines, formula, liveNotes }) => {
+  const all = useMemo(() => [...lines, ...liveNotes].map(chalkify), [lines, liveNotes]);
+  // Shrink the writing as the board fills up, the way a teacher writes smaller.
+  const size = all.length <= 4 ? 30 : all.length <= 6 ? 26 : all.length <= 8 ? 22 : 19;
+  // Stagger: each line starts writing after the previous one has had time to finish.
+  let delay = title ? 0.9 : 0.2;
+  const timed = all.map((l) => {
+    const d = delay;
+    const dur = Math.min(2.2, 0.35 + l.length * 0.028);
+    delay += dur + 0.25;
+    return { l, d, dur };
+  });
+  const firstLive = lines.length;
+
+  return (
+    <div className="absolute inset-0 overflow-hidden"
+         style={{ background: 'radial-gradient(120% 90% at 30% 20%, #2F4238 0%, #23332B 55%, #1A2621 100%)' }}>
+      {/* chalk dust and old smudges */}
+      <div className="absolute inset-0 opacity-[0.07] pointer-events-none"
+           style={{ backgroundImage: 'radial-gradient(#fff 0.6px, transparent 0.8px)', backgroundSize: '5px 5px' }} />
+      <div className="absolute -left-20 top-24 w-[420px] h-[160px] rounded-full blur-3xl opacity-[0.06] bg-white pointer-events-none" />
+      <div className="absolute right-10 bottom-10 w-[360px] h-[120px] rounded-full blur-3xl opacity-[0.05] bg-white pointer-events-none" />
+      {/* chalk ledge */}
+      <div className="absolute inset-x-0 bottom-0 h-3 bg-gradient-to-b from-[#5B4632] to-[#3E2F21]" />
+
+      <div className="relative h-full px-12 pt-16 pb-10 flex flex-col font-chalk" style={{ color: CHALK }}>
+        {title ? (
+          <div className="mb-5">
+            <h2 className="chalk-write text-[38px] leading-tight" style={{ animationDuration: '0.8s' }}>{chalkify(title)}</h2>
+            <svg width="100%" height="10" className="mt-1 overflow-visible">
+              <path d="M2 6 C 120 2, 260 9, 420 4" stroke={YELLOW} strokeWidth="3" fill="none" strokeLinecap="round"
+                    className="chalk-underline" />
+            </svg>
+          </div>
+        ) : null}
+
+        <div className="flex-1 min-h-0 space-y-3">
+          {timed.map(({ l, d, dur }, i) => {
+            const { label, text } = splitLabel(l);
+            return (
+              <React.Fragment key={i + l}>
+                {i === firstLive && liveNotes.length > 0 && lines.length > 0 && (
+                  <div className="border-t-2 border-dashed border-white/20 my-3" />
+                )}
+                <p className="chalk-write leading-snug" style={{ fontSize: size, animationDelay: `${d}s`, animationDuration: `${dur}s` }}>
+                  {label && <span style={{ color: YELLOW }} className="mr-2">{label}</span>}
+                  <span>{text}</span>
+                </p>
+              </React.Fragment>
+            );
+          })}
+          {all.length === 0 && !title && (
+            <p className="text-white/35 text-[24px]">Dr. Marcus will write here as he explains.</p>
+          )}
+        </div>
+
+        {formula && (
+          <div className="chalk-write self-start mt-4 px-5 py-2 rounded-xl border-2"
+               style={{ borderColor: PINK, color: BLUE, fontSize: size + 6, animationDelay: `${delay}s`, animationDuration: '0.9s' }}>
+            {chalkify(formula)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
