@@ -1,0 +1,1657 @@
+import express from 'express';
+import http from 'http';
+import path from 'path';
+import dotenv from 'dotenv';
+import { WebSocketServer, WebSocket } from 'ws';
+import { GoogleGenAI, Modality, Type, LiveServerMessage } from '@google/genai';
+import { createDynamicLesson } from './src/utils/lessonGenerator';
+import multer from 'multer';
+import {
+  getOrCreateLearner, getLearner, listLearners, ensureSubject,
+  ensureConceptState, getConceptState, recordAttempt, addGlobalInsight,
+  incrementSessionCount, startSession, getSession, updateSession, endSession,
+  recordReasoningEvidence, getEvidenceLog,
+} from './src/adaptive/learnerStore';
+import { assessUnderstanding, selectNextStrategy } from './src/adaptive/assessmentEngine';
+import {
+  assessReasoningWithDeadline, misconceptionText, misconceptionCatalog,
+  ReasoningAssessment, DeadlineResult,
+} from './src/adaptive/reasoningAssessor';
+import { MASTERY_THRESHOLD } from './src/adaptive/bkt';
+import { PYTHAGORAS_CURRICULUM, getConcept, getNextUnmasteredConcept } from './src/curriculum/pythagoras';
+import { getCurriculum, listCurricula, nextUnmasteredConcept } from './src/curriculum/ingest';
+import { startIngestJob, getJob } from './src/curriculum/pdfIngest';
+import os from 'os';
+import fs from 'fs';
+import { AdaptiveSessionState, TeachingStrategy, CurriculumConcept } from './src/adaptive/learnerModel';
+
+
+dotenv.config();
+
+// ── Guard against Vite-internal WebSocket frame errors ──────────
+// When Vite runs in middlewareMode, its bundled ws instance can emit
+// uncaught errors for malformed HMR close frames (Node 18+).
+// These are non-fatal and should not crash the server.
+process.on('uncaughtException', (err: any) => {
+  if (
+    err?.code === 'WS_ERR_INVALID_CLOSE_CODE' ||
+    err?.message?.includes('Invalid WebSocket frame') ||
+    err?.message?.includes('WebSocket')
+  ) {
+    console.debug('[Server] Non-fatal WebSocket frame error suppressed:', err.message);
+    return; // swallow and continue
+  }
+  // Re-throw anything genuinely unexpected
+  console.error('[Server] Uncaught exception:', err);
+  process.exit(1);
+});
+
+
+const app = express();
+const server = http.createServer(app);
+const PORT = Number(process.env.PORT) || 3000;
+
+// How long the voice model may be kept waiting for a diagnosis. The Live tool
+// call blocks speech, so this is felt directly as silence by the child.
+const ASSESS_BUDGET_MS = Number(process.env.ASSESS_BUDGET_MS) || 2500;
+
+app.use(express.json());
+
+// API health endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    hasApiKey: Boolean(process.env.GEMINI_API_KEY),
+    time: new Date().toISOString(),
+  });
+});
+
+// Real-time Lesson Generation Endpoint: Uses Gemini 3.8 Flash to generate fresh lesson data for ANY topic & grade
+app.post('/api/generate-lesson', async (req, res) => {
+  const { topic, grade } = req.body;
+  const targetTopic = topic || 'Photosynthesis';
+  const targetGrade = grade || 'Middle School (Grade 6-8)';
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(200).json({
+      fallback: true,
+      message: 'Using local generator fallback (GEMINI_API_KEY not set)',
+    });
+  }
+
+  try {
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: { 'User-Agent': 'aistudio-build' },
+      },
+    });
+
+    const prompt = `You are a master pedagogical curriculum designer. Generate a comprehensive, highly engaging, age-appropriate interactive lesson for a student in "${targetGrade}" on the topic "${targetTopic}".
+Return a JSON object strictly following this JSON schema:
+{
+  "topic": "${targetTopic}",
+  "grade": "${targetGrade}",
+  "subject": "e.g. Biology, Physics, History, Literature, Computer Science, Earth Science, Mathematics",
+  "tagline": "A punchy, inspiring 1-sentence subtitle for the lesson",
+  "overview": "A rich, clear 2-sentence conceptual summary suitable for ${targetGrade}",
+  "diagram": {
+    "diagramType": "flow (or 'cycle' if the topic is a recurring loop like Calvin cycle, Krebs cycle, Water cycle, etc.)",
+    "title": "Title of the concept diagram or cycle",
+    "description": "Short explanation of the diagram",
+    "nodes": [
+      {
+        "id": "node-1",
+        "label": "Specific name of step/component (e.g. 'Photon Absorption', 'Water Photolysis' - NEVER 'Node 1')",
+        "sublabel": "Subtitle or key formula/location",
+        "category": "Classification (e.g. 'Light Reaction', 'Catalysis', 'Product')",
+        "color": "emerald",
+        "details": "1-2 sentences explaining this node clearly"
+      }
+    ],
+    "connections": [
+      { "from": "Name of Source Node", "to": "Name of Target Node", "label": "transformation or causal link" }
+    ]
+  },
+  "chalkNotes": {
+    "title": "Chalkboard Title",
+    "subtitle": "Chalkboard subtitle",
+    "coreRuleOrFormula": "The core governing law, mathematical formula, or central axiom",
+    "bulletPoints": [
+      "Key lecture point 1",
+      "Key lecture point 2",
+      "Key lecture point 3",
+      "Key lecture point 4"
+    ],
+    "keyTakeaways": [
+      "Crucial exam/conceptual takeaway 1",
+      "Crucial exam/conceptual takeaway 2"
+    ]
+  },
+  "explorer": {
+    "title": "Interactive Simulator / Experiment Title",
+    "description": "What the student is testing or exploring",
+    "variables": [
+      {
+        "id": "var1",
+        "name": "Variable 1 Name",
+        "min": 1,
+        "max": 100,
+        "step": 1,
+        "defaultValue": 50,
+        "unit": "unit",
+        "description": "What this variable controls"
+      },
+      {
+        "id": "var2",
+        "name": "Variable 2 Name",
+        "min": 1,
+        "max": 100,
+        "step": 1,
+        "defaultValue": 50,
+        "unit": "unit",
+        "description": "What this variable controls"
+      }
+    ],
+    "outcomeLabel": "Resulting Metric Name",
+    "outcomeFormulaString": "Formula or relation representing the outcome"
+  },
+  "quiz": {
+    "question": "A thought-provoking conceptual multiple-choice question testing true understanding (not rote memorization)",
+    "options": [
+      "Option A",
+      "Option B",
+      "Option C",
+      "Option D"
+    ],
+    "correctIndex": 1,
+    "explanation": "Clear pedagogical explanation why that option is correct and why others are wrong",
+    "hint": "A helpful guidance hint without giving away the answer"
+  },
+  "suggestedQuestions": [
+    "Thoughtful question 1 a student might ask",
+    "Thoughtful question 2",
+    "Thoughtful question 3"
+  ],
+  "scene3d": {
+    "sceneType": "orbit | molecule | geometry | network | dna | globe | particles",
+    "title": "Short title for 3D model",
+    "description": "1 sentence describing the 3D spatial simulation",
+    "elements": [
+      { "name": "Element name", "description": "Element description", "color": "#34d399" }
+    ]
+  },
+  "photoVisual": {
+    "caption": "Photographic / realistic observation caption",
+    "promptUsed": "Detailed photographic visual prompt description",
+    "annotations": [
+      { "label": "Key element", "description": "What to observe here", "x": 40, "y": 50 }
+    ]
+  }
+}
+
+Ensure the content is scientifically/historically accurate, perfectly adapted to ${targetGrade}, and has 4 to 6 diagram nodes. Each diagram node MUST have a real, descriptive scientific or historical name (e.g., 'Photon Absorption', 'Water Photolysis', 'ATP Synthesis', 'Calvin Cycle', 'Glucose Synthesis') - NEVER generic names like 'Node 1', 'Node 2', 'Step 1', or 'Concept A'. For the node colors, choose from 'emerald', 'amber', 'sky', 'violet', 'rose', 'teal'. Choose the scene3d sceneType carefully based on whether it is astronomy/physics ('orbit'), chemistry/biology ('molecule' or 'dna'), history/geography ('globe'), mathematics ('geometry'), or engineering/computing ('network').`;
+
+    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+    let text = '';
+    let lastError: any = null;
+
+    for (const modelName of candidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+        text = response.text || '';
+        if (text) break;
+      } catch (modelErr: any) {
+        lastError = modelErr;
+        console.warn(`[API /api/generate-lesson] Model ${modelName} returned status ${modelErr?.status || modelErr?.code || 'error'}, trying next candidate...`);
+      }
+    }
+
+    if (text) {
+      const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
+      const parsed = JSON.parse(cleanText);
+      return res.json({ success: true, data: parsed, source: 'gemini' });
+    }
+
+    console.warn('[API /api/generate-lesson] Models temporarily unavailable. Serving intelligent curriculum generator data.');
+    const fallbackData = createDynamicLesson(targetTopic, targetGrade);
+    return res.json({ success: true, data: fallbackData, source: 'intelligent-curriculum-engine' });
+  } catch (err: any) {
+    console.error('[API /api/generate-lesson] Error in lesson generation pipeline:', err?.message || err);
+    const fallbackData = createDynamicLesson(targetTopic, targetGrade);
+    return res.status(200).json({
+      success: true,
+      data: fallbackData,
+      source: 'intelligent-curriculum-engine',
+    });
+  }
+});
+
+// Real-time Diagram Update Endpoint — generates ONLY a fresh 2D diagram for the current teaching focus.
+// Called by the update_diagram tool during a live voice session to update nodes without reloading the full lesson.
+app.post('/api/update-diagram', async (req, res) => {
+  const { topic, grade, focus } = req.body;
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(400).json({ error: 'No API key' });
+
+  const prompt = `You are an expert pedagogical diagram designer. Generate a concise 2D concept diagram specifically focused on: "${focus || topic}" for a student in "${grade || 'Secondary 2'}".
+
+Return ONLY valid JSON matching this exact schema (no markdown fences):
+{
+  "diagramType": "flow",
+  "title": "Concise title for this diagram view",
+  "description": "One sentence explaining what this diagram shows",
+  "nodes": [
+    {
+      "id": "node-1",
+      "label": "Real descriptive name (e.g. 'Hypotenuse', 'Right Angle Vertex') — NEVER 'Node 1'",
+      "sublabel": "Key formula, location, or subtitle",
+      "category": "Classification label",
+      "color": "emerald",
+      "details": "1-2 clear sentences explaining this concept node"
+    }
+  ],
+  "connections": [
+    { "from": "Source Node Label", "to": "Target Node Label", "label": "relationship" }
+  ]
+}
+
+Rules:
+- 3 to 5 nodes maximum (optimised for screen space)
+- Node colors from: emerald, amber, sky, violet, rose, teal
+- Every node must have a real descriptive label — NEVER generic names
+- Focus specifically on: "${focus || topic}"`;
+
+  try {
+    const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+    let text = '';
+    for (const modelName of ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest']) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: { responseMimeType: 'application/json' },
+        });
+        text = response.text || '';
+        if (text) break;
+      } catch (_) { continue; }
+    }
+    if (!text) return res.status(500).json({ error: 'Diagram generation failed' });
+    const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
+    const diagram = JSON.parse(cleanText);
+    return res.json({ success: true, diagram });
+  } catch (err: any) {
+    console.error('[API /api/update-diagram] Error:', err?.message);
+    return res.status(500).json({ error: 'Diagram generation failed' });
+  }
+});
+
+// Real-time AI Image Generation Endpoint for Photos & Realistic Visuals
+app.post('/api/generate-image', async (req, res) => {
+  const { prompt: userPrompt, topic } = req.body || {};
+  const imagePrompt =
+    userPrompt ||
+    `A high-resolution, photorealistic, scientific educational photo depicting ${topic || 'science subject'}, sharp focus, authentic natural lighting, realistic textures, macro/telephoto lens, no text overlays, cinematic clarity`;
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.json({
+      success: true,
+      imageUrl: `https://picsum.photos/seed/${encodeURIComponent(String(topic || 'education').toLowerCase())}/1280/720`,
+      caption: `Visual Representation of ${topic || 'Topic'}`,
+      promptUsed: imagePrompt,
+    });
+  }
+
+  try {
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: { 'User-Agent': 'aistudio-build' },
+      },
+    });
+
+    // Try nano banana image generation with candidate models
+    const imageCandidateModels = ['gemini-3.1-flash-image', 'gemini-3.1-flash-lite-image'];
+    let foundBase64: string | null = null;
+
+    for (const imgModel of imageCandidateModels) {
+      try {
+        const imgResponse = await ai.models.generateContent({
+          model: imgModel,
+          contents: {
+            parts: [{ text: imagePrompt }],
+          },
+          config: {
+            imageConfig: {
+              aspectRatio: '16:9',
+            },
+          },
+        });
+
+        const parts = imgResponse.candidates?.[0]?.content?.parts || [];
+        for (const part of parts) {
+          if (part.inlineData?.data) {
+            foundBase64 = part.inlineData.data;
+            break;
+          }
+        }
+        if (foundBase64) break;
+      } catch (imgErr: any) {
+        console.warn(`[API /api/generate-image] Model ${imgModel} returned error, trying next candidate...`, imgErr?.message);
+      }
+    }
+
+    if (foundBase64) {
+      return res.json({
+        success: true,
+        imageUrl: `data:image/png;base64,${foundBase64}`,
+        caption: `AI Generated Real-Time Photographic Study: ${topic || 'Subject'}`,
+        promptUsed: imagePrompt,
+      });
+    }
+
+    // If no inlineData returned, provide high-quality fallback
+    return res.json({
+      success: true,
+      imageUrl: `https://picsum.photos/seed/${encodeURIComponent(String(topic || 'education').toLowerCase())}/1280/720`,
+      caption: `Visual Study: ${topic || 'Topic'}`,
+      promptUsed: imagePrompt,
+    });
+  } catch (err: any) {
+    console.error('[API /api/generate-image] Image generation failed, using fallback:', err?.message);
+    return res.json({
+      success: true,
+      imageUrl: `https://picsum.photos/seed/${encodeURIComponent(String(topic || 'education').toLowerCase())}/1280/720`,
+      caption: `Visual Study: ${topic || 'Topic'}`,
+      promptUsed: imagePrompt,
+    });
+  }
+});
+
+// Generalized Tools for Gemini Live Interactive Voice Session
+const dynamicFunctionDeclarations = [
+  {
+    name: 'update_chalkboard_notes',
+    description: 'Writes or updates lecture notes, definitions, formulas, or bullet points on the digital chalkboard.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING, description: 'Title of the notes section' },
+        bulletPoints: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: 'Key bullet points or steps to write on the board',
+        },
+        coreRuleOrFormula: {
+          type: Type.STRING,
+          description: 'Optional core governing formula, law, or golden rule to highlight in golden chalk',
+        },
+      },
+      required: ['bulletPoints'],
+    },
+  },
+  {
+    name: 'write_live_note',
+    description: 'Appends an instant chalk bullet note to the board while actively explaining a specific detail.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        note: { type: Type.STRING, description: 'The exact short note or insight to write' },
+      },
+      required: ['note'],
+    },
+  },
+  {
+    name: 'switch_board_view',
+    description:
+      'Switches the digital blackboard view to focus the student on a specific visual mode requested by them or decided by you. Modes: 2d (schematic / concept diagram), 3d (interactive 3D spatial model), photo (photorealistic image / scientific camera visual), chalkboard (lecture notes), explorer (simulation sandbox), quiz (question).',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        tab: {
+          type: Type.STRING,
+          enum: ['2d', '3d', 'photo', 'chalkboard', 'explorer', 'quiz'],
+          description: 'The visual blackboard view tab to display',
+        },
+      },
+      required: ['tab'],
+    },
+  },
+  {
+    name: 'generate_photo_visual',
+    description: 'Generates a new photorealistic image or visual study on the blackboard when requested by the student.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: { type: Type.STRING, description: 'Detailed prompt for the realistic photo or visual' },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'set_topic',
+    description: 'Switches or changes the learning topic on the fly to a new topic requested by the student.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        topic: { type: Type.STRING, description: 'The new topic to teach on the fly' },
+        grade: { type: Type.STRING, description: 'Optional grade level' },
+      },
+      required: ['topic'],
+    },
+  },
+  {
+    name: 'highlight_concept',
+    description: 'Highlights a specific concept node or term on the blackboard to draw student attention.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        nodeIdOrName: { type: Type.STRING, description: 'The node ID or title to highlight' },
+      },
+      required: ['nodeIdOrName'],
+    },
+  },
+  {
+    name: 'pose_quiz',
+    description: 'Presents an interactive concept check question on the blackboard for the student to solve.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        question: { type: Type.STRING, description: 'The challenge question' },
+        options: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: 'Four multiple choice options',
+        },
+        correctIndex: { type: Type.NUMBER, description: '0-indexed correct option' },
+        explanation: { type: Type.STRING, description: 'Why this answer is correct' },
+      },
+      required: ['question', 'options', 'correctIndex', 'explanation'],
+    },
+  },
+  {
+    name: 'update_diagram',
+    description: 'Regenerates the 2D concept diagram on the blackboard to visually represent the specific concept or aspect you are currently explaining. Call this when you want the diagram to reflect a particular focus area, sub-concept, or worked example during your explanation.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        focus: {
+          type: Type.STRING,
+          description: 'The specific concept, sub-topic, or aspect currently being explained (e.g. "how the hypotenuse relates to the right angle", "calculating the adjacent side using trigonometry")',
+        },
+      },
+      required: ['focus'],
+    },
+  },
+  {
+    name: 'assess_child_reasoning',
+    description:
+      "MANDATORY after every answer the child gives to a question you asked - whether the answer was right or wrong. Sends the child's answer AND their stated method to the diagnostic assessor. Returns an instruction telling you exactly what to say next. You MUST call this BEFORE responding to the answer, and you MUST follow the instruction it returns. Never evaluate an answer yourself.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        questionAsked:  { type: Type.STRING, description: 'The question you just asked, verbatim' },
+        childAnswer:    { type: Type.STRING, description: "The child's answer, verbatim" },
+        childReasoning: { type: Type.STRING, description: "The child's explanation of HOW they got it. Empty string if they have not said yet." },
+        expectedAnswer: { type: Type.STRING, description: 'The answer you expected' },
+        promptType: {
+          type: Type.STRING,
+          enum: ['teach', 'check', 'probe', 'transfer'],
+          description: "'check' = first comprehension question. 'probe' = follow-up testing their method. 'transfer' = a NEW situation testing if it generalises.",
+        },
+      },
+      required: ['questionAsked', 'childAnswer', 'promptType'],
+    },
+  },
+  {
+    name: 'show_student_thinking',
+    description:
+      "Writes the child's own method up on the board next to the figure. Call this whenever the child explains how they worked something out. Seeing their own reasoning externalised is what lets them find their own error.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        method:     { type: Type.STRING, description: "The child's method, in their own words, one short line" },
+        faultyStep: { type: Type.STRING, description: 'Optional: the one step that does not hold up' },
+        verdict: {
+          type: Type.STRING,
+          enum: ['sound', 'checking', 'breaks_down'],
+          description: "Use 'checking' while you are still probing. Do NOT mark breaks_down before the probe has been answered.",
+        },
+      },
+      required: ['method', 'verdict'],
+    },
+  },
+  {
+    name: 'record_confusion_signal',
+    description:
+      'Call when the child says they do not understand, asks you to repeat, says it is too fast, admits they guessed, goes quiet, or tells you that YOU are wrong. Records it as a positive learning signal, never as a failure.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        signal: {
+          type: Type.STRING,
+          enum: ['dont_understand', 'repeat_differently', 'too_fast', 'guessed', 'silent', 'disagrees_with_tutor'],
+        },
+        aboutWhat: { type: Type.STRING, description: 'What specifically they are stuck on' },
+      },
+      required: ['signal'],
+    },
+  },
+  {
+    name: 'set_figure',
+    description:
+      'Redraws the triangle on the board with specific side lengths for a worked example or a practice question. The figure is drawn to true proportion, so the child sees a 3-4-5 triangle actually look like one.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        a: { type: Type.NUMBER, description: 'Length of the horizontal leg' },
+        b: { type: Type.NUMBER, description: 'Length of the vertical leg' },
+        unitLabel: { type: Type.STRING, description: 'Unit, e.g. cm or m. Omit for a bare diagram.' },
+        unknownSide: {
+          type: Type.STRING,
+          enum: ['a', 'b', 'c', 'none'],
+          description: "Which side to show as '?' because the child is solving for it",
+        },
+        scene: {
+          type: Type.STRING,
+          enum: ['ladder', 'ramp', 'screen'],
+          description: "Optional real-world picture to show the triangle inside: 'ladder' (ladder against a wall), 'ramp' (wheelchair ramp), 'screen' (TV screen diagonal). Omit to keep the current view.",
+        },
+      },
+      required: ['a', 'b'],
+    },
+  },
+  {
+    name: 'reveal_part',
+    description:
+      "Shows parts of the figure. Pass every part you are about to talk about in ONE call, in the order you will mention them — the board animates them in that order while you speak. Each tool call pauses your speech, so never call this once per word.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        parts: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING, enum: ['triangle', 'right-angle', 'leg-a', 'leg-b', 'hypotenuse', 'vertices', 'formula', 'squares'] },
+          description: 'Parts to reveal, in the order you will mention them',
+        },
+        part: {
+          type: Type.STRING,
+          enum: ['triangle', 'right-angle', 'leg-a', 'leg-b', 'hypotenuse', 'vertices', 'formula', 'squares'],
+          description: 'A single part (older form; prefer parts)',
+        },
+      },
+    },
+  },
+];
+
+
+// ═══════════════════════════════════════════════════════════════
+// Any curriculum — built-in Pythagoras or an uploaded textbook.
+function curriculumFor(subjectId: string) {
+  return subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(subjectId);
+}
+
+// MULTER for PDF uploads
+// ═══════════════════════════════════════════════════════════════
+// Streams to a temp file instead of memory: a scanned textbook is 100+ MB.
+const UPLOAD_DIR = path.join(os.tmpdir(), 'pt-uploads');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const upload = multer({
+  dest: UPLOAD_DIR,
+  limits: { fileSize: 500 * 1024 * 1024, files: 10 },
+  fileFilter: (_req, file, cb) => {
+    const ok = file.mimetype === 'application/pdf' || /\.pdf$/i.test(file.originalname);
+    if (ok) cb(null, true);
+    else cb(new Error(`"${file.originalname}" is not a PDF`));
+  },
+});
+
+// GET /api/curricula — list all curricula (normalised for frontend)
+app.get('/api/curricula', (_req, res) => {
+  const builtin = [PYTHAGORAS_CURRICULUM];
+  const uploaded = listCurricula();
+  const all = [...builtin, ...uploaded.filter(c => c.id !== 'pythagoras')];
+  // Return a lightweight version suitable for the subject selector
+  const normalised = all.map(c => ({
+    subjectId: c.id,
+    label: c.label,
+    grade: c.grade,
+    source: c.source,
+    conceptCount: c.concepts.length,
+    concepts: c.concepts.map(con => ({
+      id: con.id,
+      label: con.label,
+      typicalTeachingOrder: con.typicalTeachingOrder,
+      prerequisites: con.prerequisites || [],
+      chapter: con.chapter || null,
+    })),
+  }));
+  res.json({ curricula: normalised });
+});
+
+// POST /api/curriculum/upload — one or more PDFs → background job.
+// Accepts the new 'pdfs' field (multiple) and the old single 'pdf' field.
+app.post('/api/curriculum/upload',
+  upload.fields([{ name: 'pdfs', maxCount: 10 }, { name: 'pdf', maxCount: 1 }]),
+  (req: any, res: any) => {
+    const files: any[] = [...(req.files?.pdfs || []), ...(req.files?.pdf || [])];
+    const cleanup = () => files.forEach(f => fs.promises.unlink(f.path).catch(() => {}));
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) { cleanup(); return res.status(500).json({ error: 'GEMINI_API_KEY not set on the server' }); }
+    if (!files.length) return res.status(400).json({ error: 'No PDF received' });
+    const subjectLabel = String(req.body.subjectLabel || '').trim();
+    const grade = String(req.body.grade || '').trim();
+    // Derived from the subject name, so Book 2A and Book 2B land in the same subject.
+    const subjectId = String(req.body.subjectId || subjectLabel).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    if (!subjectLabel || !grade || !subjectId) { cleanup(); return res.status(400).json({ error: 'Subject name and grade are required' }); }
+
+    const job = startIngestJob({
+      apiKey, subjectId, subjectLabel, grade,
+      files: files.map(f => ({ path: f.path, originalName: f.originalname })),
+    });
+    res.json({ success: true, jobId: job.id, subjectId });
+  });
+
+// GET /api/curriculum/jobs/:id — progress of an ingestion job.
+app.get('/api/curriculum/jobs/:id', (req, res) => {
+  const job = getJob(req.params.id);
+  if (!job) return (res as any).status(404).json({ error: 'Unknown job (the server may have restarted)' });
+  res.json({ job });
+});
+
+// Errors on /api routes are always JSON. Without this, an oversized upload
+// returned Express's HTML error page and the browser failed on "<!DOCTYPE".
+app.use('/api', (err: any, _req: any, res: any, _next: any) => {
+  const tooBig = err?.code === 'LIMIT_FILE_SIZE';
+  const tooMany = err?.code === 'LIMIT_FILE_COUNT';
+  res.status(tooBig ? 413 : 400).json({
+    error: tooBig ? 'That file is over 500 MB.'
+      : tooMany ? 'Upload at most 10 PDFs at a time.'
+      : String(err?.message || 'Upload failed'),
+  });
+});
+
+// ─── Learner endpoints ──────────────────────────────────────────
+app.get('/api/learners', (_req, res) => res.json({ learners: listLearners() }));
+app.get('/api/learners/:studentId', (req, res) => {
+  const l = getLearner(req.params.studentId);
+  if (!l) return (res as any).status(404).json({ error: 'Not found' });
+  res.json({ learner: l });
+});
+app.post('/api/learners', (req, res) => {
+  const { studentId, name, grade } = req.body;
+  if (!studentId || !name || !grade)
+    return (res as any).status(400).json({ error: 'studentId, name, grade required' });
+  res.json({ learner: getOrCreateLearner(studentId, name, grade) });
+});
+
+// ─── Adaptive session endpoints ─────────────────────────────────
+app.post('/api/session/start', (req, res) => {
+  const { studentId, name, grade, subjectId } = req.body;
+  if (!studentId || !subjectId)
+    return (res as any).status(400).json({ error: 'studentId and subjectId required' });
+  const learner = getOrCreateLearner(studentId, name || 'Student', grade || 'Secondary 2 (Grade 8)');
+  const curriculum = subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(subjectId);
+  if (!curriculum) return (res as any).status(404).json({ error: 'Curriculum not found' });
+  ensureSubject(studentId, subjectId, curriculum.label, curriculum.grade, curriculum.source);
+
+  const masteredIds = Object.values(learner.subjects[subjectId]?.conceptStates || {})
+    .filter(cs => cs.masteryScore >= 75).map(cs => cs.conceptId);
+  const nextConcept = nextUnmasteredConcept(curriculum, masteredIds) || curriculum.concepts[0];
+  ensureConceptState(studentId, subjectId, nextConcept.id, nextConcept.label);
+
+  const sessionId = `session_${Date.now()}_${studentId}`;
+  const session: AdaptiveSessionState = {
+    sessionId, studentId, subjectId,
+    currentConceptId: nextConcept.id,
+    currentStrategy: 'direct_explanation',
+    sessionStarted: Date.now(),
+    interactionCount: 0,
+    recentAttempts: [],
+  };
+  startSession(session);
+  res.json({
+    sessionId, learner, currentConcept: nextConcept,
+    conceptState: getConceptState(studentId, subjectId, nextConcept.id),
+    strategy: 'direct_explanation',
+  });
+});
+
+app.get('/api/session/:sessionId', (req, res) => {
+  const session = getSession(req.params.sessionId);
+  if (!session) return (res as any).status(404).json({ error: 'Session not found' });
+  const learner = getLearner(session.studentId);
+  const curriculum = session.subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(session.subjectId);
+  const concept = curriculum?.concepts.find(c => c.id === session.currentConceptId);
+  const conceptState = getConceptState(session.studentId, session.subjectId, session.currentConceptId);
+  res.json({ session, learner, currentConcept: concept, conceptState });
+});
+
+app.post('/api/session/:sessionId/assess', async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return (res as any).status(500).json({ error: 'No API key' });
+  const session = getSession(req.params.sessionId);
+  if (!session) return (res as any).status(404).json({ error: 'Session not found' });
+
+  const { questionSummary, studentAnswer, correctAnswer, selectedOptionIndex, correctOptionIndex } = req.body;
+  const isCorrect = selectedOptionIndex === correctOptionIndex;
+
+  const curriculum = session.subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(session.subjectId);
+  const concept = curriculum?.concepts.find(c => c.id === session.currentConceptId);
+  if (!concept) return (res as any).status(404).json({ error: 'Concept not found' });
+  const conceptState = getConceptState(session.studentId, session.subjectId, concept.id);
+  if (!conceptState) return (res as any).status(404).json({ error: 'Concept state not found' });
+
+  const assessment = await assessUnderstanding({
+    concept, questionAsked: questionSummary, studentAnswer,
+    correctAnswer, isCorrect, selectedOptionIndex, conceptState, apiKey,
+  });
+
+  const attempt = {
+    timestamp: Date.now(), questionSummary, conceptTag: concept.id,
+    selectedOption: selectedOptionIndex, correctOption: correctOptionIndex,
+    isCorrect, understandingDepth: assessment.understandingDepth,
+    misconceptionDetected: assessment.misconceptionDescription,
+    strategyUsed: session.currentStrategy as TeachingStrategy,
+    teachingNote: assessment.teachingNote,
+  };
+  recordAttempt(session.studentId, session.subjectId, concept.id, attempt, assessment);
+
+  const nextStrategy = selectNextStrategy(conceptState, assessment);
+  let nextConceptId = session.currentConceptId;
+  let advancedToConcept = null;
+
+  if (['advance','praise_and_continue'].includes(assessment.recommendedAction)) {
+    const updated = getConceptState(session.studentId, session.subjectId, concept.id);
+    if ((updated?.masteryScore || 0) >= 75) {
+      const masteredIds = Object.values(
+        getLearner(session.studentId)?.subjects?.[session.subjectId]?.conceptStates || {}
+      ).filter(cs => cs.masteryScore >= 75).map(cs => cs.conceptId);
+      const next = curriculum ? nextUnmasteredConcept(curriculum, masteredIds) : undefined;
+      if (next && next.id !== session.currentConceptId) {
+        nextConceptId = next.id; advancedToConcept = next;
+        ensureConceptState(session.studentId, session.subjectId, next.id, next.label);
+      }
+    }
+  }
+
+  updateSession(session.sessionId, {
+    currentConceptId: nextConceptId, currentStrategy: nextStrategy,
+    interactionCount: session.interactionCount + 1,
+    recentAttempts: [...session.recentAttempts.slice(-4), attempt],
+    pendingStrategySwitch: assessment.recommendedAction === 'switch_strategy' ? nextStrategy : undefined,
+    switchReason: assessment.recommendedAction === 'switch_strategy' ? assessment.teachingNote : undefined,
+  });
+
+  res.json({
+    assessment, nextStrategy, advancedToConcept,
+    updatedConceptState: getConceptState(session.studentId, session.subjectId, nextConceptId),
+    learner: getLearner(session.studentId),
+    session: getSession(session.sessionId),
+  });
+});
+
+app.post('/api/session/:sessionId/end', (req, res) => {
+  const session = getSession(req.params.sessionId);
+  if (!session) { res.json({ ok: true }); return; }
+  const durationMins = Math.round((Date.now() - session.sessionStarted) / 60000);
+  incrementSessionCount(session.studentId, session.subjectId, durationMins);
+  endSession(session.sessionId);
+  res.json({ ok: true, durationMinutes: durationMins });
+});
+
+// GET learner context for voice tutor system prompt
+app.get('/api/learner-context/:studentId/:subjectId', (req, res) => {
+  const { studentId, subjectId } = req.params;
+  const learner = getLearner(studentId);
+  if (!learner) return (res as any).status(404).json({ error: 'Learner not found' });
+  const subject = learner.subjects[subjectId];
+  if (!subject) return res.json({ context: 'No prior learning history for this subject.' });
+
+  const conceptSummaries = Object.values(subject.conceptStates)
+    .sort((a, b) => b.lastVisited - a.lastVisited).slice(0, 10)
+    .map(cs => {
+      const lines = [`- ${cs.label}: mastery ${cs.masteryScore}/100 (${cs.masteryLevel})`];
+      if (cs.confirmedMisconceptions.length)
+        lines.push(`  CONFIRMED MISCONCEPTIONS: ${cs.confirmedMisconceptions.join('; ')}`);
+      if (cs.effectiveStrategies.length)
+        lines.push(`  EFFECTIVE STRATEGIES: ${cs.effectiveStrategies.join(', ')}`);
+      if (cs.ineffectiveStrategies.length)
+        lines.push(`  DID NOT HELP: ${cs.ineffectiveStrategies.join(', ')}`);
+      return lines.join('\n');
+    }).join('\n');
+
+  const context = `LEARNER: ${learner.name} (${learner.grade})\nSessions: ${subject.sessionCount}, Minutes: ${subject.totalMinutes}\n\nCONCEPT MASTERY:\n${conceptSummaries || 'None yet'}\n\nINSIGHTS: ${learner.globalInsights.slice(-3).join(' | ') || 'None yet'}`;
+  res.json({ context });
+});
+
+// ─── Voice session log ────────────────────────────────────────
+// One file per session in logs/. Timings, tool calls, closes and what was said,
+// so a "the tutor went quiet" report can be diagnosed from evidence.
+// Local development only; the folder is git-ignored.
+function openVoiceLog(topic: string) {
+  const dir = path.join(process.cwd(), 'logs');
+  try { fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const file = path.join(dir, `voice-${stamp}.log`);
+  const t0 = Date.now();
+  const write = (line: string) => { try { fs.appendFileSync(file, line + '\n'); } catch (_) {} };
+  write(`# voice session ${new Date().toISOString()} topic="${topic}"`);
+  return (event: string, data?: Record<string, any>) => {
+    const t = ((Date.now() - t0) / 1000).toFixed(2).padStart(8);
+    const body = data ? ' ' + JSON.stringify(data).slice(0, 400) : '';
+    write(`${t}s  ${event}${body}`);
+    if (!/^(tutor_said|child_said)$/.test(event)) console.log(`[voice] ${event}${body.slice(0, 160)}`);
+  };
+}
+
+// WebSocket Server for Live API audio and events
+const wss = new WebSocketServer({ noServer: true });
+wss.on('error', (err) => {
+  console.error('[WSS] Server error:', err.message);
+});
+
+// Fallback WebSocket server for Vite HMR / browser client keepalive
+const fallbackWss = new WebSocketServer({
+  noServer: true,
+  handleProtocols: (protocols: Set<string>) => {
+    if (protocols.has('vite-hmr')) return 'vite-hmr';
+    const first = Array.from(protocols)[0];
+    return first || false;
+  },
+});
+fallbackWss.on('connection', (ws) => {
+  try {
+    ws.send(JSON.stringify({ type: 'connected' }));
+  } catch (_) {}
+  ws.on('message', () => {});
+  // Prevent unhandled 'error' events from crashing the process
+  // (Vite HMR client can send malformed close frames locally)
+  ws.on('error', (err) => {
+    console.debug('[FallbackWS] Non-fatal WebSocket error (Vite HMR):', err.message);
+  });
+});
+
+server.on('upgrade', (request, socket, head) => {
+  try {
+    const url = new URL(request.url || '', `http://${request.headers.host || 'localhost'}`);
+    if (url.pathname === '/ws/live') {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    } else {
+      fallbackWss.handleUpgrade(request, socket, head, (ws) => {
+        fallbackWss.emit('connection', ws, request);
+      });
+    }
+  } catch (upgradeErr) {
+    console.warn('[Server] WebSocket upgrade error:', upgradeErr);
+    try {
+      socket.destroy();
+    } catch (_) {}
+  }
+});
+
+wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
+  // Parse query parameters for topic, grade and adaptive context
+  const url = new URL(req.url || '', `http://${req.headers.host}`);
+  const topic = url.searchParams.get('topic') || 'the requested subject';
+  const grade = url.searchParams.get('grade') || 'the student level';
+  const studentId = url.searchParams.get('studentId') || null;
+  const subjectId = url.searchParams.get('subjectId') || null;
+
+  console.log(`[WebSocket] Live session started for Topic: "${topic}", Grade: "${grade}", Student: ${studentId || 'anonymous'}`);
+
+  // Fetch learner context for personalised system prompt
+  let learnerContext = '';
+  if (studentId && subjectId) {
+    try {
+      const learner = getLearner(studentId);
+      if (learner) {
+        const subject = learner.subjects[subjectId];
+        if (subject) {
+          const conceptSummaries = Object.values(subject.conceptStates)
+            .sort((a, b) => b.lastVisited - a.lastVisited).slice(0, 8)
+            .map(cs => {
+              const parts = [`  - ${cs.label}: mastery ${cs.masteryScore}/100 (${cs.masteryLevel})`];
+              if (cs.confirmedMisconceptions.length)
+                parts.push(`    CONFIRMED MISCONCEPTIONS: ${cs.confirmedMisconceptions.join('; ')}`);
+              if (cs.effectiveStrategies.length)
+                parts.push(`    EFFECTIVE STRATEGIES: ${cs.effectiveStrategies.join(', ')}`);
+              if (cs.ineffectiveStrategies.length)
+                parts.push(`    AVOID THESE: ${cs.ineffectiveStrategies.join(', ')}`);
+              return parts.join('\n');
+            }).join('\n');
+
+          learnerContext = `
+\n\n=== LEARNER PROFILE ===
+Student Name: ${learner.name}
+Sessions Completed: ${subject.sessionCount}
+Total Study Time: ${subject.totalMinutes} minutes
+
+CONCEPT MASTERY:
+${conceptSummaries || '  No prior learning recorded — start from the beginning.'}
+
+GLOBAL INSIGHTS: ${learner.globalInsights.slice(-2).join(' | ') || 'None yet.'}
+=== END LEARNER PROFILE ===\n`;
+        }
+      }
+    } catch (lcErr) {
+      console.warn('[WebSocket] Could not load learner context:', lcErr);
+    }
+  }
+
+  // ── Session-scoped teaching state ────────────────────────────
+  // The voice model does not hold the learner model; the server does.
+  // Every diagnostic decision is made here against persisted evidence.
+  const liveCurriculum = subjectId
+    ? (subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(subjectId))
+    : PYTHAGORAS_CURRICULUM;
+
+  let liveConcept: CurriculumConcept | undefined = liveCurriculum?.concepts?.[0];
+  let liveStrategy: TeachingStrategy = 'direct_explanation';
+  let lastQuestionAsked = '';
+  let lastQuestionAt = Date.now();
+
+  if (studentId && subjectId && liveCurriculum) {
+    try {
+      ensureSubject(studentId, subjectId, liveCurriculum.label, liveCurriculum.grade, liveCurriculum.source);
+      const learner = getLearner(studentId);
+      const mastered = Object.values(learner?.subjects?.[subjectId]?.conceptStates || {})
+        .filter(cs => cs.masteryScore >= MASTERY_THRESHOLD)
+        .map(cs => cs.conceptId);
+      const next = nextUnmasteredConcept(liveCurriculum, mastered) || liveCurriculum.concepts[0];
+      if (next) {
+        liveConcept = next;
+        ensureConceptState(studentId, subjectId, next.id, next.label);
+        const cs = getConceptState(studentId, subjectId, next.id);
+        // Resume with a strategy that has not already failed this child.
+        const failed = cs?.ineffectiveStrategies || [];
+        if (failed.includes(liveStrategy)) liveStrategy = 'worked_example';
+      }
+    } catch (e) {
+      console.warn('[WebSocket] could not resolve live concept:', e);
+    }
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error('[WebSocket] GEMINI_API_KEY is missing');
+    clientWs.send(
+      JSON.stringify({
+        type: 'error',
+        code: 'API_KEY_MISSING',
+        message: 'GEMINI_API_KEY is required for live voice interaction. Please configure it in AI Studio settings.',
+      })
+    );
+    clientWs.close();
+    return;
+  }
+
+  let liveSession: any = null;
+  let isClosed = false;
+
+  // ─────────────────────────────────────────────────────────────
+  // Server-side tool execution.
+  //
+  // The voice model is deliberately NOT trusted to judge an answer.
+  // It reports what the child said; the diagnostic pipeline decides what
+  // that means and hands back a single imperative instruction. This is
+  // what stops the tutor from stating the answer and moving on.
+  // ─────────────────────────────────────────────────────────────
+  // Guards the blocking window: only one diagnosis at a time per session.
+  let assessInFlight = false;
+  // A diagnosis that arrived after its turn, to be folded into the next one.
+  let carriedInsight: string | null = null;
+
+  type AnswerCtx = {
+    questionAsked: string; childAnswer: string; childReasoning: string;
+    promptType: 'teach' | 'check' | 'probe' | 'transfer'; latencyMs: number;
+  };
+
+  /** Records a real diagnosis as evidence and builds the payload for the model + UI. */
+  function applyAssessment(assessment: ReasoningAssessment, concept: CurriculumConcept, ctx: AnswerCtx, late: boolean) {
+    const candidates = assessment.candidateMisconceptionIds.map(id => ({
+      id, text: misconceptionText(concept, id) || id,
+    }));
+
+    let record: ReturnType<typeof recordReasoningEvidence> = null;
+    if (studentId && subjectId) {
+      ensureConceptState(studentId, subjectId, concept.id, concept.label);
+      record = recordReasoningEvidence({
+        studentId, subjectId,
+        conceptId: concept.id,
+        difficultyLevel: concept.difficultyLevel,
+        promptType: ctx.promptType,
+        questionAsked: ctx.questionAsked,
+        childAnswer: ctx.childAnswer,
+        childReasoning: ctx.childReasoning,
+        classification: assessment.classification,
+        understandingDepth: assessment.understandingDepth,
+        candidateMisconceptions: candidates,
+        confidence: assessment.confidence,
+        strategyInUse: liveStrategy,
+        responseLatencyMs: ctx.latencyMs,
+      });
+    }
+
+    let instruction = assessment.tutorGuidance;
+    if (assessment.shouldProbe && assessment.probeQuestion) {
+      instruction =
+        `Ask EXACTLY this and then stop talking: "${assessment.probeQuestion}" ` +
+        `Do not explain, do not hint, do not reveal the answer, do not say whether the ` +
+        `previous answer was right. Wait for their reply, then call assess_child_reasoning ` +
+        `again with promptType "probe".`;
+    } else if (assessment.classification === 'clear_reasoning') {
+      instruction = `${assessment.tutorGuidance} Praise the specific move they made, not the child. Then move to the next idea.`;
+    }
+    const newlyConfirmed = record?.newlyConfirmed || [];
+    if (newlyConfirmed.length > 0) {
+      instruction +=
+        ` A misconception is now CONFIRMED: "${newlyConfirmed[0].text}". ` +
+        `Do not simply state the rule. Show them a case where THEIR method gives the wrong ` +
+        `answer, let them see it break, then re-teach using a ${assessment.nextStrategy.replace(/_/g, ' ')}.`;
+    }
+
+    liveStrategy = assessment.nextStrategy;
+    if (!late) {
+      lastQuestionAsked = assessment.probeQuestion || ctx.questionAsked;
+      lastQuestionAt = Date.now();
+    }
+
+    return {
+      result: 'assessed',
+      instruction,
+      classification: assessment.classification,
+      understandingDepth: assessment.understandingDepth,
+      confidence: assessment.confidence,
+      reasoningSummary: assessment.reasoningSummary,
+      faultyStep: assessment.faultyStep || null,
+      shouldProbe: assessment.shouldProbe,
+      probeQuestion: late ? null : (assessment.probeQuestion || null),
+      nextStrategy: assessment.nextStrategy,
+      concept: { id: concept.id, label: concept.label },
+      mastery: record ? { before: record.masteryBefore, after: record.masteryAfter, derivation: record.derivation } : null,
+      misconceptions: record?.ledger?.map(m => ({ id: m.id, text: m.text, status: m.status })) || [],
+    };
+  }
+
+  function summariseForLater(a: ReasoningAssessment, concept: CurriculumConcept): string {
+    if (a.classification === 'clear_reasoning') return 'their earlier method was sound';
+    const mis = a.candidateMisconceptionIds.map(id => misconceptionText(concept, id)).filter(Boolean);
+    if (mis.length) return `their earlier method suggests this misconception: "${mis[0]}"`;
+    return 'their earlier method was unclear';
+  }
+
+  /** Prepends a late diagnosis to the next instruction, once. */
+  function withCarriedInsight(payload: Record<string, any>): Record<string, any> {
+    if (!carriedInsight || !payload.instruction) return payload;
+    const note = `Background from checking their PREVIOUS answer: ${carriedInsight}. Use this, but do not mention it. `;
+    carriedInsight = null;
+    return { ...payload, instruction: note + payload.instruction };
+  }
+
+  async function handleLiveTool(name: string, args: Record<string, any>): Promise<Record<string, any>> {
+    // ── Diagnostic path ──────────────────────────────────────
+    if (name === 'assess_child_reasoning') {
+      if (!liveConcept) {
+        return {
+          result: 'no_curriculum',
+          instruction: 'Ask the child to explain how they worked it out before you say anything about the answer.',
+        };
+      }
+
+      const questionAsked = String(args.questionAsked || lastQuestionAsked || '');
+      const childAnswer = String(args.childAnswer || '');
+      const childReasoning = String(args.childReasoning || '');
+      const promptType = (['teach','check','probe','transfer'].includes(args.promptType)
+        ? args.promptType : 'check') as 'teach' | 'check' | 'probe' | 'transfer';
+      const latencyMs = Math.max(0, Date.now() - lastQuestionAt);
+
+      // If the child has given an answer but no method yet, do not assess.
+      // Elicit first. Assessing an unexplained answer is exactly the failure
+      // mode we are engineered against.
+      if (!childReasoning.trim()) {
+        lastQuestionAsked = questionAsked;
+        return {
+          result: 'reasoning_required',
+          classification: 'no_reasoning_given',
+          instruction:
+            'Do NOT say whether that is right or wrong, and do NOT give the answer. ' +
+            'Ask the child how they worked it out, then wait for them to finish. ' +
+            'Call assess_child_reasoning again once they have told you their method.',
+        };
+      }
+
+      // Duplicate call while we are still checking (the child repeated
+      // themselves and the model re-fired). Answer instantly; do not re-assess.
+      if (assessInFlight) {
+        return {
+          result: 'already_checking',
+          instruction:
+            'You are already checking this answer. Do not ask the question again and do not repeat ' +
+            'yourself. At most say "Got it" and wait.',
+        };
+      }
+
+      const concept = liveConcept;
+      const conceptState = studentId && subjectId
+        ? getConceptState(studentId, subjectId, concept.id)
+        : null;
+      const ctx = { questionAsked, childAnswer, childReasoning, promptType, latencyMs };
+
+      // Tell the browser straight away so the child can SEE they were heard.
+      if (clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(JSON.stringify({ type: 'tool_pending', name }));
+      }
+
+      assessInFlight = true;
+      let result: DeadlineResult;
+      try {
+        result = await assessReasoningWithDeadline({
+          concept,
+          conceptState,
+          questionAsked,
+          childAnswer,
+          childReasoning,
+          expectedAnswer: args.expectedAnswer ? String(args.expectedAnswer) : undefined,
+          currentStrategy: liveStrategy,
+          apiKey: apiKey!,
+        }, ASSESS_BUDGET_MS);
+      } finally {
+        assessInFlight = false;
+      }
+      console.log(`[assess] ${result.elapsedMs}ms ${result.timedOut ? 'DEADLINE — transfer move sent, diagnosis continues' : 'in budget'}`);
+
+      if (!result.timedOut) {
+        const payload = applyAssessment(result.assessment, concept, ctx, false);
+        return withCarriedInsight(payload);
+      }
+
+      // Late path: the diagnosis lands after the conversation has moved on.
+      // It is recorded as evidence and shown in the UI, and folded into the
+      // tutor's NEXT instruction. The placeholder is never recorded as evidence.
+      result.full.then(full => {
+        if (isClosed) return;
+        const payload = applyAssessment(full, concept, ctx, true);
+        carriedInsight = summariseForLater(full, concept);
+        if (clientWs.readyState === WebSocket.OPEN) {
+          clientWs.send(JSON.stringify({ type: 'assessment_update', serverResult: payload }));
+        }
+      }).catch(e => console.warn('[assess] late diagnosis failed:', e?.message || e));
+
+      lastQuestionAt = Date.now();
+      return withCarriedInsight({
+        result: 'checking',
+        classification: 'pending',
+        instruction: result.assessment.tutorGuidance,
+        concept: { id: concept.id, label: concept.label },
+      });
+    }
+
+    // ── Confusion signals ────────────────────────────────────
+    if (name === 'record_confusion_signal') {
+      const signal = String(args.signal || 'dont_understand');
+      if (studentId && subjectId && liveConcept) {
+        try {
+          ensureConceptState(studentId, subjectId, liveConcept.id, liveConcept.label);
+          addGlobalInsight(studentId, `Asked for help (${signal}) on ${liveConcept.label}${args.aboutWhat ? ': ' + args.aboutWhat : ''}`);
+        } catch (_) {}
+      }
+      const responses: Record<string, string> = {
+        dont_understand:      'Thank them plainly for saying so, then re-teach that ONE point using a completely different representation. Do not repeat the words you just used.',
+        repeat_differently:   'Do not repeat yourself. Switch representation entirely — if you explained it, show it; if you showed it, use a concrete everyday example.',
+        too_fast:             'Slow down. Take the last idea and break it into two smaller steps. Check after each one.',
+        guessed:              'Treat admitting a guess as a good thing and say so. Then go back one step and rebuild from what they DO know.',
+        silent:               'Do not fill the silence with the answer. Offer a smaller entry point: ask them what the first thing they would work out is.',
+        disagrees_with_tutor: 'Take it seriously. Re-examine your own statement out loud. If they are right, say so clearly and thank them.',
+      };
+      return {
+        result: 'recorded',
+        instruction: (responses[signal] || responses.dont_understand) +
+          ' Never sigh, never say "as I said", never imply this should have been obvious.',
+      };
+    }
+
+    // ── Board tool: the child's thinking goes up on the board ─
+    if (name === 'show_student_thinking') {
+      return {
+        result: 'displayed',
+        instruction: "The child's method is now on the board beside the figure. Refer to it as their method, not as a mistake.",
+      };
+    }
+
+    // ── Board tools: executed in the browser ─────────────────
+    if (name === 'pose_quiz' && args.question) {
+      lastQuestionAsked = String(args.question);
+      lastQuestionAt = Date.now();
+    }
+    return { result: 'ok' };
+  }
+
+
+  const dynamicSystemInstruction = `You are "Dr. Marcus Vance", a patient, warm tutor working one-to-one with a ${grade} student on "${topic}".
+
+Your purpose is NOT to deliver a lecture and not to supply answers. It is to find out what this
+child actually understands, and to fix what they do not. A child who hears the right answer has
+learned nothing. A child who discovers why their own method breaks has learned permanently.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THE ONE RULE THAT OVERRIDES EVERYTHING ELSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+When the child answers a question, you NEVER say whether it is right or wrong,
+and you NEVER state the correct answer.
+
+Instead, every single time, you do this:
+  1. Ask how they got it. "How did you work that out?" / "Talk me through it."
+  2. Wait. Let them finish. Do not fill the silence.
+  3. Call assess_child_reasoning with their answer AND their method.
+  4. Do exactly what the returned "instruction" field tells you.
+
+This applies when they are RIGHT as much as when they are wrong. A correct answer
+reached by a broken method is the most important thing you will ever catch, and you
+cannot catch it without asking. If you skip step 1 you have failed at your job.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW THE SESSION OPENS — TEACH FIRST, TEST LATER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You never open with a question about something you have not yet taught. A child
+asked to answer before being taught feels tested, not taught. The first minute
+or two is YOU explaining, with the picture doing half the work.
+
+  1. One warm sentence of hello. Nothing about "no wrong answers" speeches.
+  2. Put a real situation on screen: set_figure({a:4, b:3, unitLabel:'m',
+     unknownSide:'c', scene:'ladder'}). Describe the picture in plain words
+     — "Here's a ladder leaning against a wall."
+  3. Teach the idea IN the picture. First ONE call:
+     reveal_part({parts:['triangle','right-angle','hypotenuse','leg-a','leg-b']})
+     then explain in that order: the wall and the ground meet at a square
+     corner → the ladder is the side facing that corner, the hypotenuse, always
+     the longest → the two short sides are the legs.
+  4. Lift the triangle out of the picture: switch_board_view({tab:'2d'}) shows
+     the bare shape. Say it is the same triangle.
+  5. Only now ask your FIRST question, and make it one they can answer from what
+     you just showed ("Which side do you think is the hypotenuse here?"), not a
+     calculation.
+Teach in short spoken chunks of two to four sentences, but keep going through
+steps 1-4 without stopping to quiz. A light "with me so far?" is fine; a test
+question is not.
+
+When a NEW idea starts later (the theorem itself, finding a missing side), the
+same rule applies: explain and show it first, then check.
+
+Views: tab 'photo' = real-world picture, '2d' = the bare shape, '3d' = 3D model.
+Start each new idea in the real-world picture, then move to the shape.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THE TEACHING LOOP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TEACH      One idea. Two or three sentences. Put it on the board as you say it.
+ASK        One short question. Then STOP TALKING.
+ELICIT     "How did you get that?" Never skip this.
+ASSESS     Call assess_child_reasoning. Never judge the answer yourself.
+FOLLOW     Obey the instruction it returns, word for word in intent.
+PROBE      If told to probe: ask the probe question and nothing else. No hints,
+           no answer, no "well actually". One question, then silence.
+RE-TEACH   Only after a misconception is confirmed. Use a DIFFERENT representation
+           than the one that just failed - the assessor tells you which.
+TRANSFER   Re-test with a NEW situation, never the same question again. Different
+           numbers, different orientation, different context.
+ADVANCE    Only when the assessor says the method is sound.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WAIT TIME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+After you ask a question, stay silent. A 13-year-old needs several seconds to
+assemble a thought, and filling that silence teaches them that thinking is too slow.
+Silence is not a problem to solve. If they are still quiet after a long pause, do not
+answer for them - offer a smaller step: "Want to start with just the first bit?"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW YOU SPEAK TO A CHILD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Evaluate the METHOD, never the child.
+  Never: "No, that's wrong." / "Not quite." / "Good girl." / "You're so clever."
+  Instead: "That rule would work if... let's test it on this one." The error belongs
+  to the strategy, not to them. That distinction is the whole point.
+
+Praise the specific move, never the person.
+  Never: "Brilliant! You're so smart!"
+  Instead: "You found which side was opposite the right angle before you did anything
+  else - that's exactly the right first move." Name the actual thing they did.
+  Praising a child for being clever makes them avoid hard problems. Praising the move
+  makes them try harder ones.
+
+Confusion is the goal, not the failure.
+  When they say "I don't get it" / "say it differently" / "too fast" / "I guessed",
+  call record_confusion_signal and thank them plainly: "That's genuinely useful -
+  now I know where to start." Never sigh, never "as I said", never "let me repeat".
+
+They are allowed to be right and you wrong.
+  If the child says you are mistaken, take it seriously and check. Say so if they are
+  right. A child who can correct their tutor is a child who is thinking.
+
+Never compare them to anyone. No scores read aloud, no "most students find this easy",
+no "this is the simple one". Nothing that makes being stuck feel shameful.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+THE BOARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+One idea on the board at a time. It follows your voice - you say it, then it appears.
+Never let the board show something you are not currently talking about.
+
+  Naming a part of the figure      -> reveal_part({part}) AT THE MOMENT you say the word
+  Setting up a worked example      -> set_figure({a, b, unitLabel, unknownSide})
+  A rule worth keeping            -> update_chalkboard_notes({title, bulletPoints, coreRuleOrFormula})
+  The child explains their method  -> show_student_thinking({method, verdict})
+
+EVERY TOOL CALL PAUSES YOUR VOICE until it returns. So:
+  - Make board calls BETWEEN spoken chunks, never in the middle of a sentence.
+  - Batch: one reveal_part({parts:[...]}) for everything in the next chunk —
+    e.g. reveal_part({parts:['right-angle','hypotenuse']}) then speak about both.
+  - A typical explanation needs one or two board calls, not five.
+Reveal order that works: triangle -> right-angle -> leg-a -> leg-b -> hypotenuse -> formula.
+Nothing is on the board before you have said it. When you want them to SEE why the theorem
+is true rather than take your word for it, reveal_part({part:'squares'}) and let them look.
+
+Do NOT narrate the board ("as you can see on the screen"). Do NOT read your own words
+out as bullet points while you speak them - the child cannot read and listen at once.
+The board carries the figure; your voice carries the explanation.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CURRICULUM FOR "${topic}"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Work through these in order, but do NOT move on until the assessor confirms the
+method is sound. Depth beats coverage. Finishing one concept properly is a better
+lesson than touching six.
+  1. What a right-angled triangle is, and which side is the hypotenuse and why
+  2. Pythagoras' Theorem: a² + b² = c², and why c must be the hypotenuse
+  3. Finding the hypotenuse from two legs
+  4. Finding an unknown leg from the hypotenuse and one leg
+  5. Recognising when the theorem does and does not apply
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VOICE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Warm, unhurried, genuinely curious about how this particular child thinks. Short
+sentences. ${grade} vocabulary. You have unlimited time and unlimited patience, and
+the child should be able to feel that.${learnerContext ? '\n\n' + learnerContext : ''}`;
+
+
+  // ─────────────────────────────────────────────────────────────
+  // Live connection management.
+  //
+  // Google closes a Live connection after ~10 minutes and an audio session
+  // after 15 unless context compression is on. It warns first with goAway.
+  // Previously none of that was handled and the browser was never told, so
+  // a dropped session looked like a hung tutor. Now:
+  //   - context compression is on (sessions are not capped at 15 minutes)
+  //   - a resumption handle is kept, and on goAway or an unexpected close the
+  //     server reconnects to Gemini behind the scenes; the child's browser
+  //     connection stays open throughout
+  //   - tool calls Gemini cancels (child barged in) are never answered
+  //   - every event is written to logs/voice-*.log for diagnosis
+  // ─────────────────────────────────────────────────────────────
+  const LIVE_MODEL = process.env.LIVE_MODEL || 'gemini-3.8-live';
+  const vlog = openVoiceLog(topic);
+  let resumeHandle: string | null = null;
+  let generation = 0;
+  let reconnecting = false;
+  const cancelledCalls = new Set<string>();
+  let lastUserSpeechAt = 0;
+  let awaitingReplyAfterUser = false;
+
+  const toClient = (msg: Record<string, any>) => {
+    if (clientWs.readyState === WebSocket.OPEN) clientWs.send(JSON.stringify(msg));
+  };
+
+  const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+
+  function handleServerMessage(message: LiveServerMessage) {
+    if (isClosed || clientWs.readyState !== WebSocket.OPEN) return;
+    const sc: any = message.serverContent;
+
+    // Audio + text from the model
+    const modelParts = message.serverContent?.modelTurn?.parts;
+    if (modelParts && Array.isArray(modelParts)) {
+      for (const part of modelParts) {
+        if (part.inlineData?.data) {
+          if (awaitingReplyAfterUser) {
+            awaitingReplyAfterUser = false;
+            vlog('reply_latency', { ms: Date.now() - lastUserSpeechAt });
+          }
+          toClient({ type: 'audio_out', data: part.inlineData.data });
+        }
+        if (part.text) toClient({ type: 'output_transcript', text: part.text });
+      }
+    }
+
+    const outTrans = sc?.outputTranscription?.text ?? sc?.outputAudioTranscription?.text;
+    if (outTrans) { toClient({ type: 'output_transcript', text: outTrans }); vlog('tutor_said', { text: outTrans }); }
+    const inTrans = sc?.inputTranscription?.text ?? sc?.inputAudioTranscription?.text;
+    if (inTrans) {
+      lastUserSpeechAt = Date.now();
+      awaitingReplyAfterUser = true;
+      toClient({ type: 'input_transcript', text: inTrans });
+      vlog('child_said', { text: inTrans });
+    }
+    if (sc?.interrupted) { toClient({ type: 'interrupted' }); vlog('interrupted'); }
+    if (sc?.turnComplete) { toClient({ type: 'turn_complete' }); vlog('turn_complete'); }
+
+    // Session housekeeping
+    if (message.sessionResumptionUpdate?.resumable && message.sessionResumptionUpdate.newHandle) {
+      resumeHandle = message.sessionResumptionUpdate.newHandle;
+    }
+    if (message.goAway) {
+      vlog('go_away', { timeLeft: message.goAway.timeLeft });
+      void resume('goAway');
+    }
+    if (message.toolCallCancellation?.ids?.length) {
+      for (const id of message.toolCallCancellation.ids) cancelledCalls.add(id);
+      vlog('tool_cancelled', { ids: message.toolCallCancellation.ids });
+      toClient({ type: 'tool_cancelled', ids: message.toolCallCancellation.ids });
+    }
+
+    // Tool calls
+    const functionCalls = message.toolCall?.functionCalls;
+    if (functionCalls && Array.isArray(functionCalls) && functionCalls.length > 0) {
+      const sessionForCalls = liveSession;   // answer on the connection that asked
+      for (const call of functionCalls) {
+        const t0 = Date.now();
+        vlog('tool_call', { name: call.name, args: call.args });
+        void (async () => {
+          let payload: Record<string, any> = { result: 'ok' };
+          try {
+            payload = await handleLiveTool(call.name || '', (call.args || {}) as Record<string, any>);
+          } catch (toolErr: any) {
+            console.error(`[Tool Call] ${call.name} failed:`, toolErr?.message || toolErr);
+            payload = {
+              result: 'error',
+              instruction: 'The assessor is unavailable. Do NOT give the child the answer. Ask them to walk you through their working, starting with the first step.',
+            };
+          }
+          toClient({ type: 'tool_call', id: call.id, name: call.name, args: call.args || {}, serverResult: payload });
+
+          // A cancelled call must not be answered, and a call from a connection
+          // we have since replaced cannot be answered on the new one.
+          if (call.id && cancelledCalls.has(call.id)) { vlog('tool_response_skipped', { name: call.name, reason: 'cancelled' }); return; }
+          if (isClosed || liveSession !== sessionForCalls) { vlog('tool_response_skipped', { name: call.name, reason: 'stale connection' }); return; }
+          try {
+            liveSession.sendToolResponse({ functionResponses: [{ id: call.id, name: call.name, response: payload }] });
+            vlog('tool_response', { name: call.name, ms: Date.now() - t0, result: payload.result });
+          } catch (respErr: any) {
+            vlog('tool_response_failed', { name: call.name, error: String(respErr?.message || respErr) });
+          }
+        })();
+      }
+    }
+  }
+
+  async function connectLive(handle: string | null) {
+    const myGen = ++generation;
+    const session = await ai.live.connect({
+      model: LIVE_MODEL,
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        systemInstruction: dynamicSystemInstruction,
+        tools: [{ functionDeclarations: dynamicFunctionDeclarations }],
+        // Lift the 15-minute audio session cap.
+        contextWindowCompression: { slidingWindow: {} },
+        // Ask for resumption handles so a dropped connection can be resumed.
+        sessionResumption: handle ? { handle } : {},
+      },
+      callbacks: {
+        onopen: () => vlog('gemini_open', { generation: myGen, resumed: !!handle }),
+        onmessage: (m: LiveServerMessage) => { if (myGen === generation) handleServerMessage(m); },
+        onerror: (e: any) => {
+          vlog('gemini_error', { generation: myGen, message: e?.message || String(e) });
+          if (myGen === generation) toClient({ type: 'error', code: 'LIVE_ERROR', message: e?.message || 'Gemini Live error' });
+        },
+        onclose: (e: any) => {
+          vlog('gemini_close', { generation: myGen, code: e?.code, reason: e?.reason || '' });
+          // Replaced connections and intentional shutdowns are expected.
+          if (myGen !== generation || isClosed) return;
+          if (resumeHandle && !reconnecting) void resume(`closed ${e?.code ?? ''} ${e?.reason ?? ''}`.trim());
+          else toClient({ type: 'session_closed', reason: e?.reason || `code ${e?.code ?? 'unknown'}` });
+        },
+      },
+    });
+    return session;
+  }
+
+  async function resume(why: string) {
+    if (reconnecting || isClosed) return;
+    reconnecting = true;
+    vlog('resuming', { why, haveHandle: !!resumeHandle });
+    toClient({ type: 'reconnecting' });
+    const old = liveSession;
+    try {
+      liveSession = await connectLive(resumeHandle);
+      try { old?.close(); } catch (_) {}
+      vlog('resumed');
+      toClient({ type: 'reconnected' });
+    } catch (e: any) {
+      vlog('resume_failed', { error: String(e?.message || e) });
+      toClient({ type: 'session_closed', reason: 'could not reconnect' });
+    } finally {
+      reconnecting = false;
+    }
+  }
+
+  try {
+    liveSession = await connectLive(null);
+
+    if (clientWs.readyState === WebSocket.OPEN) {
+      clientWs.send(JSON.stringify({ type: 'session_ready' }));
+      vlog('session_ready', { model: LIVE_MODEL, studentId, subjectId });
+
+      // Kick off the lesson (first connection only — never on a resume).
+      try {
+        liveSession.sendClientContent({
+          turns: [{
+            role: 'user',
+            parts: [{
+              text: `The student has just joined a one-to-one session on "${topic}" at ${grade} level. Follow "HOW THE SESSION OPENS" exactly: one warm sentence of hello, then put the ladder scene on screen with set_figure and start TEACHING straight away. Do not ask the child anything that tests knowledge until you have taught the idea and shown the bare shape. Do not ask what they want to learn.`,
+            }],
+          }],
+          turnComplete: true,
+        });
+      } catch (initErr) {
+        console.error('[Gemini Live] Error sending initial turn:', initErr);
+      }
+    }
+  } catch (err: any) {
+    vlog('connect_failed', { error: String(err?.message || err) });
+    console.error('[WebSocket] Failed to initialize Gemini Live session:', err);
+    clientWs.send(
+      JSON.stringify({
+        type: 'error',
+        code: 'INITIALIZATION_FAILED',
+        message: err?.message || 'Failed to start Live session',
+      })
+    );
+    clientWs.close();
+    return;
+  }
+
+  // Handle messages from client
+  clientWs.on('message', (rawData) => {
+    if (isClosed || !liveSession || reconnecting) return;
+
+    try {
+      const msg = JSON.parse(rawData.toString());
+
+      if ((msg.type === 'audio' || msg.type === 'audio_in') && msg.data) {
+        liveSession.sendRealtimeInput({
+          audio: {
+            data: msg.data,
+            mimeType: 'audio/pcm;rate=16000',
+          },
+        });
+      } else if (msg.type === 'text' && msg.text) {
+        liveSession.sendClientContent({
+          turns: [{ role: 'user', parts: [{ text: msg.text }] }],
+          turnComplete: true,
+        });
+      } else if (msg.type === 'tool_response') {
+        console.log('[WebSocket] Tool execution confirmed:', msg.id);
+      } else if (msg.type === 'close') {
+        isClosed = true;
+        clientWs.close();
+      }
+    } catch (parseErr) {
+      console.error('[WebSocket] Failed to parse client message:', parseErr);
+    }
+  });
+
+  clientWs.on('close', () => {
+    isClosed = true;
+    vlog('client_disconnected');
+    console.log('[WebSocket] Client disconnected');
+    if (liveSession) {
+      try {
+        liveSession.close();
+      } catch (closeErr) {
+        console.error('[Gemini Live] Error closing session:', closeErr);
+      }
+    }
+  });
+});
+
+async function startServer() {
+  // Vite middleware in dev or static files in production
+  if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
+    const isHmrDisabled = process.env.DISABLE_HMR === 'true';
+    const vite = await createViteServer({
+      server: {
+        middlewareMode: true,
+        hmr: isHmrDisabled ? false : { server },
+      },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Server] AI Tutor backend running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();

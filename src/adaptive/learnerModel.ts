@@ -1,0 +1,187 @@
+// ─────────────────────────────────────────────────────────────────
+// Learner Model — core types for the adaptive loop
+// ─────────────────────────────────────────────────────────────────
+
+export type MasteryLevel = 'not_started' | 'exposed' | 'partial' | 'developing' | 'proficient' | 'mastered';
+
+export type TeachingStrategy =
+  | 'direct_explanation'
+  | 'worked_example'
+  | 'visual_diagram'
+  | 'real_world_analogy'
+  | 'socratic_questioning'
+  | 'step_by_step'
+  | 'story_context'
+  | 'interactive_simulation'
+  | 'peer_comparison'
+  | 'prerequisite_review';
+
+export type UnderstandingDepth =
+  | 'memorised'       // Child repeated back the answer verbatim
+  | 'recognised'      // Child identified the right answer from options
+  | 'understood'      // Child can explain in own words
+  | 'applied'         // Child applied the concept to a new problem
+  | 'transferred'     // Child used it in a novel context unprompted
+  | 'incorrect'       // Child was wrong
+  | 'guessed'         // Child admitted they guessed
+  | 'confused';       // Child expressed confusion
+
+export interface QuizAttempt {
+  timestamp: number;
+  questionSummary: string;
+  conceptTag: string;
+  selectedOption: number;
+  correctOption: number;
+  isCorrect: boolean;
+  understandingDepth: UnderstandingDepth;
+  misconceptionDetected?: string;
+  strategyUsed: TeachingStrategy;
+  teachingNote?: string;   // Gemini's note on what the child showed
+}
+
+export interface ConceptState {
+  conceptId: string;
+  label: string;
+  masteryLevel: MasteryLevel;
+  masteryScore: number;         // 0–100
+  attemptCount: number;
+  correctCount: number;
+  lastVisited: number;          // timestamp
+  strategiesUsed: TeachingStrategy[];
+  effectiveStrategies: TeachingStrategy[];    // strategies that led to improvement
+  ineffectiveStrategies: TeachingStrategy[];  // strategies that didn't help
+  confirmedMisconceptions: string[];
+  suspectedMisconceptions: string[];
+  quizHistory: QuizAttempt[];
+  prerequisitesGapped: string[];  // concept IDs where gaps were detected
+  notes: string[];                // Gemini's running notes on this child's pattern
+
+  // ─── Live-voice evidence layer (optional: older profiles predate these) ───
+  evidenceLog?: LearningEvidence[];
+  misconceptionLedger?: MisconceptionRecord[];
+  strategyOutcomes?: StrategyOutcome[];
+  /** Posterior P(knows skill) from Bayesian Knowledge Tracing, 0..1. */
+  pKnown?: number;
+}
+
+export interface SubjectProgress {
+  subjectId: string;
+  subjectLabel: string;
+  grade: string;
+  curriculumSource: string;       // e.g. 'singapore-sec2-maths' or 'uploaded-pdf'
+  conceptStates: Record<string, ConceptState>;
+  sessionCount: number;
+  totalMinutes: number;
+  lastSession: number;
+}
+
+export interface LearnerProfile {
+  studentId: string;
+  name: string;
+  grade: string;
+  createdAt: number;
+  updatedAt: number;
+  subjects: Record<string, SubjectProgress>;
+  globalInsights: string[];     // Cross-subject patterns Gemini has noted
+}
+
+// ─── Active Session (in-memory only) ───────────────────────────
+export interface AdaptiveSessionState {
+  sessionId: string;
+  studentId: string;
+  subjectId: string;
+  currentConceptId: string;
+  currentStrategy: TeachingStrategy;
+  sessionStarted: number;
+  interactionCount: number;
+  recentAttempts: QuizAttempt[];  // last 5 in this session
+  pendingStrategySwitch?: TeachingStrategy;
+  switchReason?: string;
+}
+
+// ─── Assessment result from Gemini ─────────────────────────────
+export interface AssessmentResult {
+  understandingDepth: UnderstandingDepth;
+  misconceptionDetected: boolean;
+  misconceptionDescription?: string;
+  misconceptionType?: 'conceptual' | 'procedural' | 'factual' | 'prerequisite_gap';
+  confidence: 'high' | 'medium' | 'low';
+  recommendedAction: 'advance' | 'reinforce' | 'switch_strategy' | 'revisit_prerequisite' | 'praise_and_continue';
+  suggestedNextStrategy?: TeachingStrategy;
+  teachingNote: string;
+  masteryDelta: number;   // how much to adjust masteryScore (-20 to +15)
+}
+
+// ─── Curriculum concept (populated from PDF or hardcoded) ──────
+export interface CurriculumConcept {
+  id: string;
+  label: string;
+  subjectId: string;
+  prerequisites: string[];         // concept IDs that must be understood first
+  commonMisconceptions: string[];  // known misconceptions for this concept
+  keyFacts: string[];
+  workedExamples: string[];
+  difficultyLevel: 1 | 2 | 3 | 4 | 5;
+  typicalTeachingOrder: number;
+  /** e.g. "Chapter 9: Pythagoras' Theorem" — set for concepts extracted from a textbook. */
+  chapter?: string;
+  /** Which uploaded book it came from. */
+  book?: string;
+}
+
+export interface CurriculumSubject {
+  id: string;
+  label: string;
+  grade: string;
+  source: string;
+  concepts: CurriculumConcept[];
+  prerequisiteMap: Record<string, string[]>;  // conceptId → [prerequisite conceptIds]
+}
+
+// ─── Live-voice evidence layer ──────────────────────────────────
+// One record per CONVERSATIONAL TURN, not per quiz click. This is the
+// unit the learner model is actually built from during a voice lesson.
+
+export type PromptType = 'teach' | 'check' | 'probe' | 'transfer';
+
+export interface LearningEvidence {
+  timestamp: number;
+  conceptId: string;
+  promptType: PromptType;
+  questionAsked: string;
+  childAnswer: string;
+  childReasoning: string;
+  classification: string;
+  understandingDepth: UnderstandingDepth;
+  /** Ids from the concept's closed misconception catalogue. */
+  candidateMisconceptionIds: string[];
+  confidence: 'high' | 'medium' | 'low';
+  strategyInUse: TeachingStrategy;
+  /** Seconds the child took to respond — a signal, never a judgement. */
+  responseLatencyMs?: number;
+  helpRequested?: boolean;
+  selfReportedConfusion?: boolean;
+  masteryBefore: number;
+  masteryAfter: number;
+  /** Plain-language derivation of the mastery change, for the parent portal. */
+  derivation: string;
+}
+
+export interface MisconceptionRecord {
+  id: string;
+  text: string;
+  status: 'suspected' | 'confirmed' | 'resolved';
+  /** Independent observations. Promotion to confirmed requires >= 2. */
+  observations: number;
+  firstSeen: number;
+  lastSeen: number;
+  /** Set when a later transfer item was answered soundly. */
+  resolvedAt?: number;
+}
+
+/** Which representation preceded a mastery gain, for THIS child on THIS concept. */
+export interface StrategyOutcome {
+  strategy: TeachingStrategy;
+  timesUsed: number;
+  timesFollowedByGain: number;
+}
