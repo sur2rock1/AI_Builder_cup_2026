@@ -73,6 +73,7 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
   return (
     <div
       id="animated-tutor-container"
+<<<<<<< HEAD
       className="h-full flex flex-col justify-between items-center p-3 sm:p-4 bg-[#FFFFFF] border-r border-[#E3E6EC] text-[#161A22] relative overflow-hidden select-none"
     >
       {/* Ambient Classroom Glow Beams */}
@@ -97,6 +98,32 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
         </div>
         <p className="text-[11px] text-[#8A93A3] mt-1 font-sans flex items-center justify-center gap-1">
           <GraduationCap className="w-3.5 h-3.5 text-[#4F46E5]" />
+=======
+      className="h-full flex flex-col justify-between items-center p-3 sm:p-4 bg-[#07170e] border-r border-[#193a27] text-[#f3f1e6] relative overflow-hidden select-none"
+    >
+      {/* Ambient Classroom Glow Beams */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#092214]/90 via-[#06140c]/95 to-[#040c07] pointer-events-none" />
+      <div className="absolute -top-16 -left-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-8 -right-16 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Tutor Identity Tag Header */}
+      <div id="tutor-header" className="w-full text-center z-10 pt-1">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#112b1d] border border-[#235839] shadow-lg">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              isSpeaking ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'
+            }`}
+          />
+          <span className="text-xs tracking-wider uppercase font-bold text-[#e1f5eb]">
+            {tutorState.name || 'Dr. Marcus Vance'}
+          </span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30">
+            AI TUTOR
+          </span>
+        </div>
+        <p className="text-[11px] text-[#86b59b] mt-1 font-sans flex items-center justify-center gap-1">
+          <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           <span>Interactive Mentor &bull; {currentGrade}</span>
         </p>
       </div>
@@ -110,13 +137,22 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
         <div
           className={`absolute w-56 h-56 rounded-full transition-all duration-300 pointer-events-none ${
             isSpeaking
+<<<<<<< HEAD
               ? 'bg-[#4F46E5]/12 blur-3xl scale-110'
               : 'bg-[#4F46E5]/6 blur-2xl scale-95'
+=======
+              ? 'bg-amber-400/20 blur-3xl scale-110'
+              : 'bg-emerald-500/15 blur-2xl scale-95'
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           }`}
         />
 
         {/* Character Stage Card */}
+<<<<<<< HEAD
         <div className="relative w-56 h-72 rounded-2xl overflow-hidden border-2 border-[#E3E6EC] shadow-[0_6px_20px_rgba(22,26,34,0.10)] bg-gradient-to-b from-[#EEF0F4] to-[#E4E7EE] flex items-center justify-center group">
+=======
+        <div className="relative w-56 h-72 rounded-2xl overflow-hidden border-2 border-[#2b6b45] shadow-[0_12px_40px_rgba(0,0,0,0.8)] bg-gradient-to-b from-[#133022] to-[#0a1b12] flex items-center justify-center group">
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           {/* Animated SVG Character */}
           <div
             className={`w-full h-full flex items-center justify-center transition-transform duration-300 ${
@@ -337,13 +373,20 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
 
           {/* Live Audio Visualizer Banner Over Character Base */}
           {isSpeaking && (
+<<<<<<< HEAD
             <div className="absolute bottom-2 inset-x-2 px-2.5 py-1 rounded-md bg-white/90 backdrop-blur-sm border border-[#DDE1E8] flex items-center justify-between text-[11px] text-[#4F46E5] font-mono">
               <span className="flex items-center gap-1.5">
                 <Volume2 className="w-3.5 h-3.5 text-[#4F46E5] animate-pulse" />
+=======
+            <div className="absolute bottom-2 inset-x-2 px-2.5 py-1 rounded-md bg-black/80 backdrop-blur-sm border border-amber-400/40 flex items-center justify-between text-[11px] text-amber-300 font-mono">
+              <span className="flex items-center gap-1.5">
+                <Volume2 className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
                 <span>Dr. Marcus Talking</span>
               </span>
               <div className="flex items-center gap-0.5 h-3">
                 <span
+<<<<<<< HEAD
                   className="w-1 bg-[#4F46E5] rounded-full transition-all duration-75"
                   style={{ height: `${Math.max(4, openness * 16)}px` }}
                 />
@@ -357,6 +400,21 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
                 />
                 <span
                   className="w-1 bg-[#8B86F0] rounded-full transition-all duration-75"
+=======
+                  className="w-1 bg-amber-400 rounded-full transition-all duration-75"
+                  style={{ height: `${Math.max(4, openness * 16)}px` }}
+                />
+                <span
+                  className="w-1 bg-amber-300 rounded-full transition-all duration-75"
+                  style={{ height: `${Math.max(6, openness * 20)}px` }}
+                />
+                <span
+                  className="w-1 bg-amber-400 rounded-full transition-all duration-75"
+                  style={{ height: `${Math.max(4, openness * 14)}px` }}
+                />
+                <span
+                  className="w-1 bg-amber-300 rounded-full transition-all duration-75"
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
                   style={{ height: `${Math.max(5, openness * 18)}px` }}
                 />
               </div>
@@ -364,13 +422,18 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
           )}
 
           {/* Teacher Badge */}
+<<<<<<< HEAD
           <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-white/90 backdrop-blur-sm text-[10px] text-indigo-600 border border-indigo-200 font-mono flex items-center gap-1">
+=======
+          <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] text-emerald-300 border border-emerald-500/30 font-mono flex items-center gap-1">
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             LIVE CHARACTER
           </div>
         </div>
 
         {/* Live Status Description */}
+<<<<<<< HEAD
         <div className="mt-2.5 flex items-center gap-2 text-xs text-[#626B7B]">
           {isSpeaking ? (
             <span className="flex items-center gap-1.5 text-[#4F46E5] font-medium">
@@ -379,6 +442,16 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
             </span>
           ) : (
             <span className="flex items-center gap-1.5 text-indigo-600 font-medium">
+=======
+        <div className="mt-2.5 flex items-center gap-2 text-xs text-[#9ec4af]">
+          {isSpeaking ? (
+            <span className="flex items-center gap-1.5 text-amber-300 font-medium">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+              Explaining {currentTopic}...
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-emerald-400/90 font-medium">
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
               <Mic className="w-3.5 h-3.5 text-emerald-400" />
               Listening &bull; Speak or interrupt anytime
             </span>
@@ -393,12 +466,21 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
       >
         {/* Student Voice Bubble */}
         {showInput && inputTranscript?.text && (
+<<<<<<< HEAD
           <div className="w-full p-2.5 rounded-xl bg-[#F8F9FB] border border-[#DDE1E8] text-xs shadow-md animate-fadeIn">
             <div className="flex items-center gap-1.5 text-[#626B7B] font-bold mb-1">
               <User className="w-3.5 h-3.5 text-emerald-400" />
               <span>You ({currentGrade}):</span>
             </div>
             <p className="text-[#2B313C] italic font-sans leading-relaxed">
+=======
+          <div className="w-full p-2.5 rounded-xl bg-[#14281f] border border-[#23583a] text-xs shadow-md animate-fadeIn">
+            <div className="flex items-center gap-1.5 text-[#97e2b3] font-bold mb-1">
+              <User className="w-3.5 h-3.5 text-emerald-400" />
+              <span>You ({currentGrade}):</span>
+            </div>
+            <p className="text-[#f1f7f3] italic font-sans leading-relaxed">
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
               &ldquo;{inputTranscript.text}&rdquo;
             </p>
           </div>
@@ -406,6 +488,7 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
 
         {/* Tutor Voice Bubble */}
         {showOutput && outputTranscript?.text && (
+<<<<<<< HEAD
           <div className="w-full p-2.5 rounded-xl bg-[#E3E6EC] border border-[#C7C4F7] text-xs shadow-lg animate-fadeIn">
             <div className="flex items-center justify-between text-[#4F46E5] font-bold mb-1">
               <span className="flex items-center gap-1.5">
@@ -415,15 +498,32 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
               <span className="text-[10px] text-[#8A93A3] font-normal">Real-time</span>
             </div>
             <p className="text-[#161A22] font-sans leading-relaxed">
+=======
+          <div className="w-full p-2.5 rounded-xl bg-[#1a3827] border border-[#3b7e56] text-xs shadow-lg animate-fadeIn">
+            <div className="flex items-center justify-between text-amber-300 font-bold mb-1">
+              <span className="flex items-center gap-1.5">
+                <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+                <span>Dr. Marcus:</span>
+              </span>
+              <span className="text-[10px] text-[#86b59b] font-normal">Real-time</span>
+            </div>
+            <p className="text-[#ffffff] font-sans leading-relaxed">
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
               {outputTranscript.text}
             </p>
           </div>
         )}
 
         {!showInput && !showOutput && (
+<<<<<<< HEAD
           <div className="w-full p-3 rounded-xl bg-[#F8F9FB]/70 border border-[#E3E6EC] text-center text-xs text-[#8A93A3]">
             <p>
               Click <strong className="text-emerald-300">Start Lesson</strong> below to start a live voice session on <strong className="text-[#4F46E5]">{currentTopic}</strong>. Dr. Marcus will speak, listen, and dynamically illustrate the concepts!
+=======
+          <div className="w-full p-3 rounded-xl bg-[#102419]/70 border border-[#1b432a] text-center text-xs text-[#7aa58d]">
+            <p>
+              Click <strong className="text-emerald-300">Start Lesson</strong> below to start a live voice session on <strong className="text-amber-300">{currentTopic}</strong>. Dr. Marcus will speak, listen, and dynamically illustrate the concepts!
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
             </p>
           </div>
         )}
