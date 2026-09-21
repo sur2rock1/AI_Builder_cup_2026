@@ -28,6 +28,7 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
     setCustomPrompt('');
   };
 
+<<<<<<< HEAD
   // Generate a topic-relevant SVG diagram as a reliable fallback when AI image generation is unavailable.
   // This is always on-topic, always educational, and never requires API credits.
   const buildFallbackSvg = (topicText: string): string => {
@@ -102,6 +103,12 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
   const defaultImageUrl = photoData?.imageUrl || buildFallbackSvg(topic);
   const isAiGenerated = !!photoData?.imageUrl;
 
+=======
+  // Default educational fallback image seed based on topic if no image yet
+  const defaultImageUrl =
+    photoData?.imageUrl ||
+    `https://picsum.photos/seed/${encodeURIComponent(topic.toLowerCase().replace(/[^a-z0-9]/g, ''))}/1280/720?blur=1`;
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
 
   return (
     <div className="w-full h-full flex flex-col bg-[#05170e] text-[#f0f9f3] relative overflow-hidden select-none">
@@ -184,6 +191,7 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-5 pt-12 pointer-events-none">
               <div className="max-w-2xl">
                 <span className="text-[10px] text-amber-400 uppercase font-mono font-bold tracking-wider block mb-1">
+<<<<<<< HEAD
                   {isAiGenerated ? 'AI-Generated Scientific Visual' : 'Educational Diagram — Tap "Generate" for AI photo'}
                 </span>
                 <h4 className="text-base font-bold text-white font-serif leading-snug">
@@ -193,6 +201,16 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
                   {isAiGenerated
                     ? (photoData?.promptUsed || `Photorealistic representation of ${topic} for ${grade}.`)
                     : `Structural concept diagram for ${topic}. Click "Generate" above to request an AI-generated photorealistic visual.`}
+=======
+                  Scientific Photographic Depiction
+                </span>
+                <h4 className="text-base font-bold text-white font-serif leading-snug">
+                  {photoData?.caption || `High-Resolution Photographic Study: ${topic}`}
+                </h4>
+                <p className="text-xs text-[#b8dfcc] mt-1 leading-relaxed line-clamp-2">
+                  {photoData?.promptUsed ||
+                    `Photorealistic representation illustrating the real-world scale, physical environment, and empirical manifestations of ${topic} for ${grade}.`}
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
                 </p>
               </div>
             </div>

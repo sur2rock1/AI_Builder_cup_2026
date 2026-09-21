@@ -23,7 +23,11 @@ export const BottomBar: React.FC<BottomBarProps> = ({
   return (
     <footer
       id="bottom-action-bar"
+<<<<<<< HEAD
       className="h-[74px] w-full bg-[#FFFFFF] border-t border-[#E3E6EC] px-4 md:px-8 flex items-center justify-between z-40 select-none shadow-sm"
+=======
+      className="h-[74px] w-full bg-[#07170e] border-t border-[#1a3827] px-4 md:px-8 flex items-center justify-between z-40 select-none shadow-2xl"
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
     >
       {/* Left section: Big "Start / End Lesson" Button & Status Dot */}
       <div className="flex items-center gap-4">
@@ -33,8 +37,13 @@ export const BottomBar: React.FC<BottomBarProps> = ({
           disabled={connectionStatus === 'connecting'}
           className={`px-6 py-2.5 rounded-full font-bold text-sm tracking-wide transition-all duration-200 flex items-center gap-2.5 cursor-pointer shadow-lg active:scale-95 ${
             isLessonActive
+<<<<<<< HEAD
               ? 'bg-[#DC2626] hover:bg-[#B91C1C] text-white shadow-md'
               : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold shadow-md'
+=======
+              ? 'bg-[#c93b3b] hover:bg-[#b02f2f] text-white shadow-rose-900/30'
+              : 'bg-[#10b981] hover:bg-[#059669] text-[#062014] font-black shadow-emerald-900/40 hover:shadow-emerald-500/20'
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           } ${connectionStatus === 'connecting' ? 'opacity-70 cursor-wait' : ''}`}
         >
           {isLessonActive ? (
@@ -78,20 +87,35 @@ export const BottomBar: React.FC<BottomBarProps> = ({
       </div>
 
       {/* Middle section: Active Topic & Real-Time Dynamic Visuals */}
+<<<<<<< HEAD
       <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F1F0FE] border border-[#DDE1E8] text-xs">
         <Sparkles className="w-3.5 h-3.5 text-[#4F46E5]" />
         <span className="text-[#626B7B]">
           Dynamic Teaching Surface: <strong className="text-[#161A22]">{currentTopic}</strong> &bull; Speaks, illustrates &amp; tests in real time
+=======
+      <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#102418] border border-[#1f4b30] text-xs">
+        <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+        <span className="text-[#8cb89f]">
+          Dynamic Teaching Surface: <strong className="text-white">{currentTopic}</strong> &bull; Speaks, illustrates &amp; tests in real time
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
         </span>
       </div>
 
       {/* Right section: Microphone Input Activity Bars */}
       <div id="mic-indicator-box" className="flex items-center gap-3">
+<<<<<<< HEAD
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F8F9FB] border border-[#E3E6EC]">
           {isLessonActive ? (
             <Mic className="w-4 h-4 text-[#4F46E5] animate-pulse" />
           ) : (
             <MicOff className="w-4 h-4 text-[#8A93A3]" />
+=======
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#102519] border border-[#1c472d]">
+          {isLessonActive ? (
+            <Mic className="w-4 h-4 text-emerald-400 animate-pulse" />
+          ) : (
+            <MicOff className="w-4 h-4 text-[#5e8b72]" />
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           )}
 
           {/* Audio Visualizer Waves */}
@@ -101,8 +125,13 @@ export const BottomBar: React.FC<BottomBarProps> = ({
                 key={i}
                 className={`w-1 rounded-full transition-all duration-75 ${
                   isLessonActive && i < activeBars
+<<<<<<< HEAD
                     ? 'bg-[#4F46E5] h-3.5'
                     : 'bg-[#DDE1E8] h-1.5'
+=======
+                    ? 'bg-amber-400 h-3.5'
+                    : 'bg-[#183925] h-1.5'
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
                 }`}
               />
             ))}

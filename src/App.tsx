@@ -15,6 +15,7 @@ import { BottomBar } from './components/BottomBar';
 import { AudioManager } from './utils/audio';
 import { createDynamicLesson } from './utils/lessonGenerator';
 import { Sparkles, RefreshCw } from 'lucide-react';
+<<<<<<< HEAD
 import { LearnerProfilePanel } from './components/LearnerProfilePanel';
 import { CurriculumUpload } from './components/CurriculumUpload';
 import {
@@ -112,6 +113,15 @@ export const App: React.FC = () => {
   }, []);
 
   // ─── Blackboard State
+=======
+
+export const App: React.FC = () => {
+  // Topic and Grade State (No hardcoded predefined topic - set on the fly!)
+  const [topic, setTopic] = useState('');
+  const [grade, setGrade] = useState('Secondary 2 (Grade 8)');
+
+  // Blackboard State
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
   const [blackboard, setBlackboard] = useState<BlackboardState>({
     activeTab: '2d',
     lessonData: null,
@@ -327,6 +337,7 @@ export const App: React.FC = () => {
 
   // Handle Tool Calls from Gemini Live Voice Model
   const handleToolCall = useCallback(
+<<<<<<< HEAD
     (name: string, args: Record<string, any>, serverResult?: Record<string, any>) => {
       console.log(`[App] Handling Gemini Live tool call: ${name}`, args, serverResult);
 
@@ -405,17 +416,26 @@ export const App: React.FC = () => {
           break;
         }
 
+=======
+    (name: string, args: Record<string, any>) => {
+      console.log(`[App] Handling Gemini Live tool call: ${name}`, args);
+
+      switch (name) {
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
         case 'update_chalkboard_notes': {
           const bulletPoints = Array.isArray(args.bulletPoints) ? args.bulletPoints : [];
           const coreRule = args.coreRuleOrFormula || undefined;
           const title = args.title || undefined;
 
+<<<<<<< HEAD
           setBoardNote({ title, lines: bulletPoints.map(String), formula: coreRule });
           // Writing on the board: switch to the chalkboard, on a fresh page.
           setPanelMode('chalk');
           setBlackboard(prev => ({ ...prev, customLiveNotes: [] }));
           if (coreRule) revealPart('formula');
 
+=======
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           setBlackboard((prev) => {
             if (!prev.lessonData) return prev;
             return {
@@ -444,7 +464,10 @@ export const App: React.FC = () => {
               activeTab: 'chalkboard',
               customLiveNotes: [...prev.customLiveNotes, String(note)],
             }));
+<<<<<<< HEAD
             setPanelMode('chalk');
+=======
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           }
           break;
         }
@@ -455,13 +478,19 @@ export const App: React.FC = () => {
           if (['2d', '3d', 'photo', 'chalkboard', 'explorer', 'quiz'].includes(tab)) {
             setBlackboard((prev) => ({ ...prev, activeTab: tab }));
           }
+<<<<<<< HEAD
           // Six legacy tabs collapse onto three views: real world, shape, 3D.
           setPanelMode(tab === '3d' ? '3d' : tab === 'photo' ? 'real' : tab === 'chalkboard' ? 'chalk' : 'shape');
+=======
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           break;
         }
 
         case 'generate_photo_visual': {
+<<<<<<< HEAD
           setPanelMode('real');
+=======
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           const prompt = args.prompt;
           handleGeneratePhoto(prompt);
           break;
@@ -480,7 +509,10 @@ export const App: React.FC = () => {
 
         case 'highlight_concept': {
           const target = String(args.nodeIdOrName || '').toLowerCase();
+<<<<<<< HEAD
           revealPart(resolvePart(target));
+=======
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           setBlackboard((prev) => {
             const matched = prev.lessonData?.diagram.nodes.find(
               (n) => n.id.toLowerCase().includes(target) || n.label.toLowerCase().includes(target)
@@ -500,6 +532,7 @@ export const App: React.FC = () => {
           const correctIndex = Number(args.correctIndex) || 0;
           const explanation = args.explanation || 'Review the core concept breakdown.';
 
+<<<<<<< HEAD
           // Put the question on the chalkboard so the child can see what to solve.
           // (Before, this only updated the old blackboard's quiz tab, which the
           // immersive stage never shows — the board looked frozen.) The answer
@@ -514,6 +547,8 @@ export const App: React.FC = () => {
             setPanelMode('chalk');
           }
 
+=======
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           if (question && Array.isArray(options)) {
             setBlackboard((prev) => {
               if (!prev.lessonData) return prev;
@@ -537,6 +572,7 @@ export const App: React.FC = () => {
           break;
         }
 
+<<<<<<< HEAD
         case 'update_diagram': {
           const focus = String(args.focus || '');
           revealPart(resolvePart(focus));
@@ -574,10 +610,13 @@ export const App: React.FC = () => {
           break;
         }
 
+=======
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
         default:
           console.warn(`[App] Unhandled tool call: ${name}`);
       }
     },
+<<<<<<< HEAD
     [grade, topic, loadLesson, revealPart]
   );
 
@@ -665,6 +704,11 @@ export const App: React.FC = () => {
     });
   };
 
+=======
+    [grade, loadLesson]
+  );
+
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
   // Start or Stop Live Voice Lesson
   const toggleVoiceLesson = async () => {
     if (connectionStatus === 'connected' || connectionStatus === 'connecting') {
@@ -734,11 +778,16 @@ export const App: React.FC = () => {
               text: msg.text,
               timestamp: Date.now(),
             });
+<<<<<<< HEAD
           } else if (msg.type === 'learner_update' && msg.snapshot) {
             applyLearnerSnapshot(msg.snapshot as LearnerSnapshot);
           } else if (msg.type === 'session_ready') {
             setConnectionStatus('connected');
             setLearnerSnap(null); setLiveMastery(0); setLiveMisconceptions([]); setLiveAssessment(null);
+=======
+          } else if (msg.type === 'session_ready') {
+            setConnectionStatus('connected');
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           } else if (msg.type === 'interrupted') {
             audioMgr.flushPlayback();
           } else if (msg.type === 'tool_call') {
@@ -768,6 +817,7 @@ export const App: React.FC = () => {
     }
   };
 
+<<<<<<< HEAD
   // A confusion button is the child speaking. It goes into the conversation as
   // a real turn so the tutor responds to it, and it is never framed as a failure.
   const CONFUSION_PHRASES: Record<string, string> = {
@@ -850,6 +900,8 @@ export const App: React.FC = () => {
     return () => window.clearInterval(iv);
   }, [connectionStatus, setThinking]);
 
+=======
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
   // Send a suggested question as student voice/text prompt
   const handleAskSuggestedQuestion = (questionText: string) => {
     setInputTranscript({
@@ -912,6 +964,7 @@ export const App: React.FC = () => {
     }
   };
 
+<<<<<<< HEAD
   // ─── Screen navigation handlers ─────────────────────────────
   const handleLogin = (profile: StudentProfile) => {
     setLoggedInStudent(profile);
@@ -1026,6 +1079,17 @@ export const App: React.FC = () => {
             ? 'bg-[#0C0F16] border-b border-white/[0.07]'
             : 'bg-[#FFFFFF] border-b border-[#E3E6EC] shadow-md'
         }`}
+=======
+  return (
+    <div
+      id="app-root"
+      className="w-screen h-screen flex flex-col bg-[#05110a] text-[#f2faf5] font-sans antialiased overflow-hidden select-none"
+    >
+      {/* GLOBAL TOP NAVIGATION */}
+      <header
+        id="top-nav-bar"
+        className="h-14 w-full bg-[#071910] border-b border-[#1a3a27] px-4 flex items-center justify-between z-30 shadow-md"
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
       >
         {/* Brand & Identity */}
         <div className="flex items-center gap-2.5">
@@ -1050,6 +1114,7 @@ export const App: React.FC = () => {
           isLoading={blackboard.isLoading}
         />
 
+<<<<<<< HEAD
         {/* Right: Student info + controls */}
         <div className="flex items-center gap-2">
           {loggedInStudent && (
@@ -1067,18 +1132,27 @@ export const App: React.FC = () => {
           >
             <span className="text-xs font-medium">👤 {loggedInStudent?.name || 'Profile'}</span>
           </button>
+=======
+        {/* Right: Refresh Lesson / Voice Status */}
+        <div className="flex items-center gap-2">
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           {topic && (
             <button
               onClick={() => loadLesson(topic, grade)}
               disabled={blackboard.isLoading}
               title="Regenerate dynamic lesson"
+<<<<<<< HEAD
               className="p-1.5 rounded-lg bg-[#FFFFFF] hover:bg-[#F1F0FE] border border-[#DDE1E8] text-[#8A93A3] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+=======
+              className="p-1.5 rounded-lg bg-[#0e271a] hover:bg-[#163a26] border border-[#204e33] text-[#86b59b] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
             >
               <RefreshCw className={`w-4 h-4 ${blackboard.isLoading ? 'animate-spin' : ''}`} />
             </button>
           )}
         </div>
       </header>
+<<<<<<< HEAD
       )}
 
       {/* MAIN WORKSPACE */}
@@ -1089,6 +1163,15 @@ export const App: React.FC = () => {
         <section
           id="animated-tutor-section"
           className="w-[30%] min-w-[280px] max-w-[380px] h-full flex flex-col min-h-0"
+=======
+
+      {/* MAIN WORKSPACE: Animated Tutor Character on left, Dynamic Blackboard on right */}
+      <main id="main-workspace" className="flex-1 w-full flex flex-row overflow-hidden">
+        {/* Left: Animated Vector Character Tutor */}
+        <section
+          id="animated-tutor-section"
+          className="w-[30%] min-w-[280px] max-w-[380px] h-full flex flex-col"
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
         >
           <AnimatedTutorCharacter
             tutorState={tutorState}
@@ -1098,6 +1181,7 @@ export const App: React.FC = () => {
             currentGrade={grade}
           />
         </section>
+<<<<<<< HEAD
         )}
 
         {/* Right: Teaching surface */}
@@ -1150,6 +1234,11 @@ export const App: React.FC = () => {
               onConfusion={handleConfusion}
             />
           ) : (
+=======
+
+        {/* Right: Dynamic Real-Time Blackboard Teaching Surface */}
+        <section id="dynamic-blackboard-section" className="flex-1 h-full relative">
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           <DynamicBlackboard
             blackboard={blackboard}
             onTabChange={(tab) => setBlackboard((prev) => ({ ...prev, activeTab: tab }))}
@@ -1174,6 +1263,7 @@ export const App: React.FC = () => {
               }));
             }}
             onQuizAnswer={(idx) => {
+<<<<<<< HEAD
               if (sessionId) {
                 handleAdaptiveQuizAnswer(idx);
               } else {
@@ -1183,12 +1273,20 @@ export const App: React.FC = () => {
                   showQuizResult: true,
                 }));
               }
+=======
+              setBlackboard((prev) => ({
+                ...prev,
+                selectedQuizOption: idx,
+                showQuizResult: true,
+              }));
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
             }}
             onAskSuggestedQuestion={handleAskSuggestedQuestion}
             onSetTopicOnTheFly={handleApplyTopicAndGrade}
             onAskVisualOrCommand={handleAskVisualOrCommand}
             onGeneratePhoto={handleGeneratePhoto}
           />
+<<<<<<< HEAD
           )}
         </section>
       </main>
@@ -1214,6 +1312,12 @@ export const App: React.FC = () => {
 
       {/* BOTTOM CONTROL BAR — immersive stage supplies its own, so skip it there. */}
       {BOARD_SURFACE !== 'immersive' && (
+=======
+        </section>
+      </main>
+
+      {/* BOTTOM CONTROL BAR: Start/End Lesson & Audio Mic Status */}
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
       <BottomBar
         isLessonActive={connectionStatus === 'connected' || connectionStatus === 'connecting'}
         connectionStatus={connectionStatus}
@@ -1221,7 +1325,10 @@ export const App: React.FC = () => {
         currentTopic={topic || 'Any Topic on the Fly'}
         onToggleLesson={toggleVoiceLesson}
       />
+<<<<<<< HEAD
       )}
+=======
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
     </div>
   );
 };

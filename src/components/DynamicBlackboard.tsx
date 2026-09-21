@@ -414,7 +414,11 @@ export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
       </div>
 
       {/* MAIN VIEWPORT: Render 2D, 3D, Photo, Chalk Notes, Explorer, or Quiz */}
+<<<<<<< HEAD
       <main className="flex-1 w-full overflow-y-auto min-h-0 p-4 sm:p-6 z-10">
+=======
+      <main className="flex-1 w-full overflow-y-auto p-4 sm:p-6 z-10">
+>>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
         {/* ============================================================ */}
         {/* TAB 1: 2D CONCEPT DIAGRAM */}
         {/* ============================================================ */}
