@@ -1,0 +1,6 @@
+{
+  "name": "Pythagoras Tutor",
+  "description": "An interactive voice AI teacher with an animated tutor character that dynamically generates lessons, concept diagrams, chalk notes, and quizzes for any subject, topic, and grade level in real time.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

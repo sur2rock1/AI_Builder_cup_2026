@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        function isBenign(item) {
+          if (!item) return false;
+          var text = (item.message || item.reason?.message || item.reason || item.description || String(item)).toLowerCase();
+          return text.indexOf('websocket') !== -1 || text.indexOf('[vite]') !== -1 || text.indexOf('vite-hmr') !== -1;
+        }
+        var origConsoleError = console.error;
+        console.error = function() {
+          var text = Array.prototype.slice.call(arguments).map(function(arg) {
+            return (arg && arg.message) || String(arg || '');
+          }).join(' ').toLowerCase();
+          if (text.indexOf('[vite]') !== -1 || text.indexOf('websocket closed without opened') !== -1 || text.indexOf('failed to connect to websocket') !== -1) {
+            return;
+          }
+          return origConsoleError.apply(console, arguments);
+        };
+        window.addEventListener('unhandledrejection', function(e) {
+          if (isBenign(e.reason) || isBenign(e)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return false;
+          }
+        }, true);
+        window.addEventListener('error', function(e) {
+          if (isBenign(e.error) || isBenign(e.message) || isBenign(e)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return false;
+          }
+        }, true);
+      })();
+    </script>
+    <title>Dr. Marcus — AI Learning Companion</title>
+    <meta name="description" content="A judgment-free AI tutor that adapts to how you learn. with an animated tutor character that dynamically generates lessons, concept diagrams, chalk notes, and quizzes for any subject, topic, and grade level in real time." />
+    <meta property="og:title" content="Dr. Marcus — AI Learning Companion" />
+    <meta property="og:description" content="A judgment-free AI tutor that adapts to how you learn. with an animated tutor character that dynamically generates lessons, concept diagrams, chalk notes, and quizzes for any subject, topic, and grade level in real time." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
