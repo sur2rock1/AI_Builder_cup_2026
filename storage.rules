@@ -1,0 +1,40 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    function isUnderSize(maxBytes) {
+      return request.resource.size < maxBytes;
+    }
+    function isMedia() {
+      return request.resource.contentType.matches('image/.*')
+        || request.resource.contentType.matches('audio/.*')
+        || request.resource.contentType.matches('video/.*')
+        || request.resource.contentType == 'application/pdf';
+    }
+
+    // User multimedia uploads (images, audio, video, PDF)
+    match /users/{userId}/media/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId)
+        && isMedia()
+        && isUnderSize(100 * 1024 * 1024);
+    }
+
+    // Curriculum / lesson assets
+    match /curricula/{userId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId)
+        && isMedia()
+        && isUnderSize(50 * 1024 * 1024);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

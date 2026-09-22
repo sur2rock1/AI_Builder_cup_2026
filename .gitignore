@@ -7,6 +7,25 @@ coverage/
 .env*
 !.env.example
 
+# Firebase / Google credentials — never commit
+serviceAccount.json
+**/serviceAccount*.json
+*-firebase-adminsdk-*.json
+.runtimeconfig.json
+functions/.env
+functions/.env.*
+!functions/.env.example
+
+# Firebase local / emulator artifacts
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
+firestore-debug.log
+pubsub-debug.log
+functions/lib/
+functions/node_modules/
+
 # test build output
 tests/.build/
 logs/

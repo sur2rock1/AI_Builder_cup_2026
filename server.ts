@@ -29,9 +29,11 @@ import { startIngestJob, getJob } from './src/curriculum/pdfIngest';
 import os from 'os';
 import fs from 'fs';
 import { AdaptiveSessionState, TeachingStrategy, CurriculumConcept } from './src/adaptive/learnerModel';
+import { initFirebaseAdmin } from './src/firebase/admin';
 
 
 dotenv.config();
+initFirebaseAdmin();
 
 // ── Guard against Vite-internal WebSocket frame errors ──────────
 // When Vite runs in middlewareMode, its bundled ws instance can emit
