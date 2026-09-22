@@ -348,13 +348,9 @@ export const Interactive2DDiagram: React.FC<Interactive2DDiagramProps> = ({
   return (
     <div
       className={`w-full flex flex-col gap-4 text-[#e0f2e9] ${
-<<<<<<< HEAD
         isExpanded
           ? 'fixed inset-4 z-50 bg-[#06190e] border-2 border-emerald-500/50 rounded-3xl p-6 shadow-2xl overflow-y-auto'
           : 'relative'
-=======
-        isExpanded ? 'fixed inset-4 z-50 bg-[#06190e] border-2 border-emerald-500/50 rounded-3xl p-6 shadow-2xl overflow-y-auto' : ''
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
       }`}
     >
       {/* 1. TOP HEADER & DIAGRAM VIEW CONTROLS */}
@@ -441,18 +437,12 @@ export const Interactive2DDiagram: React.FC<Interactive2DDiagramProps> = ({
         </div>
       </div>
 
-<<<<<<< HEAD
       {/* MAIN INTERACTIVE VISUAL CANVAS */}
       <div className="relative w-full rounded-3xl bg-[#06180d] border-2 border-[#1c482c] shadow-2xl overflow-hidden min-h-[440px] pb-24 flex flex-row items-stretch justify-center p-4 gap-4">
-=======
-      {/* 2. MAIN INTERACTIVE VISUAL CANVAS */}
-      <div className="relative w-full rounded-3xl bg-[#06180d] border-2 border-[#1c482c] shadow-2xl overflow-hidden min-h-[440px] flex flex-col items-center justify-center p-4">
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
         {/* Subtle grid background */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f331f_1px,transparent_1px),linear-gradient(to_bottom,#0f331f_1px,transparent_1px)] bg-[size:28px_28px] opacity-40 pointer-events-none" />
         <div className="absolute inset-0 bg-radial from-transparent via-[#06180d]/60 to-[#06180d] pointer-events-none" />
 
-<<<<<<< HEAD
         {/* 2D GEOMETRY PANEL — full-height left panel for triangle/maths/pythagoras topics */}
         {/triangle|pythagoras|theorem|geometry|right.angle|hypotenuse/i.test(`${title} ${diagram.description || ''} ${overview || ''}`) && (
           <div className="shrink-0 w-[38%] max-w-[420px] rounded-2xl bg-[#041009]/85 border border-[#1c482c] flex flex-col items-center justify-center p-4 select-none">
@@ -498,14 +488,6 @@ export const Interactive2DDiagram: React.FC<Interactive2DDiagramProps> = ({
             <svg
               viewBox="0 0 960 440"
               className="w-full h-full select-none"
-=======
-        {/* MODE A: SVG FLOWCHART PIPELINE CANVAS */}
-        {viewMode === 'flow' && (
-          <div className="relative w-full h-[460px] flex items-center justify-center overflow-x-auto">
-            <svg
-              viewBox="0 0 960 440"
-              className="w-full h-full min-w-[720px] select-none"
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
               preserveAspectRatio="xMidYMid meet"
             >
               <defs>
@@ -739,11 +721,7 @@ export const Interactive2DDiagram: React.FC<Interactive2DDiagramProps> = ({
 
         {/* MODE B: CIRCULAR CYCLE VIEW (For cycles like Calvin, Water, Krebs, Carnot) */}
         {viewMode === 'cycle' && (
-<<<<<<< HEAD
           <div className="relative flex-1 min-w-0 h-[480px] flex items-center justify-center">
-=======
-          <div className="relative w-full h-[480px] flex items-center justify-center">
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
             <svg
               viewBox="0 0 800 500"
               className="w-full h-full max-w-2xl select-none"
@@ -894,11 +872,7 @@ export const Interactive2DDiagram: React.FC<Interactive2DDiagramProps> = ({
 
         {/* MODE C: DETAILED SCHEMATIC MATRIX (Enhanced Cards with connecting process bars) */}
         {viewMode === 'matrix' && (
-<<<<<<< HEAD
           <div className="flex-1 min-w-0 max-h-[460px] overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 p-2 relative z-10 content-start">
-=======
-          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2 relative z-10">
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
             {nodes.map((node, index) => {
               const isSelected = selectedNode?.id === node.id;
               const isCurrentActive = activeStepIndex === index;
@@ -955,7 +929,6 @@ export const Interactive2DDiagram: React.FC<Interactive2DDiagramProps> = ({
         )}
       </div>
 
-<<<<<<< HEAD
       {/* 3. LIVE STEP SPOTLIGHT — rendered as overlay INSIDE the canvas, no extra height */}
       {selectedNode && (
         <div className="absolute bottom-0 inset-x-0 z-20 bg-[#06180d]/95 backdrop-blur-sm border-t-2 border-amber-400/40 px-5 py-3 flex items-start gap-4">
@@ -982,92 +955,10 @@ export const Interactive2DDiagram: React.FC<Interactive2DDiagramProps> = ({
               <Volume2 className="w-3 h-3 text-amber-400" />
               <span>Ask Dr. Vance</span>
             </button>
-=======
-      {/* 3. LIVE STEP SPOTLIGHT & DEEP CONCEPT INSPECTOR */}
-      {selectedNode && (
-        <div className="bg-[#092214] border-2 border-amber-400/40 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400/5 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3 pb-3 border-b border-[#1b432a]">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-300">
-                {React.createElement(getNodeIcon(selectedNode), { className: 'w-5 h-5' })}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] px-2 py-0.5 rounded uppercase font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 font-mono">
-                    {getPhaseBadge(activeStepIndex, nodes.length, selectedNode.category)}
-                  </span>
-                  {selectedNode.sublabel && (
-                    <span className="text-xs text-[#9fc7b1] font-mono">
-                      {selectedNode.sublabel}
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-lg font-bold text-white font-serif tracking-wide mt-0.5">
-                  {selectedNode.label}
-                </h3>
-              </div>
-            </div>
-
-            {/* Quick action buttons for the selected node */}
-            <div className="flex items-center gap-2">
-              {onAskTutor && (
-                <button
-                  onClick={() =>
-                    onAskTutor(
-                      `Dr. Vance, can you explain the exact mechanism of "${selectedNode.label}" and how it connects to the next step?`
-                    )
-                  }
-                  className="px-3 py-1.5 rounded-xl bg-[#143c26] hover:bg-[#1a4e32] border border-[#27643f] text-amber-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow"
-                >
-                  <Volume2 className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Ask Dr. Vance to Explain</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          <p className="text-sm text-[#d4ece0] leading-relaxed">
-            {selectedNode.details}
-          </p>
-
-          {/* Upstream and Downstream Relationship Flow */}
-          {connections && connections.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-[#163824] flex flex-wrap items-center gap-4 text-xs">
-              <span className="text-[11px] uppercase font-mono font-bold text-[#86b59b]">
-                Connected Pathway:
-              </span>
-              {connections
-                .filter(
-                  (c) =>
-                    c.from.toLowerCase().includes(selectedNode.label.toLowerCase()) ||
-                    c.to.toLowerCase().includes(selectedNode.label.toLowerCase())
-                )
-                .map((conn, idx) => (
-                  <div
-                    key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0e2d1c] border border-[#214f34] text-[#a4d7bd]"
-                  >
-                    <span className="font-semibold text-emerald-300">{conn.from}</span>
-                    <ArrowRight className="w-3 h-3 text-amber-400" />
-                    <span className="font-semibold text-sky-300">{conn.to}</span>
-                    {conn.label && (
-                      <span className="text-[10px] text-amber-200/80 italic">
-                        ({conn.label})
-                      </span>
-                    )}
-                  </div>
-                ))}
-            </div>
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
           )}
         </div>
       )}
     </div>
   );
 };
-<<<<<<< HEAD
 
-=======
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352

@@ -756,39 +756,16 @@ wss.on('error', (err) => {
   console.error('[WSS] Server error:', err.message);
 });
 
-// Fallback WebSocket server for Vite HMR / browser client keepalive
-const fallbackWss = new WebSocketServer({
-  noServer: true,
-  handleProtocols: (protocols: Set<string>) => {
-    if (protocols.has('vite-hmr')) return 'vite-hmr';
-    const first = Array.from(protocols)[0];
-    return first || false;
-  },
-});
-fallbackWss.on('connection', (ws) => {
-  try {
-    ws.send(JSON.stringify({ type: 'connected' }));
-  } catch (_) {}
-  ws.on('message', () => {});
-  // Prevent unhandled 'error' events from crashing the process
-  // (Vite HMR client can send malformed close frames locally)
-  ws.on('error', (err) => {
-    console.debug('[FallbackWS] Non-fatal WebSocket error (Vite HMR):', err.message);
-  });
-});
-
+// Only claim /ws/live. Leave every other upgrade alone so Vite HMR can
+// handle its own WebSocket — stealing those connections causes a flood of
+// "Invalid WebSocket frame: invalid status code" errors in the terminal.
 server.on('upgrade', (request, socket, head) => {
   try {
     const url = new URL(request.url || '', `http://${request.headers.host || 'localhost'}`);
-    if (url.pathname === '/ws/live') {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
-      });
-    } else {
-      fallbackWss.handleUpgrade(request, socket, head, (ws) => {
-        fallbackWss.emit('connection', ws, request);
-      });
-    }
+    if (url.pathname !== '/ws/live') return;
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
   } catch (upgradeErr) {
     console.warn('[Server] WebSocket upgrade error:', upgradeErr);
     try {
@@ -1101,10 +1078,12 @@ async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const isHmrDisabled = process.env.DISABLE_HMR === 'true';
+    // Run HMR on its own port so it never shares the Live API upgrade path.
+    const hmrPort = Number(process.env.HMR_PORT) || (PORT + 10000);
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        hmr: isHmrDisabled ? false : { server },
+        hmr: isHmrDisabled ? false : { port: hmrPort, clientPort: hmrPort },
       },
       appType: 'spa',
     });

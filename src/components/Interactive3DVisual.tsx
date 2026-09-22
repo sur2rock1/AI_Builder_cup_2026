@@ -103,7 +103,6 @@ export const Interactive3DVisual: React.FC<Interactive3DVisualProps> = ({
 
     const sceneType = getSceneType();
 
-<<<<<<< HEAD
     // Position camera based on scene type for best viewing angle
     if (sceneType === 'geometry') {
       // Straight-on view for the flat triangle
@@ -111,8 +110,6 @@ export const Interactive3DVisual: React.FC<Interactive3DVisualProps> = ({
       camera.lookAt(0, 0.1, 0);
     }
 
-=======
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
     // Background floating dust particles
     const particleCount = 200;
     const particleGeo = new THREE.BufferGeometry();
@@ -293,7 +290,6 @@ export const Interactive3DVisual: React.FC<Interactive3DVisualProps> = ({
         rootGroup.add(pin);
       });
     } else if (sceneType === 'geometry') {
-<<<<<<< HEAD
       // ─── 3D Right-Angle Triangle ─────────────────────────────────────────
       // Vertices: right angle at origin (bottom-left), base goes right, height goes up
       const A = new THREE.Vector3(-3.2, -2.2, 0); // right angle (90°)
@@ -370,29 +366,6 @@ export const Interactive3DVisual: React.FC<Interactive3DVisualProps> = ({
         new THREE.MeshBasicMaterial({ color: 0x1f4e33, transparent: true, opacity: 0.5 })
       ));
 
-=======
-      // 3D Polyhedra & Coordinate Frame
-      const icosaGeo = new THREE.IcosahedronGeometry(2.8, 1);
-      const icosaMat = new THREE.MeshStandardMaterial({
-        color: 0x10b981,
-        roughness: 0.2,
-        metalness: 0.3,
-        wireframe: false,
-      });
-      const icosa = new THREE.Mesh(icosaGeo, icosaMat);
-      rootGroup.add(icosa);
-
-      // Coordinate axes
-      const axesHelper = new THREE.AxesHelper(4.5);
-      rootGroup.add(axesHelper);
-
-      // Outer rings
-      const torus1 = new THREE.Mesh(
-        new THREE.TorusGeometry(4.2, 0.05, 16, 64),
-        new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.6 })
-      );
-      rootGroup.add(torus1);
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
     } else {
       // Neural Network / Concept Matrix
       const nodeCount = 14;

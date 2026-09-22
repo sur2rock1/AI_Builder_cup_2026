@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-<<<<<<< HEAD
 /* Self-hosted so the handwriting survives an offline run and a Cloud Run
    deployment with no outbound access to Google Fonts. File lives in
    public/fonts/, so it is served as a static asset with no npm dependency. */
@@ -12,8 +11,6 @@
   font-display: swap;
 }
 
-=======
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
 @layer utilities {
   .font-chalk {
     font-family: 'Patrick Hand', cursive, sans-serif;
@@ -23,19 +20,13 @@
 body {
   margin: 0;
   padding: 0;
-<<<<<<< HEAD
   background-color: #F6F7F9;
   color: #161A22;
-=======
-  background-color: #0f1715;
-  color: #f3f1e6;
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   overflow: hidden;
   user-select: none;
 }
 
-<<<<<<< HEAD
 
 /* Chalkboard: each line is "written" left to right. */
 @keyframes chalkWrite {
@@ -55,5 +46,3 @@ body {
 /* Gentle fade used when a view or a live learner insight appears. */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 .animate-fadeIn { animation: fadeIn .45s ease-out both; }
-=======
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
