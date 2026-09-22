@@ -141,7 +141,6 @@ export interface TranscriptEntry {
 }
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
-<<<<<<< HEAD
 
 // ─── Adaptive Learning Types (frontend-facing) ─────────────────
 
@@ -226,5 +225,3 @@ export interface CurriculumConceptUI {
   difficultyLevel: number;
   typicalTeachingOrder: number;
 }
-=======
->>>>>>> 73732644c7c312fafae9fe2617657d797c0e4352
