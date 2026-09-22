@@ -746,6 +746,13 @@ export const App: React.FC = () => {
           } else if (msg.type === 'error') {
             console.error('[WebSocket] Server reported error:', msg);
             setConnectionStatus('error');
+            if (msg.message) {
+              setOutputTranscript({
+                id: `err-${Date.now()}`,
+                text: String(msg.message),
+                timestamp: Date.now(),
+              });
+            }
           }
         } catch (parseErr) {
           console.error('[WebSocket] Message parsing error:', parseErr);

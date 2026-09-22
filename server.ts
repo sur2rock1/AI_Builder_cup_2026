@@ -854,8 +854,12 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
 8. NEVER GO QUIET BEFORE A BOARD ACTION. Before update_chalkboard_notes, pose_quiz or generate_photo_visual, first say one short natural phrase out loud — e.g. "Let me write that on the board for you…" or "Let's work through it step by step…" — then call the tool, then carry on explaining.`;
 
   try {
+    // Force Gemini Developer API for Live. With GOOGLE_GENAI_USE_ENTERPRISE /
+    // GOOGLE_CLOUD_PROJECT set, the SDK otherwise routes AQ.* AI Studio keys to
+    // Vertex and closes immediately with a misleading "Invalid resource" error.
     const ai = new GoogleGenAI({
       apiKey,
+      vertexai: false,
       httpOptions: {
         headers: { 'User-Agent': 'aistudio-build' },
       },
@@ -867,8 +871,9 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
     });
     clientWs.on('close', () => observer?.close());
 
+    const liveModel = process.env.LIVE_MODEL || 'gemini-3.8-live';
     liveSession = await ai.live.connect({
-      model: 'gemini-3.8-live',
+      model: liveModel,
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
@@ -881,7 +886,7 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
       },
       callbacks: {
         onopen: () => {
-          console.log('[Gemini Live] Session connected');
+          console.log('[Gemini Live] Session connected', liveModel);
         },
         onmessage: (message: LiveServerMessage) => {
           if (isClosed || clientWs.readyState !== WebSocket.OPEN) return;
@@ -987,9 +992,21 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
             );
           }
         },
-        onclose: () => {
-          console.log('[Gemini Live] Session closed');
+        onclose: (ev: any) => {
+          const reason = String(ev?.reason || '').trim();
+          const code = ev?.code;
+          console.log('[Gemini Live] Session closed', code, reason);
           if (clientWs.readyState === WebSocket.OPEN) {
+            const credits = /credits? are depleted|prepayment|billing/i.test(reason);
+            clientWs.send(
+              JSON.stringify({
+                type: 'error',
+                code: credits ? 'CREDITS_DEPLETED' : 'LIVE_CLOSED',
+                message: credits
+                  ? 'Gemini Live credits are depleted. Top up billing at https://ai.studio/projects then retry voice.'
+                  : reason || `Gemini Live closed (code ${code ?? 'unknown'})`,
+              })
+            );
             clientWs.send(JSON.stringify({ type: 'session_closed' }));
           }
         },
