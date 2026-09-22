@@ -29,7 +29,7 @@ import { startIngestJob, getJob } from './src/curriculum/pdfIngest';
 import os from 'os';
 import fs from 'fs';
 import { AdaptiveSessionState, TeachingStrategy, CurriculumConcept } from './src/adaptive/learnerModel';
-import { initFirebaseAdmin } from './src/firebase/admin';
+import { initFirebaseAdmin, admin } from './src/firebase/admin';
 
 
 dotenv.config();
@@ -57,6 +57,8 @@ process.on('uncaughtException', (err: any) => {
 const app = express();
 const server = http.createServer(app);
 const PORT = Number(process.env.PORT) || 3000;
+// Cloud Run / Hosting terminate TLS and forward the original host/proto.
+app.set('trust proxy', true);
 
 // How long the voice model may be kept waiting for a diagnosis. The Live tool
 // call blocks speech, so this is felt directly as silence by the child.
@@ -575,17 +577,69 @@ app.use('/api', (err: any, _req: any, res: any, _next: any) => {
 });
 
 // ─── Learner endpoints ──────────────────────────────────────────
-app.get('/api/learners', (_req, res) => res.json({ learners: listLearners() }));
-app.get('/api/learners/:studentId', (req, res) => {
-  const l = getLearner(req.params.studentId);
-  if (!l) return (res as any).status(404).json({ error: 'Not found' });
-  res.json({ learner: l });
+// On Cloud Run, prefer Firestore so profiles survive instance restarts and
+// stay in sync with the earlier Functions-backed hosting deploy.
+function useFirestoreLearners() {
+  return process.env.USE_FIRESTORE_LEARNERS === 'true' || Boolean(process.env.K_SERVICE);
+}
+
+app.get('/api/learners', async (_req, res) => {
+  try {
+    if (useFirestoreLearners() && admin.apps.length) {
+      const snap = await admin.firestore().collection('learners').get();
+      const learners = snap.docs
+        .map((d) => d.data())
+        .sort((a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      return res.json({ learners });
+    }
+    res.json({ learners: listLearners() });
+  } catch (err: any) {
+    console.error('[API /api/learners]', err);
+    res.status(500).json({ error: err?.message || 'Failed to list learners' });
+  }
 });
-app.post('/api/learners', (req, res) => {
-  const { studentId, name, grade } = req.body;
-  if (!studentId || !name || !grade)
-    return (res as any).status(400).json({ error: 'studentId, name, grade required' });
-  res.json({ learner: getOrCreateLearner(studentId, name, grade) });
+app.get('/api/learners/:studentId', async (req, res) => {
+  try {
+    if (useFirestoreLearners() && admin.apps.length) {
+      const doc = await admin.firestore().collection('learners').doc(req.params.studentId).get();
+      if (!doc.exists) return (res as any).status(404).json({ error: 'Not found' });
+      return res.json({ learner: doc.data() });
+    }
+    const l = getLearner(req.params.studentId);
+    if (!l) return (res as any).status(404).json({ error: 'Not found' });
+    res.json({ learner: l });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to load learner' });
+  }
+});
+app.post('/api/learners', async (req, res) => {
+  try {
+    const { studentId, name, grade } = req.body;
+    if (!studentId || !name || !grade)
+      return (res as any).status(400).json({ error: 'studentId, name, grade required' });
+
+    if (useFirestoreLearners() && admin.apps.length) {
+      const ref = admin.firestore().collection('learners').doc(String(studentId));
+      const existing = await ref.get();
+      const learner = existing.exists
+        ? { ...(existing.data() as any), name: String(name), grade: String(grade), updatedAt: Date.now() }
+        : {
+            studentId: String(studentId),
+            name: String(name),
+            grade: String(grade),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            subjects: {},
+            globalInsights: [],
+          };
+      await ref.set(learner, { merge: true });
+      return res.json({ learner });
+    }
+
+    res.json({ learner: getOrCreateLearner(studentId, name, grade) });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to create learner' });
+  }
 });
 
 // ─── Adaptive session endpoints ─────────────────────────────────

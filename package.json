@@ -18,7 +18,9 @@
     "firebase:deploy": "npm run build:web && npx -y firebase-tools@latest deploy --project sceneflow-f9529",
     "firebase:deploy:rules": "npx -y firebase-tools@latest deploy --only firestore:rules,storage,auth --project sceneflow-f9529",
     "firebase:deploy:functions": "npx -y firebase-tools@latest deploy --only functions --project sceneflow-f9529",
-    "build:web": "vite build"
+    "build:web": "vite build",
+    "deploy:live": "bash scripts/deploy-cloudrun.sh",
+    "deploy:hosting": "npm run build:web && npx -y firebase-tools@latest deploy --only hosting --project sceneflow-f9529"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
