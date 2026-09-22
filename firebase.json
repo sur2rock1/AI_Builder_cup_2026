@@ -37,13 +37,26 @@
         "headers": [
           { "key": "Cache-Control", "value": "no-store" }
         ]
+      },
+      {
+        "source": "/ws/**",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-store" }
+        ]
       }
     ],
     "rewrites": [
       {
+        "source": "/ws/**",
+        "run": {
+          "serviceId": "dr-marcus-live",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/**",
-        "function": {
-          "functionId": "api",
+        "run": {
+          "serviceId": "dr-marcus-live",
           "region": "us-central1"
         }
       },

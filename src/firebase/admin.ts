@@ -34,10 +34,12 @@ export function initFirebaseAdmin() {
     });
   } else if (process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT) {
     // Cloud Functions / Cloud Run default credentials
+    const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;
     admin.initializeApp({
+      projectId,
       storageBucket:
         process.env.FIREBASE_STORAGE_BUCKET ||
-        `${process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT}.firebasestorage.app`,
+        `${projectId}.firebasestorage.app`,
     });
   } else {
     console.warn('[Firebase Admin] No credentials configured (set FIREBASE_SERVICE_ACCOUNT_PATH)');

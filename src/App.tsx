@@ -14,6 +14,7 @@ import { TopicGradeSelector } from './components/TopicGradeSelector';
 import { BottomBar } from './components/BottomBar';
 import { AudioManager } from './utils/audio';
 import { createDynamicLesson } from './utils/lessonGenerator';
+import { liveWebSocketUrl } from './utils/liveWs';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { LearnerProfilePanel } from './components/LearnerProfilePanel';
 import { CurriculumUpload } from './components/CurriculumUpload';
@@ -704,16 +705,13 @@ export const App: React.FC = () => {
 
       // 2. Connect WebSocket to Gemini Live with topic and grade query params
       const activeTopic = topic || 'any topic the student asks for on the fly';
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws/live?topic=${encodeURIComponent(
-        activeTopic
-      )}&grade=${encodeURIComponent(grade)}`;
+      const wsUrl = liveWebSocketUrl(activeTopic, grade);
 
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;
 
       socket.onopen = () => {
-        console.log('[WebSocket] Connected to Gemini Live');
+        console.log('[WebSocket] Connected to Gemini Live', wsUrl);
       };
 
       socket.onmessage = (event) => {
