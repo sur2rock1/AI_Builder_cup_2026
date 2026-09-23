@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Lumen growing chips</title>
+  <link rel="stylesheet" href="diagrams.css" />
+</head>
+<body>
+  <section class="slide">
+    <div>
+      <div class="kicker">Lumen · Tech design</div>
+      <h1>Why week-5 chips are specific</h1>
+      <p class="sub">Same question every time. Same four jobs. Labels come from Firestore history + the last AI Logic digest.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="layer">
+        <h2>Day 0 — generic seed</h2>
+        <div class="cards" style="margin-top:8px;">
+          <div class="card accent"><div class="name">Learn something new</div><div class="role">intent: learn</div></div>
+          <div class="card"><div class="name">Homework help</div><div class="role">intent: homework</div></div>
+          <div class="card"><div class="name">Exam prep</div><div class="role">intent: exam</div></div>
+          <div class="card"><div class="name">Writing help</div><div class="role">intent: writing</div></div>
+        </div>
+        <p class="note" style="margin-top:12px;">Nothing in tasks, no examDate, no aiDigest yet.</p>
+      </div>
+      <div class="layer" style="background:#EAF6F3;">
+        <h2>Week 5 — Maya’s history</h2>
+        <div class="cards" style="margin-top:8px;">
+          <div class="card accent"><div class="name">Continue Pythagoras</div><div class="role">open task: Did you try the ladder?</div></div>
+          <div class="card"><div class="name">Exam prep — triangles, Friday</div><div class="role">examDate + aiDigest.examFocus</div></div>
+          <div class="card"><div class="name">Homework — photosynthesis</div><div class="role">unused artefact / wrap hint</div></div>
+          <div class="card"><div class="name">Writing — space story draft</div><div class="role">writingNextDraft</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer">
+      <h2>What writes the inputs</h2>
+      <div class="cards">
+        <div class="card">
+          <img class="logo" src="icons/firestore.png" alt="Firestore" />
+          <div class="name">Firestore facts</div>
+          <div class="role">open tasks, examDate, wantedSubjects, last subject. Ranking is code.</div>
+        </div>
+        <div class="card">
+          <img class="logo" src="icons/firebase-ml.png" alt="AI Logic" />
+          <div class="name">AI Logic wording</div>
+          <div class="role">Turns “examFocus: isosceles” into “Exam in 6 days — triangles”.</div>
+        </div>
+        <div class="card">
+          <img class="logo" src="icons/gemini.png" alt="Live" />
+          <div class="name">Live only after tap / say</div>
+          <div class="role">Gets intent + compact brief. Does not pick the four chips.</div>
+        </div>
+        <div class="card">
+          <img class="logo" src="icons/analytics.png" alt="GA4" />
+          <div class="name">GA4</div>
+          <div class="role">intent_offered / intent_chosen so we see which suggestions she ignored.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

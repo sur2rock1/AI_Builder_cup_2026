@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Lumen runtime connections</title>
+  <link rel="stylesheet" href="diagrams.css" />
+</head>
+<body>
+  <section class="slide">
+    <div>
+      <div class="kicker">Lumen · Tech design</div>
+      <h1>How the pieces connect at runtime</h1>
+      <p class="sub">Chips are computed. Live teaches. AI Logic writes the memory that makes next week’s chips specific.</p>
+    </div>
+
+    <div class="row" style="flex:1;">
+      <div class="flow-box" style="max-width:360px;">
+        <span class="pill">Before Live</span>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+          <img class="logo" src="icons/firestore.png" alt="Firestore" />
+          <h3>Firestore read</h3>
+        </div>
+        <p class="note">profile · open tasks · BKT · ledger · lastBrief · nextIntentHint · examDate · last aiDigest</p>
+        <div class="big-arrow" style="margin:10px 0;">↓</div>
+        <div class="card">
+          <div class="name">Chip resolver (code)</div>
+          <div class="role">Priority: open task → continue last subject → exam-if-soon → homework → writing draft → new subject → generic seed. Max 4.</div>
+        </div>
+        <div class="big-arrow" style="margin:10px 0;">↓</div>
+        <div class="card accent">
+          <div class="name">Start screen</div>
+          <div class="role">“What do you need today, Maya?” + offeredChips stored on the session.</div>
+        </div>
+      </div>
+
+      <div class="big-arrow">→</div>
+
+      <div class="flow-box">
+        <span class="pill">During the 15 min</span>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+          <img class="logo" src="icons/cloud-run.png" alt="Cloud Run" />
+          <h3>Cloud Run builds one brief</h3>
+        </div>
+        <p class="note">Intent from the tapped chip + 8–15 lines of child history. Never the raw transcript.</p>
+        <div class="card amber" style="margin:12px 0;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img class="logo" src="icons/gemini.png" alt="Gemini Live" />
+            <div>
+              <div class="name">Gemini Live · ai.live.connect</div>
+              <div class="role">Mouth + captions + our tools. One socket.</div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <img class="logo" src="icons/vertex-ai.png" alt="Tools" />
+            <div class="name">Tool calls</div>
+            <div class="role">Board fade, set_topic, assess_child_reasoning. Server executes. Child never waits on Higgsfield.</div>
+          </div>
+          <div class="card">
+            <img class="logo" src="icons/firestore.png" alt="Turns" />
+            <div class="name">turns/* on turnComplete</div>
+            <div class="role">Joined captions. Language inferred. Parent replay reads this.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="big-arrow">→</div>
+
+      <div class="flow-box" style="max-width:360px;">
+        <span class="pill amber">After endedAt</span>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+          <img class="logo" src="icons/firebase-ml.png" alt="AI Logic" />
+          <h3>AI Logic text</h3>
+        </div>
+        <p class="note">getGenerativeModel structured JSON. Cloud Run or a Function. App Check if client.</p>
+        <div class="card" style="margin-top:12px;">
+          <div class="name">aiDigest</div>
+          <div class="role">recap · strengths · examFocus · nextIntent · chip labels</div>
+        </div>
+        <div class="big-arrow" style="margin:10px 0;">↓</div>
+        <div class="card accent">
+          <div class="name">Next week’s chips</div>
+          <div class="role">Same four jobs. Different words. “Exam in 6 days — triangles.”</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:12px;">
+          <img class="logo" src="icons/analytics.png" alt="GA4" />
+          <p class="note">GA4 gets intent_offered / intent_chosen only.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

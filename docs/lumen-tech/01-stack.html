@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Lumen tech stack</title>
+  <link rel="stylesheet" href="diagrams.css" />
+</head>
+<body>
+  <section class="slide">
+    <div>
+      <div class="kicker">Lumen · Tech design</div>
+      <h1>Google stack — who does what</h1>
+      <p class="sub">One Live mouth on Cloud Run. Firebase holds memory. AI Logic is text only. Studio tools stay offline.</p>
+    </div>
+
+    <div class="layer">
+      <h2>1 · Child & parent surfaces</h2>
+      <div class="cards">
+        <div class="card">
+          <img class="logo" src="icons/hosting.png" alt="Firebase Hosting" />
+          <div class="name">Firebase Hosting</div>
+          <div class="role">Kid tablet + parent dashboard. Static UI. No API key in the browser.</div>
+        </div>
+        <div class="card">
+          <img class="logo" src="icons/firebase.png" alt="Firebase Auth" />
+          <div class="name">Firebase Auth</div>
+          <div class="role">Named profiles for the cup. Parent email later.</div>
+        </div>
+        <div class="card">
+          <img class="logo" src="icons/security.png" alt="App Check" />
+          <div class="name">App Check</div>
+          <div class="role">Required before any client AI Logic call (from 2 Nov 2026).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer" style="background:#EAF6F3;">
+      <h2>2 · The mouth (in-lesson)</h2>
+      <div class="cards">
+        <div class="card accent">
+          <img class="logo" src="icons/cloud-run.png" alt="Cloud Run" />
+          <div class="name">Cloud Run · server.ts</div>
+          <div class="role">Holds the WebSocket. Builds the start brief. Persists captions. Runs board tools.</div>
+        </div>
+        <div class="card accent">
+          <img class="logo" src="icons/gemini.png" alt="Gemini Live" />
+          <div class="name">Gemini Live</div>
+          <div class="role">Speak / hear / captions. Voice picker. Language inferred from speech.</div>
+        </div>
+        <div class="card">
+          <img class="logo" src="icons/vertex-ai.png" alt="Gemini tools" />
+          <div class="name">Live tool calling</div>
+          <div class="role">Our functionDeclarations: fading board, set_topic, assess_child_reasoning. Not browser AI Logic Live.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer">
+      <h2>3 · Memory, digest, knobs</h2>
+      <div class="cards">
+        <div class="card amber">
+          <img class="logo" src="icons/firestore.png" alt="Cloud Firestore" />
+          <div class="name">Cloud Firestore</div>
+          <div class="role">Profile, BKT, ledger, tasks, turns, aiDigest. The model forgets. This does not.</div>
+        </div>
+        <div class="card">
+          <img class="logo" src="icons/firebase-ml.png" alt="Firebase AI Logic" />
+          <div class="name">Firebase AI Logic · text</div>
+          <div class="role">getGenerativeModel after the session. Structured JSON digest. Not a second Live socket.</div>
+        </div>
+        <div class="card">
+          <img class="logo" src="icons/cloud-storage.png" alt="Cloud Storage" />
+          <div class="name">Cloud Storage</div>
+          <div class="role">Homework photo, writing paste, textbook PDF → Files API.</div>
+        </div>
+        <div class="card">
+          <img class="logo" src="icons/remote-config.png" alt="Remote Config" />
+          <div class="name">Remote Config</div>
+          <div class="role">LIVE_MODEL, default voice, default 15 min. Change without redeploy.</div>
+        </div>
+        <div class="card">
+          <img class="logo" src="icons/analytics.png" alt="Google Analytics" />
+          <div class="name">GA4</div>
+          <div class="role">Events only: intent_offered, intent_chosen. Never raw captions.</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="foot">Logos: official Google Cloud product icons + Icons8 color set. Higgsfield / Gamma / Firecrawl stay in the studio layer — not inside the 15-minute mouth.</p>
+  </section>
+</body>
+</html>
