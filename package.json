@@ -22,7 +22,8 @@
     "firebase:deploy:functions": "npx -y firebase-tools@latest deploy --only functions --project sceneflow-f9529",
     "build:web": "vite build",
     "deploy:live": "bash scripts/deploy-cloudrun.sh",
-    "deploy:hosting": "npm run build:web && npx -y firebase-tools@latest deploy --only hosting --project sceneflow-f9529"
+    "deploy:hosting": "npm run build:web && npx -y firebase-tools@latest deploy --only hosting --project sceneflow-f9529",
+    "verify:models": "npx --yes tsx scripts/verify-models.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

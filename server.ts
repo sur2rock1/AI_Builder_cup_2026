@@ -8,18 +8,29 @@ import { GoogleGenAI, Modality, Type, LiveServerMessage } from '@google/genai';
 import { createDynamicLesson } from './src/utils/lessonGenerator';
 import multer from 'multer';
 import {
-  getOrCreateLearner, getLearner, listLearners, ensureSubject,
+  getOrCreateLearner, getLearner, listLearners, deleteLearner, ensureSubject,
   ensureConceptState, getConceptState, recordAttempt, addGlobalInsight,
   incrementSessionCount, startSession, getSession, updateSession, endSession,
   recordReasoningEvidence, getEvidenceLog,
 } from './src/adaptive/learnerStore';
+import { getRepo } from './src/adaptive/repo';
+import { requireAuth, requireOwnership } from './server/middleware/requireAuth';
+import { compileTeachingPlan } from './src/plan/compile';
+import type { TeachingPlan } from './src/plan/types';
+import { composeSystemInstruction, composeKickoff, DEFAULT_PERSONA_NAME } from './src/persona/compose';
+import { ageBandFromGrade } from './src/persona/ageBands';
+import { subjectModeForSubject } from './src/persona/subjectModes';
+import { renderPlanForPrompt } from './src/plan/render';
+import { verifyModels, isDemoMode } from './src/ai/gateway';
+import { compilePlanDelta, initialDeltaState } from './src/plan/delta';
+import type { PlanDeltaState } from './src/plan/types';
 import { assessUnderstanding, selectNextStrategy } from './src/adaptive/assessmentEngine';
 import {
   assessReasoningWithDeadline, misconceptionText, misconceptionCatalog,
   ReasoningAssessment, DeadlineResult,
 } from './src/adaptive/reasoningAssessor';
 import { MASTERY_THRESHOLD } from './src/adaptive/bkt';
-import { liveConfigFor } from './src/live/liveConfig';
+import { liveConfigFor, ALL_TOOLS } from './src/live/liveConfig';
 import { buildCurriculumIntelligenceContext } from './src/curriculum/curriculumIntelligence';
 import { getCurriculum, listCurricula, preloadCurricula, nextUnmasteredConcept } from './src/curriculum/ingest';
 import { startIngestJob, getJob } from './src/curriculum/pdfIngest';
@@ -664,118 +675,158 @@ app.use('/api', (err: any, _req: any, res: any, _next: any) => {
 });
 
 // ─── Learner endpoints ──────────────────────────────────────────
-// On Cloud Run, prefer Firestore so profiles survive instance restarts and
-// stay in sync with the earlier Functions-backed hosting deploy.
-function useFirestoreLearners() {
-  return process.env.USE_FIRESTORE_LEARNERS === 'true' || Boolean(process.env.K_SERVICE);
-}
+// Storage backend (file vs Firestore) is decided inside src/adaptive/repo
+// (T03) — these routes no longer branch on it directly. Ownership is
+// enforced by requireAuth/requireOwnership (T02); DEV bypass only under
+// NODE_ENV=development && ALLOW_DEV_AUTH_BYPASS=true.
 
-app.get('/api/learners', async (_req, res) => {
+app.get('/api/learners', requireAuth, async (_req, res) => {
   try {
-    if (useFirestoreLearners() && admin.apps.length) {
-      const snap = await admin.firestore().collection('learners').get();
-      const learners = snap.docs
-        .map((d) => d.data())
-        .sort((a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0));
-      return res.json({ learners });
-    }
-    res.json({ learners: listLearners() });
+    res.json({ learners: await listLearners() });
   } catch (err: any) {
     console.error('[API /api/learners]', err);
     res.status(500).json({ error: err?.message || 'Failed to list learners' });
   }
 });
-app.get('/api/learners/:studentId', async (req, res) => {
+app.get('/api/learners/:studentId', requireAuth, requireOwnership, async (req, res) => {
   try {
-    if (useFirestoreLearners() && admin.apps.length) {
-      const doc = await admin.firestore().collection('learners').doc(req.params.studentId).get();
-      if (!doc.exists) return (res as any).status(404).json({ error: 'Not found' });
-      return res.json({ learner: doc.data() });
-    }
-    const l = getLearner(req.params.studentId);
+    const l = await getLearner(req.params.studentId);
     if (!l) return (res as any).status(404).json({ error: 'Not found' });
     res.json({ learner: l });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || 'Failed to load learner' });
   }
 });
-app.post('/api/learners', async (req, res) => {
+app.post('/api/learners', requireAuth, async (req, res) => {
   try {
     const { studentId, name, grade } = req.body;
     if (!studentId || !name || !grade)
       return (res as any).status(400).json({ error: 'studentId, name, grade required' });
-
-    if (useFirestoreLearners() && admin.apps.length) {
-      const ref = admin.firestore().collection('learners').doc(String(studentId));
-      const existing = await ref.get();
-      const learner = existing.exists
-        ? { ...(existing.data() as any), name: String(name), grade: String(grade), updatedAt: Date.now() }
-        : {
-            studentId: String(studentId),
-            name: String(name),
-            grade: String(grade),
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            subjects: {},
-            globalInsights: [],
-          };
-      await ref.set(learner, { merge: true });
-      return res.json({ learner });
-    }
-
-    res.json({ learner: getOrCreateLearner(studentId, name, grade) });
+    if ((req as any).authUid !== String(studentId))
+      return (res as any).status(403).json({ error: 'Not authorized for this learner profile' });
+    res.json({ learner: await getOrCreateLearner(studentId, name, grade) });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || 'Failed to create learner' });
   }
 });
-
-// ─── Adaptive session endpoints ─────────────────────────────────
-app.post('/api/session/start', (req, res) => {
-  const { studentId, name, grade, subjectId } = req.body;
-  if (!studentId || !subjectId)
-    return (res as any).status(400).json({ error: 'studentId and subjectId required' });
-  const learner = getOrCreateLearner(studentId, name || 'Student', grade || 'Secondary 2 (Grade 8)');
-  const curriculum = getCurriculum(subjectId);
-  if (!curriculum) return (res as any).status(404).json({ error: 'Curriculum not found' });
-  ensureSubject(studentId, subjectId, curriculum.label, curriculum.grade, curriculum.source);
-
-  const masteredIds = Object.values(learner.subjects[subjectId]?.conceptStates || {})
-    .filter(cs => cs.masteryScore >= 75).map(cs => cs.conceptId);
-  const nextConcept = nextUnmasteredConcept(curriculum, masteredIds) || curriculum.concepts[0];
-  ensureConceptState(studentId, subjectId, nextConcept.id, nextConcept.label);
-
-  const sessionId = `session_${Date.now()}_${studentId}`;
-  const session: AdaptiveSessionState = {
-    sessionId, studentId, subjectId,
-    currentConceptId: nextConcept.id,
-    currentStrategy: 'direct_explanation',
-    sessionStarted: Date.now(),
-    interactionCount: 0,
-    recentAttempts: [],
-  };
-  startSession(session);
-  res.json({
-    sessionId, learner, currentConcept: nextConcept,
-    conceptState: getConceptState(studentId, subjectId, nextConcept.id),
-    strategy: 'direct_explanation',
-  });
+app.delete('/api/learners/:studentId', requireAuth, requireOwnership, async (req, res) => {
+  try {
+    await deleteLearner(req.params.studentId);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to delete learner' });
+  }
+});
+app.post('/api/learners/:studentId/onboarding', requireAuth, requireOwnership, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const learner = await getLearner(studentId);
+    if (!learner) return (res as any).status(404).json({ error: 'Not found' });
+    const { interests, subjectFeelings, accessibility, languagePrefs, ageBand } = req.body || {};
+    learner.onboarding = {
+      interests: Array.isArray(interests) ? interests : [],
+      subjectFeelings: subjectFeelings || {},
+      accessibility: accessibility || {},
+      languagePrefs,
+      completedAt: Date.now(),
+    };
+    if (ageBand) learner.ageBand = ageBand;
+    learner.updatedAt = Date.now();
+    await getRepo().saveProfile(learner);
+    res.json({ learner });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to save onboarding' });
+  }
+});
+app.get('/api/learners/:studentId/events', requireAuth, requireOwnership, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { conceptId, limit } = req.query as { conceptId?: string; limit?: string };
+    const events = await getRepo().listEvents(studentId, {
+      conceptId, limit: limit ? Number(limit) : undefined,
+    });
+    res.json({ events });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to load events' });
+  }
 });
 
-app.get('/api/session/:sessionId', (req, res) => {
+// ─── Adaptive session endpoints ─────────────────────────────────
+app.post('/api/session/start', requireAuth, async (req, res) => {
+  try {
+    const { studentId, name, grade, subjectId, channel } = req.body;
+    if (!studentId || !subjectId)
+      return (res as any).status(400).json({ error: 'studentId and subjectId required' });
+    if ((req as any).authUid !== String(studentId))
+      return (res as any).status(403).json({ error: 'Not authorized for this learner profile' });
+
+    const learner = await getOrCreateLearner(studentId, name || 'Student', grade || 'Secondary 2 (Grade 8)');
+    const curriculum = getCurriculum(subjectId);
+    if (!curriculum) return (res as any).status(404).json({ error: 'Curriculum not found' });
+    await ensureSubject(studentId, subjectId, curriculum.label, curriculum.grade, curriculum.source);
+
+    const masteredIds = Object.values(learner.subjects[subjectId]?.conceptStates || {})
+      .filter(cs => cs.masteryScore >= 75).map(cs => cs.conceptId);
+    const nextConcept = nextUnmasteredConcept(curriculum, masteredIds) || curriculum.concepts[0];
+    await ensureConceptState(studentId, subjectId, nextConcept.id, nextConcept.label, 'direct_explanation', nextConcept.chapter || 'general');
+
+    const sessionId = `session_${Date.now()}_${studentId}`;
+
+    // T17/T18: compile the per-learner Teaching Plan before the tutor opens.
+    let plan: TeachingPlan | null = null;
+    try {
+      const refreshedLearner = await getLearner(studentId);
+      if (refreshedLearner) {
+        plan = compileTeachingPlan(refreshedLearner, curriculum, {
+          studentId, subjectId, channel: channel === 'text' ? 'text' : 'voice', requestedConceptId: nextConcept.id,
+        });
+        await getRepo().savePlan(studentId, plan.planVersion, plan);
+      }
+    } catch (planErr: any) {
+      console.error('[session/start] plan compile failed (continuing without a plan)', planErr?.message || planErr);
+    }
+
+    const session: AdaptiveSessionState = {
+      sessionId, studentId, subjectId,
+      currentConceptId: nextConcept.id,
+      currentStrategy: 'direct_explanation',
+      sessionStarted: Date.now(),
+      interactionCount: 0,
+      recentAttempts: [],
+    };
+    startSession(session);
+    (session as any).planVersion = plan?.planVersion;
+    res.json({
+      sessionId, learner, currentConcept: nextConcept,
+      conceptState: await getConceptState(studentId, subjectId, nextConcept.id),
+      strategy: 'direct_explanation',
+      plan,
+    });
+  } catch (err: any) {
+    console.error('[POST /api/session/start]', err);
+    res.status(500).json({ error: err?.message || 'Failed to start session' });
+  }
+});
+
+app.get('/api/session/:sessionId', requireAuth, async (req, res) => {
   const session = getSession(req.params.sessionId);
   if (!session) return (res as any).status(404).json({ error: 'Session not found' });
-  const learner = getLearner(session.studentId);
+  if ((req as any).authUid !== session.studentId)
+    return (res as any).status(403).json({ error: 'Not authorized for this session' });
+  const learner = await getLearner(session.studentId);
   const curriculum = getCurriculum(session.subjectId);
   const concept = curriculum?.concepts.find(c => c.id === session.currentConceptId);
-  const conceptState = getConceptState(session.studentId, session.subjectId, session.currentConceptId);
+  const conceptState = await getConceptState(session.studentId, session.subjectId, session.currentConceptId);
   res.json({ session, learner, currentConcept: concept, conceptState });
 });
 
-app.post('/api/session/:sessionId/assess', async (req, res) => {
+app.post('/api/session/:sessionId/assess', requireAuth, async (req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return (res as any).status(500).json({ error: 'No API key' });
   const session = getSession(req.params.sessionId);
   if (!session) return (res as any).status(404).json({ error: 'Session not found' });
+  if ((req as any).authUid !== session.studentId)
+    return (res as any).status(403).json({ error: 'Not authorized for this session' });
 
   const { questionSummary, studentAnswer, correctAnswer, selectedOptionIndex, correctOptionIndex } = req.body;
   const isCorrect = selectedOptionIndex === correctOptionIndex;
@@ -783,7 +834,7 @@ app.post('/api/session/:sessionId/assess', async (req, res) => {
   const curriculum = getCurriculum(session.subjectId);
   const concept = curriculum?.concepts.find(c => c.id === session.currentConceptId);
   if (!concept) return (res as any).status(404).json({ error: 'Concept not found' });
-  const conceptState = getConceptState(session.studentId, session.subjectId, concept.id);
+  const conceptState = await getConceptState(session.studentId, session.subjectId, concept.id);
   if (!conceptState) return (res as any).status(404).json({ error: 'Concept state not found' });
 
   const assessment = await assessUnderstanding({
@@ -799,22 +850,23 @@ app.post('/api/session/:sessionId/assess', async (req, res) => {
     strategyUsed: session.currentStrategy as TeachingStrategy,
     teachingNote: assessment.teachingNote,
   };
-  recordAttempt(session.studentId, session.subjectId, concept.id, attempt, assessment);
+  await recordAttempt(session.studentId, session.subjectId, concept.id, attempt, assessment);
 
   const nextStrategy = selectNextStrategy(conceptState, assessment);
   let nextConceptId = session.currentConceptId;
   let advancedToConcept = null;
 
   if (['advance','praise_and_continue'].includes(assessment.recommendedAction)) {
-    const updated = getConceptState(session.studentId, session.subjectId, concept.id);
+    const updated = await getConceptState(session.studentId, session.subjectId, concept.id);
     if ((updated?.masteryScore || 0) >= 75) {
+      const currentLearner = await getLearner(session.studentId);
       const masteredIds = Object.values(
-        getLearner(session.studentId)?.subjects?.[session.subjectId]?.conceptStates || {}
+        currentLearner?.subjects?.[session.subjectId]?.conceptStates || {}
       ).filter(cs => cs.masteryScore >= 75).map(cs => cs.conceptId);
       const next = curriculum ? nextUnmasteredConcept(curriculum, masteredIds) : undefined;
       if (next && next.id !== session.currentConceptId) {
         nextConceptId = next.id; advancedToConcept = next;
-        ensureConceptState(session.studentId, session.subjectId, next.id, next.label);
+        await ensureConceptState(session.studentId, session.subjectId, next.id, next.label);
       }
     }
   }
@@ -829,25 +881,27 @@ app.post('/api/session/:sessionId/assess', async (req, res) => {
 
   res.json({
     assessment, nextStrategy, advancedToConcept,
-    updatedConceptState: getConceptState(session.studentId, session.subjectId, nextConceptId),
-    learner: getLearner(session.studentId),
+    updatedConceptState: await getConceptState(session.studentId, session.subjectId, nextConceptId),
+    learner: await getLearner(session.studentId),
     session: getSession(session.sessionId),
   });
 });
 
-app.post('/api/session/:sessionId/end', (req, res) => {
+app.post('/api/session/:sessionId/end', requireAuth, async (req, res) => {
   const session = getSession(req.params.sessionId);
   if (!session) { res.json({ ok: true }); return; }
+  if ((req as any).authUid !== session.studentId)
+    return (res as any).status(403).json({ error: 'Not authorized for this session' });
   const durationMins = Math.round((Date.now() - session.sessionStarted) / 60000);
-  incrementSessionCount(session.studentId, session.subjectId, durationMins);
+  await incrementSessionCount(session.studentId, session.subjectId, durationMins);
   endSession(session.sessionId);
   res.json({ ok: true, durationMinutes: durationMins });
 });
 
 // GET learner context for voice tutor system prompt
-app.get('/api/learner-context/:studentId/:subjectId', (req, res) => {
+app.get('/api/learner-context/:studentId/:subjectId', requireAuth, requireOwnership, async (req, res) => {
   const { studentId, subjectId } = req.params;
-  const learner = getLearner(studentId);
+  const learner = await getLearner(studentId);
   if (!learner) return (res as any).status(404).json({ error: 'Learner not found' });
   const subject = learner.subjects[subjectId];
   if (!subject) return res.json({ context: 'No prior learning history for this subject.' });
@@ -944,12 +998,43 @@ function observeMessage(message: LiveServerMessage, observer: LiveObserver | nul
 }
 
 wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
-  // Parse query parameters for topic, grade, subjectId and conceptId
+  // Parse query parameters. (T04) sessionId is the primary key: the server
+  // resolves studentId/subjectId/conceptId/plan from the session it started
+  // via POST /api/session/start, rather than trusting client-supplied values
+  // for who the learner is. topic/grade/subjectId/conceptId remain as a
+  // `?guest=1` fallback for a quick no-login demo path.
   const url = new URL(req.url || '', `http://${req.headers.host}`);
-  const topic = url.searchParams.get('topic') || 'the requested subject';
-  const grade = url.searchParams.get('grade') || 'the student level';
-  const subjectId = url.searchParams.get('subjectId') || '';
-  const conceptId = url.searchParams.get('conceptId') || '';
+  const sessionIdParam = url.searchParams.get('sessionId') || '';
+  const isGuest = url.searchParams.get('guest') === '1';
+  const activeSession = sessionIdParam ? getSession(sessionIdParam) : undefined;
+
+  let topic = url.searchParams.get('topic') || 'the requested subject';
+  let grade = url.searchParams.get('grade') || 'the student level';
+  let subjectId = url.searchParams.get('subjectId') || '';
+  let conceptId = url.searchParams.get('conceptId') || '';
+  let studentId = '';
+  let resolvedPlan: TeachingPlan | null = null;
+  let resolvedLearnerName: string | undefined;
+
+  if (sessionIdParam && !activeSession && !isGuest) {
+    clientWs.send(JSON.stringify({ type: 'error', code: 'SESSION_NOT_FOUND', message: 'Unknown or expired sessionId. Start a session via POST /api/session/start first.' }));
+    clientWs.close();
+    return;
+  }
+
+  if (activeSession) {
+    studentId = activeSession.studentId;
+    subjectId = activeSession.subjectId;
+    conceptId = activeSession.currentConceptId;
+    const curriculumForSession = getCurriculum(subjectId);
+    const conceptDef = curriculumForSession?.concepts.find((c) => c.id === conceptId);
+    topic = conceptDef?.label || topic;
+    const learnerForSession = await getLearner(studentId);
+    grade = learnerForSession?.grade || grade;
+    resolvedLearnerName = learnerForSession?.name;
+    const latestPlan = await getRepo().getLatestPlan(studentId, subjectId);
+    if (latestPlan) resolvedPlan = latestPlan.plan as TeachingPlan;
+  }
 
   // Build curriculum intelligence context if we have a subject and concept
   const curriculumCtx = (subjectId && conceptId)
@@ -959,7 +1044,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   if (curriculumCtx) {
     console.log(`[WebSocket] Curriculum intelligence loaded for ${subjectId}/${conceptId}`);
   }
-  console.log(`[WebSocket] Live session started for Topic: "${topic}", Grade: "${grade}"`);
+  console.log(`[WebSocket] Live session started. studentId=${studentId || '(guest)'} topic="${topic}" grade="${grade}"`);
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -979,7 +1064,112 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   let observer: LiveObserver | null = null;
   let isClosed = false;
 
-  const dynamicSystemInstruction = `You are "Dr. Marcus Vance", an inspiring, warm, and brilliant Senior Educator and AI Tutor teaching a student in ${grade} on the topic of "${topic}". You speak in a clear, encouraging, friendly mentor voice with genuine passion for learning.
+  // T11 (partial): per-connection plan-delta state. A fuller implementation
+  // (docs/BUILD_PLAN.md T11) extracts this into src/adaptive/diagnostician.ts +
+  // src/adaptive/segmenter.ts; this inline version wires the SAME assessor
+  // (reasoningAssessor.ts) that already implements the closed-catalogue,
+  // deadline-bounded diagnosis into the actual live path for the first time —
+  // previously it was imported but never called from here (docs/PROJECT_STATE.md).
+  let deltaState: PlanDeltaState = initialDeltaState();
+
+  async function handleAssessChildReasoning(call: any) {
+    const args = call.args || {};
+    if (!studentId || !subjectId || !conceptId) {
+      // Guest/no-login session — nothing to record against. Ask the tutor to
+      // continue eliciting without asserting anything.
+      sendToolResponse(call, { instruction: 'Ask the learner to walk you through their method before saying anything about whether it is right.' });
+      return;
+    }
+    const curriculumHere = getCurriculum(subjectId);
+    const conceptDef = curriculumHere?.concepts.find((c) => c.id === conceptId);
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!conceptDef || !apiKey) {
+      sendToolResponse(call, { instruction: 'Ask the learner to explain their method, one step at a time.' });
+      return;
+    }
+    const conceptStateHere = await getConceptState(studentId, subjectId, conceptId);
+
+    const deadlineResult = await assessReasoningWithDeadline({
+      concept: conceptDef,
+      conceptState: conceptStateHere,
+      questionAsked: String(args.questionAsked || ''),
+      childAnswer: String(args.childAnswer || ''),
+      childReasoning: String(args.childReasoning || ''),
+      expectedAnswer: args.expectedAnswer ? String(args.expectedAnswer) : undefined,
+      currentStrategy: (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy,
+      apiKey,
+    });
+    const assessment = deadlineResult.assessment;
+
+    sendToolResponse(call, { instruction: assessment.tutorGuidance });
+
+    const candidateMisconceptions = assessment.candidateMisconceptionIds
+      .map((id) => ({ id, text: misconceptionText(conceptDef, id) || id }));
+
+    const promptType = ['teach', 'check', 'probe', 'transfer'].includes(args.promptType) ? args.promptType : 'check';
+
+    const evidenceResult = await recordReasoningEvidence({
+      studentId, subjectId, conceptId,
+      conceptType: conceptStateHere?.conceptType || conceptDef.chapter || 'general',
+      difficultyLevel: conceptDef.difficultyLevel || 2,
+      promptType,
+      questionAsked: String(args.questionAsked || ''),
+      childAnswer: String(args.childAnswer || ''),
+      childReasoning: String(args.childReasoning || ''),
+      classification: assessment.classification,
+      understandingDepth: assessment.understandingDepth,
+      candidateMisconceptions,
+      confidence: assessment.confidence,
+      strategyInUse: (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy,
+      moveUsed: assessment.shouldProbe ? 'DISCRIMINATING_PROBE' : 'ELICIT_REASONING',
+      sessionId: sessionIdParam,
+      planVersion: resolvedPlan?.planVersion,
+      diagnosticianModel: 'gemini (reasoningAssessor)',
+      source: 'voice',
+    });
+
+    if (clientWs.readyState === WebSocket.OPEN && evidenceResult) {
+      clientWs.send(JSON.stringify({ type: 'learner_update_v2', evidence: evidenceResult }));
+    }
+
+    if (resolvedPlan) {
+      const outcome = candidateMisconceptions.length > 0
+        ? (evidenceResult && evidenceResult.newlyConfirmed.length > 0 ? 'misconception_confirmed' : 'misconception_suspected')
+        : (assessment.classification === 'wrong_answer' || assessment.classification === 'needs_clarification' ? 'failed_check' : 'sound');
+      const delta = compilePlanDelta(resolvedPlan, deltaState, {
+        conceptId,
+        outcome: outcome as any,
+        representationUsed: (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy,
+        questionKey: String(args.questionAsked || conceptId),
+      });
+      deltaState = delta.state;
+      if (clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(JSON.stringify({ type: 'plan_update', instruction: delta.instruction, nextRepresentation: delta.nextRepresentation }));
+      }
+    }
+  }
+
+  function sendToolResponse(call: any, response: Record<string, unknown>) {
+    try {
+      if (liveSession) {
+        liveSession.sendToolResponse({ functionResponses: [{ id: call.id, name: call.name, response }] });
+      }
+    } catch (respErr) {
+      console.error('[Gemini Live] Error sending tool response:', respErr);
+    }
+  }
+
+    // T07: single composed persona (docs/TUTOR_PERSONA.md), replacing the
+  // three prompts that used to diverge (this inline one, plus
+  // classicSystemInstruction/adaptiveSystemInstruction in src/live/liveConfig.ts,
+  // now deprecated). PERSONA=legacy restores the old text verbatim for A/B
+  // comparison during the build.
+  const ageBand = ageBandFromGrade(grade);
+  const subjectModeForPrompt = subjectId ? subjectModeForSubject(subjectId, getCurriculum(subjectId)?.label) : 'well_structured';
+  const planBlockText = resolvedPlan ? renderPlanForPrompt(resolvedPlan, resolvedLearnerName) : undefined;
+
+  const dynamicSystemInstruction = process.env.PERSONA === 'legacy'
+    ? `You are "${DEFAULT_PERSONA_NAME}", an inspiring, warm, and brilliant Senior Educator and AI Tutor teaching a student in ${grade} on the topic of "${topic}". You speak in a clear, encouraging, friendly mentor voice with genuine passion for learning.
 
 PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
 1. You have an interactive real-time digital blackboard right next to you that updates dynamically.
@@ -1005,7 +1195,16 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
 8. NEVER GO QUIET BEFORE A BOARD ACTION. Before update_chalkboard_notes, pose_quiz or generate_photo_visual, first say one short natural phrase out loud — e.g. "Let me write that on the board for you…" or "Let's work through it step by step…" — then call the tool, then carry on explaining.
 9. NEVER REPEAT WHAT YOU JUST WROTE. After calling update_chalkboard_notes or write_live_note, do NOT read the bullet points aloud — the student can already see them on the board. Continue with the NEXT thought, a question, or a new explanation. Saying the same sentence twice — whether before and after a tool call, or in two consecutive turns — is always wrong.
 10. ONE IDEA PER TURN. Each spoken turn must introduce exactly one new idea or question. If you catch yourself about to say something you said in the last turn, say something different instead.
-${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd();
+${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
+    : composeSystemInstruction({
+        ageBand,
+        subjectMode: subjectModeForPrompt as any,
+        channel: 'voice',
+        learnerName: resolvedLearnerName,
+        planBlock: planBlockText,
+        curriculumContext: curriculumCtx?.systemPromptBlock,
+        topic,
+      });
 
   try {
     // Force Gemini Developer API for Live. With GOOGLE_GENAI_USE_ENTERPRISE /
@@ -1036,7 +1235,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd();
         inputAudioTranscription: {},
         outputAudioTranscription: {},
         systemInstruction: dynamicSystemInstruction,
-        tools: [{ functionDeclarations: dynamicFunctionDeclarations }],
+        tools: [{ functionDeclarations: process.env.PERSONA === 'legacy' ? dynamicFunctionDeclarations : ALL_TOOLS }],
       },
       callbacks: {
         onopen: () => {
@@ -1109,22 +1308,22 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd();
                 })
               );
 
-              // Immediately respond with { result: "ok" } so tutor continues speaking
-              try {
-                if (liveSession) {
-                  liveSession.sendToolResponse({
-                    functionResponses: [
-                      {
-                        id: call.id,
-                        name: call.name,
-                        response: { result: 'ok' },
-                      },
-                    ],
-                  });
-                }
-              } catch (respErr) {
-                console.error('[Gemini Live] Error sending tool response:', respErr);
+              if (call.name === 'assess_child_reasoning') {
+                // Diagnosis + evidence recording + plan delta (see
+                // handleAssessChildReasoning above). Not awaited here — the
+                // handler sends its own tool response as soon as the
+                // assessor returns (bounded by assessReasoningWithDeadline's
+                // budget), so the voice model is never blocked longer than
+                // that budget.
+                handleAssessChildReasoning(call).catch((err) => {
+                  console.error('[assess_child_reasoning] failed', err);
+                  sendToolResponse(call, { instruction: 'Ask the learner to walk you through their method before saying anything about whether it is right.' });
+                });
+                continue;
               }
+
+              // Board/UI tools: immediately ack so the tutor keeps speaking.
+              sendToolResponse(call, { result: 'ok' });
             }
           }
 
@@ -1178,7 +1377,9 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd();
               role: 'user',
               parts: [
                 {
-                  text: `The student has just entered the classroom to learn about "${topic}" at the ${grade} level. Greet them warmly as Dr. Marcus Vance, express excitement for exploring "${topic}", mention that you have prepared the digital blackboard, and ask what aspect they would like to explore first.`,
+                  text: process.env.PERSONA === 'legacy'
+                    ? `The student has just entered the classroom to learn about "${topic}" at the ${grade} level. Greet them warmly as ${DEFAULT_PERSONA_NAME}, express excitement for exploring "${topic}", mention that you have prepared the digital blackboard, and ask what aspect they would like to explore first.`
+                    : composeKickoff(topic, Boolean(resolvedPlan)),
                 },
               ],
             },

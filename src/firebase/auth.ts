@@ -43,3 +43,23 @@ export async function uploadUserMedia(file: File, subpath = '') {
   const url = await getDownloadURL(storageRef);
   return { objectPath, url };
 }
+
+/**
+ * fetch() wrapper that attaches the signed-in user's Firebase ID token as a
+ * Bearer Authorization header (T02 — learner-data routes now require it).
+ * Falls back to a plain fetch when no user is signed in (server-side dev
+ * bypass, ALLOW_DEV_AUTH_BYPASS, covers local development without auth).
+ */
+export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const user = getFirebaseAuth().currentUser;
+  const headers = new Headers(init.headers || {});
+  if (user) {
+    try {
+      const token = await user.getIdToken();
+      headers.set('Authorization', `Bearer ${token}`);
+    } catch (err) {
+      console.warn('[authFetch] could not get ID token', err);
+    }
+  }
+  return fetch(input, { ...init, headers });
+}

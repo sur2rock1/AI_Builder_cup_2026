@@ -62,6 +62,12 @@ export interface ConceptState {
   strategyOutcomes?: StrategyOutcome[];
   /** Posterior P(knows skill) from Bayesian Knowledge Tracing, 0..1. */
   pKnown?: number;
+
+  // ── Extensions (docs/LEARNER_MODEL.md §3) ──
+  conceptType?: string;
+  ladder?: LadderState;
+  masteryStatus?: MasteryStatus;
+  review?: ReviewState;
 }
 
 export interface SubjectProgress {
@@ -83,6 +89,14 @@ export interface LearnerProfile {
   updatedAt: number;
   subjects: Record<string, SubjectProgress>;
   globalInsights: string[];     // Cross-subject patterns Gemini has noted
+
+  // ── Extensions (docs/LEARNER_MODEL.md §3) ──
+  ageBand?: AgeBand;
+  onboarding?: Onboarding;
+  strategyProfile?: StrategyProfile;
+  affect?: AffectState;
+  claims?: LearnerClaim[];
+  sessionSummaries?: SessionSummary[];
 }
 
 // ─── Active Session (in-memory only) ───────────────────────────
@@ -214,4 +228,92 @@ export interface StrategyOutcome {
   strategy: TeachingStrategy;
   timesUsed: number;
   timesFollowedByGain: number;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Extensions for the base-persona / learner-model / teaching-plan build
+// (docs/LEARNER_MODEL.md §3). All new fields are OPTIONAL so existing
+// profiles (file or Firestore) keep loading without migration.
+// ─────────────────────────────────────────────────────────────────
+
+export type AgeBand = '5-7' | '8-12' | '13-17' | 'adult';
+export type LadderLevel = 0 | 1 | 2 | 3 | 4 | 5;
+export type MasteryStatus = 'none' | 'provisional' | 'durable' | 'durable_plus';
+export type Confidence3 = 'unsure' | 'fairly_sure' | 'sure';
+export type ErrorClass =
+  | 'none' | 'slip' | 'guess' | 'missing_prerequisite' | 'misconception'
+  | 'right_answer_wrong_reasoning' | 'procedural' | 'overgeneralisation'
+  | 'language' | 'attention';
+
+export interface Onboarding {
+  interests: string[];
+  subjectFeelings: Record<string, 'love' | 'ok' | 'worried' | 'skip'>;
+  accessibility: { audioFirst?: boolean; largeText?: boolean; captions?: boolean };
+  languagePrefs?: { primary: string; alsoUnderstands?: string[] };
+  completedAt?: number;
+}
+
+/** One diagnosed exchange. Append-only (see src/adaptive/repo). Extends LearningEvidence. */
+export interface EvidenceEvent extends LearningEvidence {
+  eventId: string;
+  sessionId: string;
+  subjectId: string;
+  conceptType: string;
+  itemId?: string;
+  ladderLevel: LadderLevel;
+  errorClass: ErrorClass;
+  learnerConfidence?: Confidence3;
+  moveUsed: string;
+  representationUsed: TeachingStrategy;
+  planVersion?: string;
+  diagnosticianModel?: string;
+  source: 'voice' | 'text' | 'quiz_click' | 'review';
+}
+
+export interface LadderState {
+  highestLevel: LadderLevel;
+  levelEvidence: Partial<Record<LadderLevel, string[]>>;
+}
+
+export interface ReviewState {
+  nextDueAt?: number;
+  intervalDays: number;
+  passes: number;
+  lapses: number;
+}
+
+export interface StrategyStat { alpha: number; beta: number; lastUsed: number }
+export type StrategyProfile = Record<string, Partial<Record<TeachingStrategy, StrategyStat>>>;
+
+export interface AffectState {
+  confusionSignals: Record<string, number>;
+  frustrationEvents: number;
+  medianLatencyMs?: number;
+  typicalSessionMinutes?: number;
+}
+
+export type ClaimKind = 'strength' | 'gap' | 'strategy' | 'engagement' | 'preference' | 'pattern';
+export interface LearnerClaim {
+  claimId: string;
+  kind: ClaimKind;
+  statement: string;
+  childFriendly?: string;
+  scope: { subjectId?: string; conceptType?: string; conceptId?: string };
+  confidence: number;
+  evidenceRefs: string[];
+  source: 'rule' | 'profiler' | 'learner_stated' | 'parent_stated';
+  status: 'active' | 'stale' | 'retracted' | 'disputed';
+  createdAt: number;
+  lastConfirmedAt: number;
+}
+
+export interface SessionSummary {
+  sessionId: string; startedAt: number; endedAt: number;
+  conceptsTouched: string[];
+  ladderMoves: Array<{ conceptId: string; from: LadderLevel; to: LadderLevel }>;
+  misconceptionsChanged: Array<{ id: string; from: string; to: string }>;
+  movesUsed: Record<string, number>;
+  representationsUsed: Record<string, number>;
+  narrative: string;
+  planVersion: string;
 }
