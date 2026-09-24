@@ -183,11 +183,19 @@ export async function generateText(opts: GenerateOptions): Promise<{ text: strin
     tried.add(model);
     const start = Date.now();
     try {
+      // Bug fixed here (found while wiring liveObserver.ts onto the gateway):
+      // `responseMimeType` was accepted in GenerateOptions and forwarded by
+      // generateJSON() but never actually placed on the request — every JSON
+      // caller was relying entirely on generateJSON's markdown-fence-strip
+      // fallback, not real JSON mode.
+      const config: Record<string, unknown> = {};
+      if (systemInstruction) config.systemInstruction = systemInstruction;
+      if (opts.responseMimeType) config.responseMimeType = opts.responseMimeType;
       const resp = await withDeadline(
         ai.models.generateContent({
           model,
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          ...(systemInstruction ? { config: { systemInstruction } } : {}),
+          ...(Object.keys(config).length ? { config } : {}),
         }),
         timeoutMs,
       );
