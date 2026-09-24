@@ -2,9 +2,21 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Brain, Clock, Star, BookOpen, AlertTriangle, TrendingUp,
   ChevronDown, ChevronRight, CheckCircle2, Circle, BarChart3, User, Lightbulb,
+  Milestone, ShieldOff, History, Loader2,
 } from 'lucide-react';
 import { authFetch } from '../firebase/auth';
 import type { StudentProfile, ConceptSummary, SubjectSummary } from './LoginScreen';
+
+// T21/T22 — richer ledger entry (status + observation count), not just the
+// flat confirmedMisconceptions[] string list the rest of this file predates.
+interface LedgerEntry {
+  id: string;
+  text: string;
+  status: 'suspected' | 'confirmed' | 'resolved' | 'disputed';
+  observations: number;
+  firstSeen: number;
+  lastSeen: number;
+}
 
 interface ConceptState extends ConceptSummary {
   conceptId: string;
@@ -16,6 +28,28 @@ interface ConceptState extends ConceptSummary {
   effectiveStrategies: string[];
   ineffectiveStrategies: string[];
   lastVisited: number;
+  // T09/T10 additions — optional so an older cached profile still renders.
+  ladder?: { highestLevel: number };
+  masteryStatus?: 'none' | 'provisional' | 'durable' | 'durable_plus';
+  misconceptionLedger?: LedgerEntry[];
+}
+
+// T22 (FR-23) — one row from GET /api/learners/:id/events, for the evidence
+// replay (docs/FUNCTIONAL_SPEC.md J4: claim -> evidence -> exchanges).
+interface EvidenceEvent {
+  eventId: string;
+  timestamp: number;
+  conceptId: string;
+  promptType?: string;
+  questionAsked?: string;
+  childAnswer?: string;
+  childReasoning?: string;
+  classification?: string;
+  understandingDepth?: string;
+  candidateMisconceptions?: Array<{ id: string; text: string }>;
+  moveUsed?: string;
+  representationUsed?: string;
+  ladderLevel?: number;
 }
 
 interface SubjectData extends SubjectSummary {
@@ -50,6 +84,14 @@ const MASTERY_BAR: Record<string, string> = {
   mastered:    'bg-emerald-400',
 };
 
+// T21 (FR-13) — evidence ladder / mastery status label, docs/TUTOR_PERSONA.md §5.
+const MASTERY_STATUS_LABEL: Record<string, string> = {
+  none: 'Not yet secure', provisional: 'Provisional', durable: 'Durable', durable_plus: 'Durable+',
+};
+const LEDGER_STATUS_COLOR: Record<string, string> = {
+  suspected: 'text-amber-300', confirmed: 'text-rose-300', resolved: 'text-emerald-300', disputed: 'text-slate-500',
+};
+
 function getAvatarColor(name: string) {
   const colors = ['from-violet-500 to-purple-600','from-sky-500 to-blue-600','from-emerald-500 to-teal-600','from-amber-500 to-orange-600','from-rose-500 to-pink-600'];
   let hash = 0; for (let i=0;i<name.length;i++) hash = name.charCodeAt(i)+((hash<<5)-hash);
@@ -75,6 +117,10 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedConcepts, setExpandedConcepts] = useState<Set<string>>(new Set());
+  // T22 (FR-23) — evidence replay: fetched lazily per concept, cached by conceptId.
+  const [replayEvents, setReplayEvents] = useState<Record<string, EvidenceEvent[]>>({});
+  const [replayLoading, setReplayLoading] = useState<Set<string>>(new Set());
+  const [replayOpenFor, setReplayOpenFor] = useState<string | null>(null);
 
   useEffect(() => {
     authFetch('/api/learners')
@@ -96,6 +142,27 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
       s.has(id) ? s.delete(id) : s.add(id);
       return s;
     });
+  };
+
+  // T22 (FR-23) — "claim -> evidence -> exchanges in <= 2 clicks" (J4):
+  // click to expand a concept, click "View evidence" to replay the actual
+  // question/answer/reasoning/classification chain behind its ladder level
+  // and misconception ledger, from GET /api/learners/:id/events.
+  const loadReplay = async (studentId: string, conceptId: string) => {
+    if (replayOpenFor === conceptId) { setReplayOpenFor(null); return; }
+    setReplayOpenFor(conceptId);
+    if (replayEvents[conceptId]) return; // cached
+    setReplayLoading(prev => new Set(prev).add(conceptId));
+    try {
+      const res = await authFetch(`/api/learners/${encodeURIComponent(studentId)}/events?conceptId=${encodeURIComponent(conceptId)}`);
+      const json = await res.json();
+      setReplayEvents(prev => ({ ...prev, [conceptId]: json.events || [] }));
+    } catch (err) {
+      console.error('[ParentPortal] evidence replay failed', err);
+      setReplayEvents(prev => ({ ...prev, [conceptId]: [] }));
+    } finally {
+      setReplayLoading(prev => { const s = new Set(prev); s.delete(conceptId); return s; });
+    }
   };
 
   const overallMastery = (learner: FullLearner) => {
@@ -273,7 +340,46 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
 
                               {expanded && (
                                 <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
-                                  {hasMisconceptions && (
+                                  {(concept.ladder || concept.masteryStatus) && (
+                                    <div className="flex items-center gap-2 text-xs">
+                                      {concept.ladder && (
+                                        <span className="inline-flex items-center gap-1 bg-white/5 rounded-lg px-2 py-1 text-slate-300">
+                                          <Milestone className="w-3 h-3" /> Ladder L{concept.ladder.highestLevel}
+                                        </span>
+                                      )}
+                                      {concept.masteryStatus && (
+                                        <span className="bg-white/5 rounded-lg px-2 py-1 text-slate-300">
+                                          {MASTERY_STATUS_LABEL[concept.masteryStatus] || concept.masteryStatus}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Misconception ledger — status-aware when we have it, falling back to
+                                      the flat list for older profiles. */}
+                                  {(concept.misconceptionLedger && concept.misconceptionLedger.length > 0) ? (
+                                    <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">
+                                      <p className="text-rose-400 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <AlertTriangle className="w-3.5 h-3.5" /> Misconception ledger
+                                      </p>
+                                      <ul className="space-y-1.5">
+                                        {concept.misconceptionLedger.map((m) => (
+                                          <li key={m.id} className="text-xs flex items-start gap-2">
+                                            {m.status === 'disputed'
+                                              ? <ShieldOff className="w-3 h-3 text-slate-500 mt-0.5 flex-shrink-0" />
+                                              : <span className="text-rose-500 mt-0.5">•</span>}
+                                            <span className={m.status === 'disputed' ? 'text-slate-500 line-through' : 'text-rose-200'}>
+                                              {m.text}
+                                            </span>
+                                            <span className={`ml-auto flex-shrink-0 font-medium ${LEDGER_STATUS_COLOR[m.status] || 'text-slate-400'}`}>
+                                              {m.status} · {m.observations}×
+                                            </span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                      <p className="text-rose-400/70 text-xs mt-2 italic">💡 Ask your child to explain this concept in their own words.</p>
+                                    </div>
+                                  ) : hasMisconceptions && (
                                     <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">
                                       <p className="text-rose-400 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                         <AlertTriangle className="w-3.5 h-3.5" /> Confirmed Misconceptions
@@ -288,6 +394,47 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
                                       <p className="text-rose-400/70 text-xs mt-2 italic">💡 Ask your child to explain this concept in their own words.</p>
                                     </div>
                                   )}
+
+                                  {/* T22 — evidence replay */}
+                                  <div>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); loadReplay(selected.studentId, concept.conceptId); }}
+                                      className="flex items-center gap-1.5 text-xs text-indigo-300 hover:text-indigo-200 font-medium"
+                                    >
+                                      <History className="w-3.5 h-3.5" />
+                                      {replayOpenFor === concept.conceptId ? 'Hide evidence' : 'View evidence'}
+                                    </button>
+                                    {replayOpenFor === concept.conceptId && (
+                                      <div className="mt-2 space-y-2 max-h-64 overflow-y-auto pr-1">
+                                        {replayLoading.has(concept.conceptId) && (
+                                          <div className="flex items-center gap-2 text-slate-500 text-xs py-2">
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading evidence…
+                                          </div>
+                                        )}
+                                        {!replayLoading.has(concept.conceptId) && (replayEvents[concept.conceptId] || []).length === 0 && (
+                                          <p className="text-slate-500 text-xs italic py-1">No recorded exchanges for this concept yet.</p>
+                                        )}
+                                        {(replayEvents[concept.conceptId] || []).map((ev) => (
+                                          <div key={ev.eventId} className="bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs">
+                                            <div className="flex items-center justify-between text-slate-500 mb-1">
+                                              <span>{new Date(ev.timestamp).toLocaleString()}</span>
+                                              {typeof ev.ladderLevel === 'number' && <span>L{ev.ladderLevel}</span>}
+                                            </div>
+                                            {ev.questionAsked && <p className="text-slate-300"><span className="text-slate-500">Asked:</span> {ev.questionAsked}</p>}
+                                            {ev.childAnswer && <p className="text-slate-300"><span className="text-slate-500">Answered:</span> {ev.childAnswer}</p>}
+                                            {ev.childReasoning && <p className="text-slate-300"><span className="text-slate-500">Reasoning:</span> {ev.childReasoning}</p>}
+                                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                              {ev.classification && <span className="bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">{ev.classification.replace(/_/g,' ')}</span>}
+                                              {ev.moveUsed && <span className="bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">{ev.moveUsed}</span>}
+                                              {(ev.candidateMisconceptions || []).map(m => (
+                                                <span key={m.id} className="bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded">{m.text}</span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                   {(concept.effectiveStrategies || []).length > 0 && (
                                     <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3">
                                       <p className="text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-1.5">What works for {selected.name}</p>

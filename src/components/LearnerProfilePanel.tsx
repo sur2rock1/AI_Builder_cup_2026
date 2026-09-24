@@ -5,8 +5,9 @@ import {
 } from '../types';
 import {
   Brain, TrendingUp, AlertTriangle, CheckCircle, Zap,
-  ChevronRight, RotateCcw, Star, Clock, BookOpen, Target,
+  ChevronRight, RotateCcw, Star, Clock, BookOpen, Target, Milestone, ShieldOff,
 } from 'lucide-react';
+import { authFetch } from '../firebase/auth';
 
 // ─── Mastery colour mapping ─────────────────────────────────────
 const MASTERY_COLOR: Record<string, string> = {
@@ -37,6 +38,20 @@ const STRATEGY_LABEL: Record<string, string> = {
   peer_comparison:       'Peer Comparison',
   prerequisite_review:   'Prerequisite Review',
 };
+// T21 (FR-13) — evidence ladder / mastery status, from docs/TUTOR_PERSONA.md §5.
+const MASTERY_STATUS_LABEL: Record<string, string> = {
+  none:         'Not yet secure',
+  provisional:  'Provisional',
+  durable:      'Durable ✦',
+  durable_plus: 'Durable+ ✦✦',
+};
+const MASTERY_STATUS_COLOR: Record<string, string> = {
+  none:         '#6b7280',
+  provisional:  '#0369a1',
+  durable:      '#15803d',
+  durable_plus: '#d97706',
+};
+
 const DEPTH_ICON: Record<string, string> = {
   memorised:   '📖',
   recognised:  '👁️',
@@ -86,30 +101,113 @@ function MasteryBar({ score, level }: { score: number; level: string }) {
 }
 
 // ─── Concept card ───────────────────────────────────────────────
-const ConceptCard: React.FC<{ cs: ConceptStateUI }> = ({ cs }) => {
+interface ConceptCardProps {
+  cs: ConceptStateUI;
+  studentId?: string;
+  subjectId?: string;
+}
+const ConceptCard: React.FC<ConceptCardProps> = ({ cs, studentId, subjectId }) => {
   const [expanded, setExpanded] = useState(false);
+  const [disputing, setDisputing] = useState<string | null>(null);
+  const [disputed, setDisputed] = useState<Set<string>>(new Set());
+
+  // T21 (FR-22) — "That's not right." Marks the ledger entry disputed on the
+  // server (server.ts's dispute route -> learnerStore.disputeMisconception);
+  // R-WATCH in src/plan/compile.ts only watches suspected/confirmed entries,
+  // so a disputed one drops out of the plan on the next compile.
+  const handleDispute = useCallback(async (misconceptionId: string) => {
+    if (!studentId || !subjectId) return;
+    setDisputing(misconceptionId);
+    try {
+      const res = await authFetch(
+        `/api/learners/${encodeURIComponent(studentId)}/subjects/${encodeURIComponent(subjectId)}/concepts/${encodeURIComponent(cs.conceptId)}/misconceptions/${encodeURIComponent(misconceptionId)}/dispute`,
+        { method: 'POST' },
+      );
+      if (res.ok) setDisputed(prev => new Set(prev).add(misconceptionId));
+    } catch (err) {
+      console.error('[LearnerProfilePanel] dispute failed', err);
+    } finally {
+      setDisputing(null);
+    }
+  }, [studentId, subjectId, cs.conceptId]);
+
+  const ledger = (cs.misconceptionLedger || []).filter(m => !disputed.has(m.id));
+  const openLedger = ledger.filter(m => m.status === 'suspected' || m.status === 'confirmed');
+
   return (
     <div
-      onClick={() => setExpanded(e => !e)}
       style={{
         background: '#111827', border: '1px solid #1f2937', borderRadius: 8,
-        padding: '10px 12px', cursor: 'pointer', marginBottom: 6,
+        padding: '10px 12px', marginBottom: 6,
         borderLeft: `3px solid ${MASTERY_COLOR[cs.masteryLevel] || '#374151'}`,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ color: '#e5e7eb', fontSize: 13, fontWeight: 500 }}>{cs.label}</span>
-        <ChevronRight size={14} color="#6b7280" style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: '0.2s' }} />
-      </div>
-      <div style={{ marginTop: 6 }}>
-        <MasteryBar score={cs.masteryScore} level={cs.masteryLevel} />
+      <div onClick={() => setExpanded(e => !e)} style={{ cursor: 'pointer' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#e5e7eb', fontSize: 13, fontWeight: 500 }}>{cs.label}</span>
+          <ChevronRight size={14} color="#6b7280" style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: '0.2s' }} />
+        </div>
+        <div style={{ marginTop: 6 }}>
+          <MasteryBar score={cs.masteryScore} level={cs.masteryLevel} />
+        </div>
+        {(cs.ladder || cs.masteryStatus) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
+            {cs.ladder && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10,
+                color: '#9ca3af', background: '#1f2937', borderRadius: 5, padding: '1px 6px',
+              }}>
+                <Milestone size={10} /> L{cs.ladder.highestLevel}
+              </span>
+            )}
+            {cs.masteryStatus && (
+              <span style={{
+                fontSize: 10, fontWeight: 600, borderRadius: 5, padding: '1px 6px',
+                color: MASTERY_STATUS_COLOR[cs.masteryStatus] || '#9ca3af',
+                background: '#1f2937',
+              }}>
+                {MASTERY_STATUS_LABEL[cs.masteryStatus] || cs.masteryStatus}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       {expanded && (
         <div style={{ marginTop: 10, fontSize: 12 }}>
           <div style={{ color: '#9ca3af', marginBottom: 4 }}>
             Attempts: {cs.attemptCount} · Correct: {cs.correctCount}
           </div>
-          {cs.confirmedMisconceptions.length > 0 && (
+
+          {/* Misconception ledger — the real per-entry status + a dispute
+              affordance, superseding the flat confirmedMisconceptions list
+              below where the richer data is available. */}
+          {openLedger.length > 0 ? (
+            <div style={{ background: '#450a0a', borderRadius: 6, padding: '6px 8px', marginBottom: 6 }}>
+              <div style={{ color: '#fca5a5', fontSize: 11, fontWeight: 600, marginBottom: 3 }}>
+                ⚠ Misconception ledger
+              </div>
+              {openLedger.map((m) => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
+                  <div style={{ color: '#f87171', fontSize: 11 }}>
+                    [{m.status}] {m.text}
+                    <span style={{ color: '#9ca3af' }}> · {m.observations} observation{m.observations === 1 ? '' : 's'}</span>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDispute(m.id); }}
+                    disabled={disputing === m.id}
+                    title="Tell the tutor this isn't right — it drops from the plan until seen again"
+                    style={{
+                      flexShrink: 0, background: 'none', border: '1px solid #7f1d1d', borderRadius: 5,
+                      color: '#fca5a5', fontSize: 10, padding: '2px 6px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 3, opacity: disputing === m.id ? 0.5 : 1,
+                    }}
+                  >
+                    <ShieldOff size={10} /> {disputing === m.id ? '…' : "Not right"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : cs.confirmedMisconceptions.length > 0 && (
             <div style={{ background: '#450a0a', borderRadius: 6, padding: '6px 8px', marginBottom: 6 }}>
               <div style={{ color: '#fca5a5', fontSize: 11, fontWeight: 600, marginBottom: 3 }}>
                 ⚠ Confirmed Misconceptions
@@ -117,6 +215,12 @@ const ConceptCard: React.FC<{ cs: ConceptStateUI }> = ({ cs }) => {
               {cs.confirmedMisconceptions.map((m, i) => (
                 <div key={i} style={{ color: '#f87171', fontSize: 11, marginBottom: 2 }}>• {m}</div>
               ))}
+            </div>
+          )}
+          {disputed.size > 0 && (
+            <div style={{ color: '#6b7280', fontSize: 10, marginBottom: 6, fontStyle: 'italic' }}>
+              You marked {disputed.size} entr{disputed.size === 1 ? 'y' : 'ies'} as not right — dropped from the
+              teaching plan until seen again.
             </div>
           )}
           {cs.effectiveStrategies.length > 0 && (
@@ -324,7 +428,9 @@ export const LearnerProfilePanel: React.FC<Props> = ({
             <div style={{ color: '#9ca3af', fontSize: 11, fontWeight: 600, marginBottom: 8, letterSpacing: 1 }}>
               CONCEPT MASTERY MAP
             </div>
-            {conceptStates.map(cs => <ConceptCard key={cs.conceptId} cs={cs} />)}
+            {conceptStates.map(cs => (
+              <ConceptCard key={cs.conceptId} cs={cs} studentId={learner?.studentId} subjectId={session?.subjectId} />
+            ))}
           </div>
         )}
 

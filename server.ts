@@ -11,7 +11,7 @@ import {
   getOrCreateLearner, getLearner, listLearners, deleteLearner, ensureSubject,
   ensureConceptState, getConceptState, recordAttempt, addGlobalInsight,
   incrementSessionCount, startSession, getSession, updateSession, endSession,
-  recordReasoningEvidence, getEvidenceLog,
+  recordReasoningEvidence, getEvidenceLog, disputeMisconception,
 } from './src/adaptive/learnerStore';
 import { getRepo } from './src/adaptive/repo';
 import { requireAuth, requireOwnership } from './server/middleware/requireAuth';
@@ -751,6 +751,24 @@ app.get('/api/learners/:studentId/events', requireAuth, requireOwnership, async 
   }
 });
 
+// T21 (FR-22) — "That's not right" on the learner card. See disputeMisconception's
+// comment in learnerStore.ts for why this marks the ledger entry rather than a
+// separate claim (T14's profiler/claim validator isn't built yet).
+app.post(
+  '/api/learners/:studentId/subjects/:subjectId/concepts/:conceptId/misconceptions/:misconceptionId/dispute',
+  requireAuth, requireOwnership,
+  async (req, res) => {
+    try {
+      const { studentId, subjectId, conceptId, misconceptionId } = req.params;
+      const rec = await disputeMisconception(studentId, subjectId, conceptId, misconceptionId);
+      if (!rec) return (res as any).status(404).json({ error: 'Misconception not found' });
+      res.json({ misconception: rec });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || 'Failed to dispute misconception' });
+    }
+  },
+);
+
 // ─── Adaptive session endpoints ─────────────────────────────────
 app.post('/api/session/start', requireAuth, async (req, res) => {
   try {
@@ -1128,8 +1146,30 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
       source: 'voice',
     });
 
+    const moveUsed = assessment.shouldProbe ? 'DISCRIMINATING_PROBE' : 'ELICIT_REASONING';
+
+    // T23 — the Tutor's-reasoning panel needs to see what the diagnosis
+    // actually found, not just the resulting ladder/mastery numbers, so the
+    // full assessment + the question/answer/reasoning it was based on ride
+    // along on the same message the panel already listens for.
     if (clientWs.readyState === WebSocket.OPEN && evidenceResult) {
-      clientWs.send(JSON.stringify({ type: 'learner_update_v2', evidence: evidenceResult }));
+      clientWs.send(JSON.stringify({
+        type: 'learner_update_v2',
+        evidence: evidenceResult,
+        diagnosis: {
+          classification: assessment.classification,
+          understandingDepth: assessment.understandingDepth,
+          confidence: assessment.confidence,
+          shouldProbe: assessment.shouldProbe,
+          tutorGuidance: assessment.tutorGuidance,
+          moveUsed,
+          questionAsked: String(args.questionAsked || ''),
+          childAnswer: String(args.childAnswer || ''),
+          childReasoning: String(args.childReasoning || ''),
+          candidateMisconceptions,
+          diagnosisLatencyMs: deadlineResult.elapsedMs,
+        },
+      }));
     }
 
     if (resolvedPlan) {
@@ -1144,7 +1184,13 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
       });
       deltaState = delta.state;
       if (clientWs.readyState === WebSocket.OPEN) {
-        clientWs.send(JSON.stringify({ type: 'plan_update', instruction: delta.instruction, nextRepresentation: delta.nextRepresentation }));
+        clientWs.send(JSON.stringify({
+          type: 'plan_update',
+          instruction: delta.instruction,
+          nextRepresentation: delta.nextRepresentation,
+          outcome,
+          moveUsed,
+        }));
       }
     }
   }
