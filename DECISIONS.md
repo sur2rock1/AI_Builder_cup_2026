@@ -400,3 +400,62 @@ BUILD_PLAN (tasks T00–T30 for coding agents), TRACEABILITY. The audit found: t
 has no learner identity; three divergent persona prompts; `learners` publicly readable in
 firestore.rules; learner data split between a JSON file and Firestore. Each of these is covered
 by a build task (T04, T05–T07, T02, T03).
+
+## 2026-09-24 — Build plan executed: critical path wired end-to-end; requireAuth dev bypass (D-2026-09-24-3)
+
+**Context.** Executed docs/BUILD_PLAN.md against the running repo: T01 (model gateway), T02
+(Firestore lockdown + auth middleware), T03 (learner repository), T04 (session-scoped
+`/ws/live`), T05–T07 (persona modules + composer, wired into the live path, replacing the
+never-invoked `assess_child_reasoning` wiring gap and the divergent prompts), T09–T10 (ladder /
+mastery-status / strategy-profile extensions to `recordReasoningEvidence`), T11 partial
+(diagnosis now flows live → `reasoningAssessor` → `recordReasoningEvidence` →
+`compilePlanDelta`, not yet split into separate `segmenter.ts`/`diagnostician.ts` modules),
+T17–T18 (deterministic `compileTeachingPlan` + `renderPlanForPrompt`, wired into
+`/api/session/start` and the composed system prompt), T20 (`compilePlanDelta` with probe/retry/
+failure limits).
+
+**Security gap found while wiring T02.** `requireOwnership` as specified requires
+`req.authUid === studentId` from a verified Firebase ID token. `LoginScreen.tsx` has no real
+sign-in step — it generates `studentId` locally with no Firebase Auth call — so strict
+enforcement would have broken the running app for every learner, not just malicious requests.
+
+**Decision.** Ship `requireAuth`/`requireOwnership` (`server/middleware/requireAuth.ts`) with a
+`DEMO_MODE=true` or `NODE_ENV=development && ALLOW_DEV_AUTH_BYPASS!=='false'` bypass that sets
+`req.authUid = studentId` from the request itself (i.e. no real ownership check in that mode),
+logs a warning once per process, and is documented in code comments as a known, temporary gap.
+`firestore.rules` still denies all client reads/writes on `learners/**` regardless of this
+bypass (server-only via Admin SDK), so the exposure is limited to the Express API surface, not
+the database.
+
+**Reason.** A demo/hackathon build must keep running through this change; a data breach in a
+disabled-by-default rules file is a worse failure than a documented, logged dev bypass on the
+API layer. This is explicitly *not* acceptable for any real deployment with real user data.
+
+**Trade-offs / what this is not.** This is not NFR-03 compliance — it is NFR-03 minus real
+per-profile authentication. Any learner can currently pass any `studentId` and the server will
+trust it whenever the bypass is active. **Follow-up required (tracked as a T02 remainder):**
+build a real Firebase sign-in flow in `LoginScreen.tsx` (or equivalent) before any non-demo
+deployment, then set `ALLOW_DEV_AUTH_BYPASS=false` in production and delete the bypass path
+once real sign-in exists everywhere it's needed.
+
+**Verification.** `npx tsc --noEmit` clean across the whole repo; `npm run test:assessor` 13/13
+(unchanged `reasoningAssessor.ts`, now actually wired into the live path); new
+`tests/smoke/plan-and-store.mjs` (misconception suspected→confirmed at 2 independent
+observations, plan re-compile reflecting the ledger, plan-delta instruction on confirmation,
+mastery blocked while a misconception stands) — all pass; a manual WS run against the real
+`server.ts` bundle (stubbed Gemini) confirmed the live session now advertises the full 13-tool
+set (previously 8, with `assess_child_reasoning` never actually reachable) and that
+`composeSystemInstruction()`/`composeKickoff()` output is what's actually sent.
+
+**Not yet verified.** `npm run test:live` (the project's own live-harness assertions) was not
+run to a pass/fail verdict in this environment — the bridged filesystem's slow first-time
+`node_modules` resolution made the harness's built-in timeouts unreliable here (see the manual
+reproduction above, which exercises the same server.ts bundle and passed). Re-run
+`npm run test:live` directly on the development machine to close this out.
+
+**Deliberately not built this pass (see TRACEABILITY.md for full status):** T08 (text-channel
+`/api/tutor/turn`), T11's segmenter/diagnostician split, T12 (confidence-capture UI), T13
+(onboarding UI — the API route exists), T14 (profiler/claim validator), T15 (spaced-review
+scheduling — the type exists, nothing schedules yet), T19's formal latency spike/report, T21–T23
+(learner card, parent-portal replay, tutor's-reasoning panel), T24–T27 (eval harnesses, seeded
+demo learners), T29–T30 (Cloud Run deploy smoke test, delete-endpoint end-to-end review).
