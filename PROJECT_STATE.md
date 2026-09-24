@@ -129,3 +129,53 @@ publicly readable in firestore.rules (T02); three divergent persona prompts (T05
 unverified (T01).
 
 **Open questions added:** OQ-1 persona name; OQ-3 second subject for the cross-subject proof.
+
+---
+
+## Update — 2026-09-24 (later): build-plan critical path implemented and committed
+
+Executed against the repo (commit `6478d3a`, on top of baseline tag `baseline-2026-09-24`):
+T01, T02 (partial — see risk below), T03, T04, T05–T07, T09–T10, T11 (partial), T17–T18, T20.
+Full detail in DECISIONS.md (D-2026-09-24-3) and docs/TRACEABILITY.md.
+
+**What actually runs now, verified:**
+- The live voice tutor's system prompt and tool list are the new composed persona
+  (`composeSystemInstruction` + all 13 tools), not the old hand-written prompt — confirmed by a
+  manual WebSocket run against the real `server.ts` bundle.
+- `assess_child_reasoning` — previously declared as a tool but never actually reachable from the
+  live path — now fires on every answer, feeds `reasoningAssessor.ts` (unchanged), records an
+  `EvidenceEvent`, updates the ladder/mastery/strategy profile, and pushes a plan-delta
+  instruction back over the socket.
+- `/api/session/start` compiles and persists a deterministic Teaching Plan.
+- `tests/smoke/plan-and-store.mjs`: misconception suspected→confirmed→drives the plan's
+  watch-list, plan-delta produces the right instruction on confirmation, mastery correctly stays
+  `none` while a misconception stands — all pass.
+- `npx tsc --noEmit` clean; `npm run test:assessor` 13/13 unchanged.
+
+**New known risk (important — surface this to judges proactively, don't wait to be asked):**
+`requireAuth`/`requireOwnership` exist but run in a documented DEMO_MODE/dev bypass because the
+client (`LoginScreen.tsx`) has no real per-profile Firebase sign-in yet. `firestore.rules` is
+correctly locked (`learners/**` denies all client reads/writes), so this is an API-layer gap, not
+a database one — but it means NFR-03 is not fully met. Must be closed (real sign-in flow) before
+any non-demo deployment.
+
+**Not yet verified in this pass:** `npm run test:live` (the project's own live-harness assertions)
+— the sandboxed remote-bridge environment's slow first-time module resolution made its built-in
+timeouts unreliable; re-run it directly on the development machine.
+
+**Deliberately deferred (see TRACEABILITY.md for the full list):** T08 text channel, T11's
+segmenter/diagnostician split, T12 confidence capture, T13 onboarding UI, T14 profiler/claim
+validator, T15 spaced-review scheduling, T19's formal latency spike, T21–T23 learner-facing views,
+T24–T27 eval harnesses, T29–T30 deploy/delete review.
+
+**Immediate next steps, in priority order (see BUILD_PLAN.md "Never cut": T02 real auth, T11,
+T17 — done, T23, T24):**
+1. Build a real per-profile Firebase sign-in flow and turn off the DEMO_MODE/dev bypass (closes
+   the NFR-03 gap flagged above).
+2. T21–T23: learner card, parent-portal evidence replay, tutor's-reasoning panel — these are the
+   UX (10%) and part of the Technical-Merit story judges can actually see; currently the strongest
+   pipeline work (ladder, ledger, plan, delta) has no visible surface yet.
+3. T24: diagnosis eval set — the single biggest unsupported claim right now is "the diagnosis
+   works"; nothing quantifies detection/false-positive rate.
+4. T19: run the formal latency spike (≥10 exchanges) and record p50/p95 in DECISIONS.md — the
+   fire-and-forget wiring shipped without that measurement.
