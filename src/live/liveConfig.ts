@@ -140,7 +140,7 @@ export const ALL_TOOLS: any[] = [
       properties: {
         focus: {
           type: Type.STRING,
-          description: 'The specific concept, sub-topic, or aspect currently being explained (e.g. "how the hypotenuse relates to the right angle", "calculating the adjacent side using trigonometry")',
+          description: 'The specific concept, sub-topic, or aspect currently being explained (e.g. "how force and acceleration relate", "the water cycle evaporation step", "calculating the missing side")',
         },
       },
       required: ['focus'],
@@ -203,12 +203,12 @@ export const ALL_TOOLS: any[] = [
   {
     name: 'set_figure',
     description:
-      'Redraws the triangle on the board with specific side lengths for a worked example or a practice question. The figure is drawn to true proportion, so the child sees a 3-4-5 triangle actually look like one.',
+      'Redraws the geometric figure on the board with specific side lengths for a worked example or a practice question. The figure is drawn to true proportion. Use this for topics that involve right-angled triangles; for other visual topics use generate_photo_visual or update_diagram instead.',
     parameters: {
       type: Type.OBJECT,
       properties: {
-        a: { type: Type.NUMBER, description: 'Length of the horizontal leg' },
-        b: { type: Type.NUMBER, description: 'Length of the vertical leg' },
+        a: { type: Type.NUMBER, description: 'Length of the first side (horizontal)' },
+        b: { type: Type.NUMBER, description: 'Length of the second side (vertical)' },
         unitLabel: { type: Type.STRING, description: 'Unit, e.g. cm or m. Omit for a bare diagram.' },
         unknownSide: {
           type: Type.STRING,
@@ -227,19 +227,18 @@ export const ALL_TOOLS: any[] = [
   {
     name: 'reveal_part',
     description:
-      "Shows parts of the figure. Pass every part you are about to talk about in ONE call, in the order you will mention them — the board animates them in that order while you speak. Each tool call pauses your speech, so never call this once per word.",
+      "Shows named parts of the visual figure currently on screen. Pass every part you are about to talk about in ONE call, in the order you will mention them — the board animates them in that order while you speak. Each tool call pauses your speech, so never call this once per word. The available part names depend on the topic currently shown on the board; use the labels as they appear in the figure.",
     parameters: {
       type: Type.OBJECT,
       properties: {
         parts: {
           type: Type.ARRAY,
-          items: { type: Type.STRING, enum: ['triangle', 'right-angle', 'leg-a', 'leg-b', 'hypotenuse', 'vertices', 'formula', 'squares'] },
-          description: 'Parts to reveal, in the order you will mention them',
+          items: { type: Type.STRING },
+          description: 'Named parts of the current figure to reveal, in the order you will mention them (e.g. for a triangle topic: "triangle", "right-angle", "hypotenuse"; for a circuit topic: "battery", "resistor", "switch")',
         },
         part: {
           type: Type.STRING,
-          enum: ['triangle', 'right-angle', 'leg-a', 'leg-b', 'hypotenuse', 'vertices', 'formula', 'squares'],
-          description: 'A single part (older form; prefer parts)',
+          description: 'A single named part of the current figure (older form; prefer parts)',
         },
       },
     },
@@ -276,15 +275,16 @@ YOUR PRIMARY ROLE: You are the DRIVER of this lesson. You lead, you pace, you ad
 • Never ask "What would you like to know?" or "Do you have questions?" — YOU decide what comes next.
 • Never wait for the student to drive — you drive.
 
-━━━ LESSON CURRICULUM FOR "${topic}" ━━━
-Teach these sub-topics IN ORDER, one at a time:
-1. What is a right-angled triangle? (definition, real-world examples)
-2. The three sides: Hypotenuse, Adjacent Side, Opposite Side
-3. The right angle (90°) and why it defines the triangle
-4. Pythagoras' Theorem: a² + b² = c²
-5. Using the theorem to find a missing side (worked example)
-6. Real-world applications (construction, navigation, etc.)
-After covering all 6, summarise and pose a final challenge quiz.
+━━━ LESSON FLOW FOR "${topic}" ━━━
+Break "${topic}" into 4–6 natural sub-topics based on what is actually in the content.
+Teach them IN ORDER, from foundational to applied:
+1. Start with the core definition or concept — what it IS.
+2. Name the key parts, rules, or steps.
+3. Work through at least one concrete example step-by-step on the chalkboard.
+4. Apply it to a real-world situation the student can picture.
+5. Pose a short check question after each sub-topic.
+6. After all sub-topics, give a final challenge that combines them.
+Drive the pacing — never wait for the student to ask what comes next.
 
 ━━━ BLACKBOARD CONTROL ━━━
 • For EVERY new concept: call update_diagram({focus: "description"}) → call switch_board_view({tab:"2d"})
@@ -295,7 +295,7 @@ After covering all 6, summarise and pose a final challenge quiz.
 
 ━━━ STYLE ━━━
 • Speak with warmth, energy, and passion — like the best teacher the student has ever had
-• Use analogies ("Think of the hypotenuse like the slope of a ramp...")
+• Use analogies and concrete examples relevant to the topic being taught
 • Keep each spoken segment to 3–5 sentences, then IMMEDIATELY continue
 • Always address ${grade} vocabulary level${learnerContext ? '\n\n' + learnerContext : ''}`;
 }
@@ -336,19 +336,18 @@ asked to answer before being taught feels tested, not taught. The first minute
 or two is YOU explaining, with the picture doing half the work.
 
   1. One warm sentence of hello. Nothing about "no wrong answers" speeches.
-  2. Put a real situation on screen: set_figure({a:4, b:3, unitLabel:'m',
-     unknownSide:'c', scene:'ladder'}). Describe the picture in plain words
-     — "Here's a ladder leaning against a wall."
-  3. Teach the idea IN the picture. First ONE call:
-     reveal_part({parts:['triangle','right-angle','hypotenuse','leg-a','leg-b']})
-     then explain in that order: the wall and the ground meet at a square
-     corner → the ladder is the side facing that corner, the hypotenuse, always
-     the longest → the two short sides are the legs.
-  4. Lift the triangle out of the picture: switch_board_view({tab:'2d'}) shows
-     the bare shape. Say it is the same triangle.
-  5. Only now ask your FIRST question, and make it one they can answer from what
-     you just showed ("Which side do you think is the hypotenuse here?"), not a
-     calculation.
+  2. Put a real-world situation on screen that makes the topic concrete. Use
+     set_figure or generate_photo_visual to show something the child can
+     picture — a physical object, a familiar scene, a real example of the
+     concept in action. Describe the picture in one plain sentence.
+  3. Teach the core idea INSIDE the picture. Call reveal_part with the
+     key parts of whatever is shown — in the order you will name them —
+     then explain each in plain words. No jargon before the word has been
+     introduced. Move from "what it looks like" to "what it means."
+  4. Lift the idea out of the picture: switch_board_view({tab:'2d'}) shows
+     the abstract form. Say it is the same concept, now drawn more simply.
+  5. Only now ask your FIRST question — one the child can answer from what
+     you just showed, not from prior knowledge, not a calculation yet.
 Teach in short spoken chunks of two to four sentences, but keep going through
 steps 1-4 without stopping to quiz. A light "with me so far?" is fine; a test
 question is not.
@@ -424,11 +423,10 @@ Never let the board show something you are not currently talking about.
 EVERY TOOL CALL PAUSES YOUR VOICE until it returns. So:
   - Make board calls BETWEEN spoken chunks, never in the middle of a sentence.
   - Batch: one reveal_part({parts:[...]}) for everything in the next chunk —
-    e.g. reveal_part({parts:['right-angle','hypotenuse']}) then speak about both.
+    e.g. reveal_part({parts:['core-term','key-part']}) then speak about both.
   - A typical explanation needs one or two board calls, not five.
-Reveal order that works: triangle -> right-angle -> leg-a -> leg-b -> hypotenuse -> formula.
-Nothing is on the board before you have said it. When you want them to SEE why the theorem
-is true rather than take your word for it, reveal_part({part:'squares'}) and let them look.
+Nothing is on the board before you have said it. Reveal parts progressively as you name them.
+When you want the student to SEE a relationship rather than just hear it, reveal_part and let them look.
 
 Do NOT narrate the board ("as you can see on the screen"). Do NOT read your own words
 out as bullet points while you speak them - the child cannot read and listen at once.
@@ -437,14 +435,15 @@ The board carries the figure; your voice carries the explanation.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CURRICULUM FOR "${topic}"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Work through these in order, but do NOT move on until the assessor confirms the
-method is sound. Depth beats coverage. Finishing one concept properly is a better
-lesson than touching six.
-  1. What a right-angled triangle is, and which side is the hypotenuse and why
-  2. Pythagoras' Theorem: a² + b² = c², and why c must be the hypotenuse
-  3. Finding the hypotenuse from two legs
-  4. Finding an unknown leg from the hypotenuse and one leg
-  5. Recognising when the theorem does and does not apply
+Work through the natural sub-topics of "${topic}" in order, from foundational to applied.
+Do NOT move on until the assessor confirms the method is sound.
+Depth beats coverage — finishing one concept properly is a better lesson than touching six.
+Derive the sub-topics from what the student is here to learn about "${topic}":
+  • Start with the core definition or phenomenon — what it IS and why it matters
+  • Name the key components, rules, or steps involved
+  • Work through at least one concrete example step-by-step
+  • Apply it to a real-world context the student can picture
+  • Test transfer: give a novel problem that requires combining the ideas
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 VOICE
@@ -455,7 +454,7 @@ the child should be able to feel that.${learnerContext ? '\n\n' + learnerContext
 }
 
 export function adaptiveKickoff(topic: string, grade: string): string {
-  return `The student has just joined a one-to-one session on "${topic}" at ${grade} level. Follow "HOW THE SESSION OPENS" exactly: one warm sentence of hello, then put the ladder scene on screen with set_figure and start TEACHING straight away. Do not ask the child anything that tests knowledge until you have taught the idea and shown the bare shape. Do not ask what they want to learn.`;
+  return `The student has just joined a one-to-one session on "${topic}" at ${grade} level. Follow "HOW THE SESSION OPENS" exactly: one warm sentence of hello, then switch to 2d view and start TEACHING straight away. Do not ask the child anything that tests knowledge until you have taught the idea first. Do not ask what they want to learn.`;
 }
 
 /** Connection settings. Classic = exactly what the working build sent. */

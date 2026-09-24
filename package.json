@@ -14,6 +14,8 @@
     "test:assessor": "node tests/run.mjs",
     "test:live": "node tests/live/run.mjs",
     "test": "node tests/run.mjs && node tests/live/run.mjs",
+    "pregen:first": "npx --yes tsx scripts/pregenerate-assets.ts --first-only",
+    "pregen": "npx --yes tsx scripts/pregenerate-assets.ts",
     "diagnose:voice": "npx --yes tsx scripts/diagnose-voice.ts",
     "firebase:deploy": "npm run build:web && npx -y firebase-tools@latest deploy --project sceneflow-f9529",
     "firebase:deploy:rules": "npx -y firebase-tools@latest deploy --only firestore:rules,storage,auth --project sceneflow-f9529",

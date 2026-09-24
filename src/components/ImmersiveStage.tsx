@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Mic, MicOff, Maximize2, Volume2, Box, PenLine, Target, ChevronRight, HelpCircle, Repeat, Gauge, Hand } from 'lucide-react';
 import { ScenePanel, PanelMode } from './ScenePanel';
+import type { ConceptMapDiagram } from './ScenePanel';
 import { SceneDef } from '../scenes/pythagorasScenes';
 import { Scene3DData } from '../types';
 import { FigureSpec, FigurePart, StudentThinking, LiveAssessment, BoardNote } from './TeachingCanvas';
@@ -59,8 +60,12 @@ interface Props {
   mouthOpenness: number;
   micLevel: number;
   panelMode: PanelMode;
-  scene: SceneDef;
+  scene: SceneDef | null;
   scene3d?: Scene3DData;
+  /** Pre-generated real-world photo (base64 data URI) for this topic, from the pregen cache. */
+  pregenPhoto?: string | null;
+  /** Pre-generated concept map diagram for this topic. */
+  topicDiagram?: ConceptMapDiagram | null;
   tutorLine?: string;
   presenter?: PresenterMedia;
   studentName?: string;
@@ -77,7 +82,7 @@ export const ImmersiveStage: React.FC<Props> = ({
   conceptLabel, subject, grade, figure, revealed, focusPart,
   studentThinking, assessment, notes, liveNotes, masteryScore, misconceptions,
   isLessonActive, isSpeaking, isThinking, learner, mouthOpenness, micLevel,
-  panelMode, scene, scene3d, tutorLine, presenter, studentName,
+  panelMode, scene, scene3d, pregenPhoto, topicDiagram, tutorLine, presenter, studentName,
   onPanelModeChange, onConfusion, onToggleLesson, onChangeTopic, onOpenProfile,
 }) => {
   const shown = (p: FigurePart) => revealed.includes(p);
@@ -101,18 +106,6 @@ export const ImmersiveStage: React.FC<Props> = ({
   }, [presenter?.still]);
   const still = stillOk ? presenter?.still : undefined;
 
-  const geo = useMemo(() => {
-    const { a, b } = figure;
-    const c = Math.sqrt(a * a + b * b);
-    const BOX = 210;
-    const s = BOX / Math.max(a, b);
-    const w = a * s, h = b * s;
-    const ox = 250 - w / 2, oy = 165 + h / 2;
-    return { c, w, h, A: { x: ox, y: oy - h }, B: { x: ox + w, y: oy }, C: { x: ox, y: oy } };
-  }, [figure]);
-  const { A, B, C, w, h, c } = geo;
-  const u = figure.unitLabel ? ` ${figure.unitLabel}` : '';
-  const num = (v: number) => (Number.isInteger(v) ? v : v.toFixed(1));
 
   return (
     <div className="w-full h-full flex flex-col bg-[#0C0F16] text-white overflow-hidden">
@@ -197,6 +190,8 @@ export const ImmersiveStage: React.FC<Props> = ({
               focusPart={focusPart}
               studentThinking={studentThinking}
               scene3d={scene3d}
+              pregenPhoto={pregenPhoto}
+              topicDiagram={topicDiagram}
               conceptLabel={conceptLabel}
               isLessonActive={isLessonActive}
               notes={notes}
@@ -310,7 +305,7 @@ export const ImmersiveStage: React.FC<Props> = ({
             <section className="p-4 border-b border-white/[0.06]">
               <h3 className="text-[10px] uppercase tracking-[0.16em] text-white/35 font-semibold mb-2.5">Ideas this session</h3>
               <ul className="space-y-2">
-                {Object.entries(learner.byConcept).map(([id, c]) => (
+                {(Object.entries(learner.byConcept) as [string, { label: string; understanding: number }][]).map(([id, c]) => (
                   <li key={id}>
                     <div className="flex justify-between text-[12px] text-white/70">
                       <span className={`truncate ${id === learner.concept.id ? 'text-white font-medium' : ''}`}>{c.label}</span>

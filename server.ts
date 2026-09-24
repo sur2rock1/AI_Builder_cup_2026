@@ -19,12 +19,9 @@ import {
   ReasoningAssessment, DeadlineResult,
 } from './src/adaptive/reasoningAssessor';
 import { MASTERY_THRESHOLD } from './src/adaptive/bkt';
-import {
-  VoiceMode, liveConfigFor, classicSystemInstruction, adaptiveSystemInstruction,
-  classicKickoff, adaptiveKickoff,
-} from './src/live/liveConfig';
-import { PYTHAGORAS_CURRICULUM, getConcept, getNextUnmasteredConcept } from './src/curriculum/pythagoras';
-import { getCurriculum, listCurricula, nextUnmasteredConcept } from './src/curriculum/ingest';
+import { liveConfigFor } from './src/live/liveConfig';
+import { buildCurriculumIntelligenceContext } from './src/curriculum/curriculumIntelligence';
+import { getCurriculum, listCurricula, preloadCurricula, nextUnmasteredConcept } from './src/curriculum/ingest';
 import { startIngestJob, getJob } from './src/curriculum/pdfIngest';
 import os from 'os';
 import fs from 'fs';
@@ -34,6 +31,8 @@ import { initFirebaseAdmin, admin } from './src/firebase/admin';
 
 dotenv.config();
 initFirebaseAdmin();
+// Warm the curriculum cache from Firestore at startup
+preloadCurricula().catch(err => console.warn('[Startup] Curriculum preload failed:', err?.message));
 
 // ── Guard against Vite-internal WebSocket frame errors ──────────
 // When Vite runs in middlewareMode, its bundled ws instance can emit
@@ -53,6 +52,31 @@ process.on('uncaughtException', (err: any) => {
   process.exit(1);
 });
 
+
+// ── Pre-generated asset cache ──────────────────────────────────────────────
+const PREGEN_DIR = path.join(process.cwd(), 'data', 'pregenerated');
+
+/** Convert a topic name to the same slug used by pregenerate-assets.ts */
+function slugifyTopic(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+}
+
+/** Load pregenerated cache file for a topic, or return null if not found */
+function loadPregen(topic: string): any | null {
+  try {
+    const file = path.join(PREGEN_DIR, `${slugifyTopic(topic)}.json`);
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, 'utf8'));
+    }
+  } catch (e: any) {
+    console.warn(`[cache] Failed to read pregenerated file for "${topic}":`, e.message);
+  }
+  return null;
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -80,6 +104,20 @@ app.post('/api/generate-lesson', async (req, res) => {
   const { topic, grade } = req.body;
   const targetTopic = topic || 'Photosynthesis';
   const targetGrade = grade || 'Middle School (Grade 6-8)';
+
+  // ── Cache-first: serve pre-generated lesson if available ─────────────────
+  const cached = loadPregen(targetTopic);
+  if (cached?.lessonData) {
+    // Merge with static fallback so every field is present.
+    // The pregen AI generates: diagram, chalkNotes, quiz, overview, tagline.
+    // The static fallback supplies: explorer (with calculateOutcome fn), scene3d,
+    // photoVisual, suggestedQuestions, and any other UI-required fields.
+    const staticBase = createDynamicLesson(targetTopic, targetGrade);
+    const mergedData = { ...staticBase, ...cached.lessonData };
+    console.log(`[API /api/generate-lesson] Cache HIT for "${targetTopic}" — serving merged pregenerated+static data`);
+    return res.json({ success: true, data: mergedData, photoUrl: cached.photoUrl ?? null, source: 'pregenerated-cache' });
+  }
+  console.log(`[API /api/generate-lesson] Cache MISS for "${targetTopic}" — calling Gemini`);
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -226,6 +264,25 @@ Ensure the content is scientifically/historically accurate, perfectly adapted to
     if (text) {
       const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
       const parsed = JSON.parse(cleanText);
+      // Save to pregenerated cache for future requests
+      try {
+        if (!fs.existsSync(PREGEN_DIR)) fs.mkdirSync(PREGEN_DIR, { recursive: true });
+        const cacheFile = path.join(PREGEN_DIR, `${slugifyTopic(targetTopic)}.json`);
+        if (!fs.existsSync(cacheFile)) {
+          const cacheEntry = {
+            topic: targetTopic, grade: targetGrade,
+            slug: slugifyTopic(targetTopic),
+            generatedAt: new Date().toISOString(),
+            lessonData: parsed,
+            diagrams: { '__main__': parsed.diagram },
+            photoUrl: null,
+          };
+          fs.writeFileSync(cacheFile, JSON.stringify(cacheEntry, null, 2), 'utf8');
+          console.log(`[API /api/generate-lesson] Saved new lesson to cache: ${slugifyTopic(targetTopic)}.json`);
+        }
+      } catch (cacheErr: any) {
+        console.warn('[API /api/generate-lesson] Cache save failed (non-fatal):', cacheErr.message);
+      }
       return res.json({ success: true, data: parsed, source: 'gemini' });
     }
 
@@ -249,6 +306,21 @@ app.post('/api/update-diagram', async (req, res) => {
   const { topic, grade, focus } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(400).json({ error: 'No API key' });
+
+  // ── Cache-first: serve pre-generated diagram variant if available ─────────
+  const cachedPregen = loadPregen(topic);
+  if (cachedPregen?.diagrams) {
+    const focusSlug = slugifyTopic(focus || topic);
+    const cachedDiagram =
+      cachedPregen.diagrams[focusSlug] ||
+      cachedPregen.diagrams['__main__'] ||
+      cachedPregen.lessonData?.diagram;
+    if (cachedDiagram) {
+      console.log(`[API /api/update-diagram] Cache HIT for "${topic}" focus="${focus || topic}" — serving pregenerated diagram`);
+      return res.json({ success: true, diagram: cachedDiagram, source: 'pregenerated-cache' });
+    }
+  }
+  console.log(`[API /api/update-diagram] Cache MISS for "${topic}" — calling Gemini`);
 
   const prompt = `You are an expert pedagogical diagram designer. Generate a concise 2D concept diagram specifically focused on: "${focus || topic}" for a student in "${grade || 'Secondary 2'}".
 
@@ -289,16 +361,33 @@ Rules:
           config: { responseMimeType: 'application/json' },
         });
         text = response.text || '';
-        if (text) break;
-      } catch (_) { continue; }
+        if (text) {
+          console.log(`[API /api/update-diagram] Generated with ${modelName} for topic: "${focus || topic}"`);
+          break;
+        }
+      } catch (modelErr: any) {
+        console.warn(`[API /api/update-diagram] ${modelName} failed: ${modelErr?.message || modelErr?.status || 'unknown'}`);
+        continue;
+      }
     }
-    if (!text) return res.status(500).json({ error: 'Diagram generation failed' });
-    const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
-    const diagram = JSON.parse(cleanText);
-    return res.json({ success: true, diagram });
+    if (text) {
+      const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
+      const diagram = JSON.parse(cleanText);
+      return res.json({ success: true, diagram, source: 'gemini' });
+    }
+    // All AI models unavailable — serve topic-specific static fallback diagram
+    console.warn(`[API /api/update-diagram] All models unavailable. Serving static fallback diagram for: "${topic}"`);
+    const fallbackLesson = createDynamicLesson(topic, grade || 'Secondary 2');
+    return res.json({ success: true, diagram: fallbackLesson.diagram, source: 'static-fallback' });
   } catch (err: any) {
     console.error('[API /api/update-diagram] Error:', err?.message);
-    return res.status(500).json({ error: 'Diagram generation failed' });
+    // Even on unexpected error, return a usable diagram rather than 500
+    try {
+      const fallbackLesson = createDynamicLesson(topic, grade || 'Secondary 2');
+      return res.json({ success: true, diagram: fallbackLesson.diagram, source: 'static-fallback' });
+    } catch {
+      return res.status(500).json({ error: 'Diagram generation failed' });
+    }
   }
 });
 
@@ -491,9 +580,9 @@ const dynamicFunctionDeclarations = [
 
 
 // ═══════════════════════════════════════════════════════════════
-// Any curriculum — built-in Pythagoras or an uploaded textbook.
+// Any curriculum — looks up an uploaded textbook curriculum by id.
 function curriculumFor(subjectId: string) {
-  return subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(subjectId);
+  return getCurriculum(subjectId);
 }
 
 // MULTER for PDF uploads
@@ -513,9 +602,7 @@ const upload = multer({
 
 // GET /api/curricula — list all curricula (normalised for frontend)
 app.get('/api/curricula', (_req, res) => {
-  const builtin = [PYTHAGORAS_CURRICULUM];
-  const uploaded = listCurricula();
-  const all = [...builtin, ...uploaded.filter(c => c.id !== 'pythagoras')];
+  const all = listCurricula();
   // Return a lightweight version suitable for the subject selector
   const normalised = all.map(c => ({
     subjectId: c.id,
@@ -648,7 +735,7 @@ app.post('/api/session/start', (req, res) => {
   if (!studentId || !subjectId)
     return (res as any).status(400).json({ error: 'studentId and subjectId required' });
   const learner = getOrCreateLearner(studentId, name || 'Student', grade || 'Secondary 2 (Grade 8)');
-  const curriculum = subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(subjectId);
+  const curriculum = getCurriculum(subjectId);
   if (!curriculum) return (res as any).status(404).json({ error: 'Curriculum not found' });
   ensureSubject(studentId, subjectId, curriculum.label, curriculum.grade, curriculum.source);
 
@@ -678,7 +765,7 @@ app.get('/api/session/:sessionId', (req, res) => {
   const session = getSession(req.params.sessionId);
   if (!session) return (res as any).status(404).json({ error: 'Session not found' });
   const learner = getLearner(session.studentId);
-  const curriculum = session.subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(session.subjectId);
+  const curriculum = getCurriculum(session.subjectId);
   const concept = curriculum?.concepts.find(c => c.id === session.currentConceptId);
   const conceptState = getConceptState(session.studentId, session.subjectId, session.currentConceptId);
   res.json({ session, learner, currentConcept: concept, conceptState });
@@ -693,7 +780,7 @@ app.post('/api/session/:sessionId/assess', async (req, res) => {
   const { questionSummary, studentAnswer, correctAnswer, selectedOptionIndex, correctOptionIndex } = req.body;
   const isCorrect = selectedOptionIndex === correctOptionIndex;
 
-  const curriculum = session.subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(session.subjectId);
+  const curriculum = getCurriculum(session.subjectId);
   const concept = curriculum?.concepts.find(c => c.id === session.currentConceptId);
   if (!concept) return (res as any).status(404).json({ error: 'Concept not found' });
   const conceptState = getConceptState(session.studentId, session.subjectId, concept.id);
@@ -857,11 +944,21 @@ function observeMessage(message: LiveServerMessage, observer: LiveObserver | nul
 }
 
 wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
-  // Parse query parameters for topic and grade
+  // Parse query parameters for topic, grade, subjectId and conceptId
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const topic = url.searchParams.get('topic') || 'the requested subject';
   const grade = url.searchParams.get('grade') || 'the student level';
+  const subjectId = url.searchParams.get('subjectId') || '';
+  const conceptId = url.searchParams.get('conceptId') || '';
 
+  // Build curriculum intelligence context if we have a subject and concept
+  const curriculumCtx = (subjectId && conceptId)
+    ? buildCurriculumIntelligenceContext(subjectId, conceptId)
+    : null;
+
+  if (curriculumCtx) {
+    console.log(`[WebSocket] Curriculum intelligence loaded for ${subjectId}/${conceptId}`);
+  }
   console.log(`[WebSocket] Live session started for Topic: "${topic}", Grade: "${grade}"`);
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -905,7 +1002,10 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
    - '3d' = the spatial model — when depth or turning the shape helps.
    - 'chalkboard' = step-by-step working, calculations, rules and definitions. Whenever you work something out step by step, write it with update_chalkboard_notes (one step per bullet) — the board switches to the chalkboard by itself.
    - When you give the student a problem to solve, ALWAYS write the problem on the chalkboard first (update_chalkboard_notes, title "Your turn", the question as the first bullet), then ask it. As the student tells you their working, write each of their steps with write_live_note.
-8. NEVER GO QUIET BEFORE A BOARD ACTION. Before update_chalkboard_notes, pose_quiz or generate_photo_visual, first say one short natural phrase out loud — e.g. "Let me write that on the board for you…" or "Let's work through it step by step…" — then call the tool, then carry on explaining.`;
+8. NEVER GO QUIET BEFORE A BOARD ACTION. Before update_chalkboard_notes, pose_quiz or generate_photo_visual, first say one short natural phrase out loud — e.g. "Let me write that on the board for you…" or "Let's work through it step by step…" — then call the tool, then carry on explaining.
+9. NEVER REPEAT WHAT YOU JUST WROTE. After calling update_chalkboard_notes or write_live_note, do NOT read the bullet points aloud — the student can already see them on the board. Continue with the NEXT thought, a question, or a new explanation. Saying the same sentence twice — whether before and after a tool call, or in two consecutive turns — is always wrong.
+10. ONE IDEA PER TURN. Each spoken turn must introduce exactly one new idea or question. If you catch yourself about to say something you said in the last turn, say something different instead.
+${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd();
 
   try {
     // Force Gemini Developer API for Live. With GOOGLE_GENAI_USE_ENTERPRISE /

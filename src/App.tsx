@@ -33,7 +33,7 @@ import {
 import type { LearnerSnapshot } from './adaptive/liveObserver';
 import { ImmersiveStage, PresenterMedia } from './components/ImmersiveStage';
 import { PanelMode } from './components/ScenePanel';
-import { getScene, PYTHAGORAS_SCENES } from './scenes/pythagorasScenes';
+import { getScene } from './scenes/genericScenes';
 
 // Which teaching surface to render.
 //   'immersive' — presenter on a stage beside a real whiteboard (current)
@@ -82,6 +82,9 @@ export const App: React.FC = () => {
   // ─── Live teaching state (new canvas) ────────────────────────
   const [figure, setFigure] = useState<FigureSpec>({ a: 4, b: 3, unknownSide: null });
   const [revealed, setRevealed] = useState<FigurePart[]>([]);
+  // Pre-generated real-world photo for this topic (base64 data URI from pregen cache).
+  // Shown in the real-world panel when the scene photo is not available or not calibrated.
+  const [pregenPhoto, setPregenPhoto] = useState<string | null>(null);
   const [focusPart, setFocusPart] = useState<FigurePart | null>(null);
   // Lesson opens on a real situation, then fades to the bare shape (concreteness fading).
   const [panelMode, setPanelMode] = useState<PanelMode>('real');
@@ -155,6 +158,9 @@ export const App: React.FC = () => {
   const loadLesson = useCallback(async (targetTopic: string, targetGrade: string, requestedTab?: BlackboardTab) => {
     if (!targetTopic.trim()) return;
 
+    // Reset scene to neutral for non-Pythagorean topics so the wrong photo doesn't show
+    if (!/pythag/i.test(targetTopic)) setSceneId('');
+
     setBlackboard((prev) => ({
       ...prev,
       isLoading: true,
@@ -173,9 +179,21 @@ export const App: React.FC = () => {
 
       const json = await res.json();
 
+      // Store pre-generated real-world photo when the server includes one
+      setPregenPhoto(json?.photoUrl ?? null);
+
       let finalData: DynamicLessonData;
       if (json && json.data) {
         finalData = json.data;
+        // Restore calculateOutcome: functions are dropped by JSON serialisation.
+        // If the server merged a static explorer into the response, re-attach the
+        // live function from createDynamicLesson so the explorer slider works.
+        if (finalData.explorer && !finalData.explorer.calculateOutcome) {
+          const localLesson = createDynamicLesson(targetTopic, targetGrade);
+          if (localLesson.explorer?.calculateOutcome) {
+            finalData.explorer.calculateOutcome = localLesson.explorer.calculateOutcome;
+          }
+        }
       } else {
         // Fallback to intelligent local generator
         finalData = createDynamicLesson(targetTopic, targetGrade);
@@ -200,6 +218,15 @@ export const App: React.FC = () => {
         showQuizResult: false,
         customLiveNotes: [],
       });
+
+      // Pre-populate Pythagorean figure parts for overview before voice session.
+      // For non-Pythagorean topics the concept-map diagram handles visualisation;
+      // revealed is left empty so no unrelated triangle parts leak into the UI.
+      if (/pythag/i.test(targetTopic)) {
+        setRevealed(['triangle', 'right-angle', 'leg-a', 'leg-b', 'hypotenuse', 'formula']);
+      } else {
+        setRevealed([]);
+      }
 
       setOutputTranscript({
         id: `topic-${Date.now()}`,
@@ -346,7 +373,7 @@ export const App: React.FC = () => {
         }
 
         case 'set_figure': {
-          if (args.scene && PYTHAGORAS_SCENES.some(sc => sc.id === args.scene)) {
+          if (args.scene && getScene(String(args.scene)) !== null) {
             setSceneId(String(args.scene));
             setPanelMode('real');
           } else {
@@ -362,7 +389,10 @@ export const App: React.FC = () => {
             });
             // A new figure is a new question — clear the previous reasoning.
             setStudentThinking(null);
-            setRevealed(prev => (prev.includes('triangle') ? prev : [...prev, 'triangle']));
+            // Only add triangle reveal for Pythagorean topics
+            if (/pythag/i.test(topic || '')) {
+              setRevealed(prev => (prev.includes('triangle') ? prev : [...prev, 'triangle']));
+            }
           }
           break;
         }
@@ -458,6 +488,40 @@ export const App: React.FC = () => {
           }
           // Six legacy tabs collapse onto three views: real world, shape, 3D.
           setPanelMode(tab === '3d' ? '3d' : tab === 'photo' ? 'real' : tab === 'chalkboard' ? 'chalk' : 'shape');
+          // Auto-regenerate the 2D concept diagram whenever the AI switches to the
+          // '2d' tab. This ensures the diagram is always relevant to the current
+          // topic even if the AI forgot to call update_diagram first.
+          if (tab === '2d') {
+            const autoTopic = topic;
+            const autoGrade = grade;
+            console.log(`[switch_board_view] Auto-triggering diagram update for: "${autoTopic}"`);
+            (async () => {
+              try {
+                const res = await fetch('/api/update-diagram', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ topic: autoTopic, grade: autoGrade, focus: autoTopic }),
+                });
+                const json = await res.json();
+                if (json.success && json.diagram) {
+                  console.log(`[switch_board_view] Diagram updated (source: ${json.source || 'unknown'})`);
+                  setBlackboard((prev) => {
+                    if (!prev.lessonData) return prev;
+                    return {
+                      ...prev,
+                      activeTab: '2d',
+                      highlightedNodeId: null,
+                      lessonData: { ...prev.lessonData, diagram: json.diagram },
+                    };
+                  });
+                } else {
+                  console.warn('[switch_board_view] Auto diagram update returned no diagram:', json);
+                }
+              } catch (err) {
+                console.warn('[switch_board_view] Auto diagram update failed:', err);
+              }
+            })();
+          }
           break;
         }
 
@@ -705,7 +769,12 @@ export const App: React.FC = () => {
 
       // 2. Connect WebSocket to Gemini Live with topic and grade query params
       const activeTopic = topic || 'any topic the student asks for on the fly';
-      const wsUrl = liveWebSocketUrl(activeTopic, grade);
+      const wsUrl = liveWebSocketUrl(
+        activeTopic,
+        grade,
+        adaptiveSession?.subjectId,
+        adaptiveSession?.currentConceptId,
+      );
 
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;
@@ -737,6 +806,10 @@ export const App: React.FC = () => {
           } else if (msg.type === 'session_ready') {
             setConnectionStatus('connected');
             setLearnerSnap(null); setLiveMastery(0); setLiveMisconceptions([]); setLiveAssessment(null);
+            // Reset the figure to blank — the AI now controls what is revealed step by step.
+            // This is the start of the concreteness-fading teaching sequence.
+            setRevealed([]);
+            setFocusPart(null);
           } else if (msg.type === 'interrupted') {
             audioMgr.flushPlayback();
           } else if (msg.type === 'tool_call') {
@@ -816,11 +889,8 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (connectionStatus === 'connected') {
-      setRevealed(prev => (prev.length ? prev : ['triangle', 'right-angle', 'leg-a', 'leg-b', 'hypotenuse', 'formula']));
-    }
-  }, [connectionStatus]);
+  // Note: figure parts are pre-shown on lesson load (full overview) and reset to []
+  // on session_ready so the AI controls progressive reveal during the voice session.
 
   // ─── "Thinking" indicator ──────────────────────────────────────
   // Gap between the child finishing and the tutor's first word: show that the
@@ -1129,7 +1199,9 @@ export const App: React.FC = () => {
               micLevel={micLevel}
               panelMode={panelMode}
               scene={getScene(sceneId)}
+              topicDiagram={blackboard.lessonData?.diagram}
               scene3d={blackboard.lessonData?.scene3d}
+              pregenPhoto={pregenPhoto}
               tutorLine={outputTranscript?.text}
               presenter={PRESENTER}
               studentName={loggedInStudent?.name}

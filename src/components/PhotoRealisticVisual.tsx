@@ -31,7 +31,8 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
   // Generate a topic-relevant SVG diagram as a reliable fallback when AI image generation is unavailable.
   // This is always on-topic, always educational, and never requires API credits.
   const buildFallbackSvg = (topicText: string): string => {
-    const isMath = /triangle|pythagoras|theorem|algebra|geometry|equation|angle|hypotenuse/i.test(topicText);
+    const isMath = /right.?angle.?triangle|pythagoras|hypotenuse|a\^2.*b\^2|trigonometry|sohcahtoa/i.test(topicText);
+    const isGeometry = !isMath && /geometry|bisect|perpendicular|parallel|angle|polygon|circle|arc|chord|tangent|congruent|similar|proof|theorem/i.test(topicText);
     const isScience = /cell|biology|chemistry|molecule|atom|physics|force|energy|wave/i.test(topicText);
     const label = topicText.length > 40 ? topicText.slice(0, 37) + '...' : topicText;
 
@@ -60,6 +61,38 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
   <text x="118" y="400" fill="#fbbf24" font-size="13" font-family="sans-serif">90°</text>
   <text x="630" y="400" fill="#38bdf8" font-size="13" font-family="sans-serif">B</text>
   <text x="118" y="76" fill="#f43f5e" font-size="13" font-family="sans-serif">A</text>
+  <text x="400" y="478" fill="#4a7a5e" font-size="12" font-family="sans-serif" text-anchor="middle">Educational Diagram — Generated for: ${label}</text>
+</svg>`)}`;
+    } else if (isGeometry) {
+      // Geometry fallback: perpendicular bisector / compass / angle diagram
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect width="800" height="500" fill="#060f07"/>
+  <text x="400" y="44" fill="#34d399" font-size="18" font-family="serif" text-anchor="middle" font-weight="bold">Geometric Diagram: ${label}</text>
+  <!-- Horizontal base line AB -->
+  <line x1="120" y1="310" x2="680" y2="310" stroke="#86efac" stroke-width="2.5"/>
+  <circle cx="120" cy="310" r="6" fill="#38bdf8"/>
+  <circle cx="680" cy="310" r="6" fill="#38bdf8"/>
+  <text x="104" y="332" fill="#38bdf8" font-size="14" font-family="sans-serif">A</text>
+  <text x="684" y="332" fill="#38bdf8" font-size="14" font-family="sans-serif">B</text>
+  <!-- Midpoint M -->
+  <circle cx="400" cy="310" r="5" fill="#fbbf24"/>
+  <text x="396" y="336" fill="#fbbf24" font-size="13" font-family="sans-serif">M</text>
+  <!-- Perpendicular bisector (vertical line through M) -->
+  <line x1="400" y1="80" x2="400" y2="430" stroke="#f43f5e" stroke-width="2" stroke-dasharray="8,4"/>
+  <!-- Right-angle marker at M -->
+  <rect x="400" y="295" width="15" height="15" fill="none" stroke="#fbbf24" stroke-width="1.8"/>
+  <!-- Compass arcs (two overlapping arcs from A and B) -->
+  <path d="M 200,170 A 220,220 0 0,1 510,170" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.7"/>
+  <path d="M 290,170 A 220,220 0 0,0 600,170" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.7"/>
+  <!-- Intersection points P and Q -->
+  <circle cx="400" cy="130" r="5" fill="#34d399"/>
+  <circle cx="400" cy="430" r="5" fill="#34d399"/>
+  <text x="410" y="128" fill="#34d399" font-size="13" font-family="sans-serif">P</text>
+  <text x="410" y="445" fill="#34d399" font-size="13" font-family="sans-serif">Q</text>
+  <!-- Labels -->
+  <text x="418" y="200" fill="#f43f5e" font-size="13" font-family="sans-serif" opacity="0.9">Perpendicular Bisector</text>
+  <text x="148" y="220" fill="#a78bfa" font-size="12" font-family="sans-serif" opacity="0.8">equal distances</text>
   <text x="400" y="478" fill="#4a7a5e" font-size="12" font-family="sans-serif" text-anchor="middle">Educational Diagram — Generated for: ${label}</text>
 </svg>`)}`;
     } else if (isScience) {

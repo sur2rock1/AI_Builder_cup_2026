@@ -6,6 +6,31 @@ import { Scene3DData } from '../types';
 import { FigureSpec, FigurePart, StudentThinking, BoardNote } from './TeachingCanvas';
 import { SceneDef, SceneVertices } from '../scenes/pythagorasScenes';
 
+
+// ─────────────────────────────────────────────────────────────────
+// Concept-map types (exported so ImmersiveStage and App can use them)
+// ─────────────────────────────────────────────────────────────────
+export interface ConceptMapNode {
+  id: string;
+  label: string;
+  sublabel?: string;
+  category?: string;
+  color?: string;
+  details?: string;
+}
+export interface ConceptMapConnection {
+  from: string;
+  to: string;
+  label?: string;
+}
+export interface ConceptMapDiagram {
+  diagramType?: string;
+  title?: string;
+  description?: string;
+  nodes: ConceptMapNode[];
+  connections: ConceptMapConnection[];
+}
+
 // ─────────────────────────────────────────────────────────────────
 // ScenePanel — a lens onto the maths, not a classroom board.
 //
@@ -24,12 +49,16 @@ const COL = { a: '#4ADE80', b: '#FBBF24', c: '#F472B6', ink: '#E8ECF8' };
 interface Props {
   mode: PanelMode;
   onModeChange: (m: PanelMode) => void;
-  scene: SceneDef;
+  scene: SceneDef | null;
   figure: FigureSpec;
   revealed: FigurePart[];
   focusPart: FigurePart | null;
   studentThinking: StudentThinking | null;
   scene3d?: Scene3DData;
+  /** Pre-generated real-world photo (base64 data URI). Used when scene.photo is absent or fails to load. */
+  pregenPhoto?: string | null;
+  /** Concept-map diagram for the current topic (from pregen cache). Rendered in shape mode for non-Pythagorean topics. */
+  topicDiagram?: ConceptMapDiagram | null;
   conceptLabel: string;
   isLessonActive: boolean;
   notes?: BoardNote | null;
@@ -38,21 +67,33 @@ interface Props {
 
 export const ScenePanel: React.FC<Props> = ({
   mode, onModeChange, scene, figure, revealed, focusPart,
-  studentThinking, scene3d, conceptLabel, isLessonActive, notes, liveNotes = [],
+  studentThinking, scene3d, pregenPhoto, topicDiagram, conceptLabel, isLessonActive, notes, liveNotes = [],
 }) => {
-  // Use the generated photo only if it actually exists; otherwise the illustration.
-  const [photoOk, setPhotoOk] = useState(false);
+  // Photo resolution: scene photo → pregenPhoto (base64 from pregen cache) → illustration SVG.
+  const [scenePhotoOk, setScenePhotoOk] = useState(false);
   useEffect(() => {
-    setPhotoOk(false);
+    setScenePhotoOk(false);
+    if (!scene?.photo) return;
     const img = new Image();
-    img.onload = () => setPhotoOk(true);
-    img.onerror = () => setPhotoOk(false);
+    img.onload = () => setScenePhotoOk(true);
+    img.onerror = () => setScenePhotoOk(false);
     img.src = scene.photo;
-  }, [scene.photo]);
+  }, [scene?.photo]);
 
-  const photoCalibrated = photoOk && !!scene.photoVertices;
-  const v: SceneVertices = photoCalibrated ? scene.photoVertices! : scene.vertices;
-  const showOverlay = !photoOk || photoCalibrated;
+  // The effective photo: prefer the scene-specific photo, fall back to the pre-generated one.
+  const photoOk = scenePhotoOk || !!pregenPhoto;
+  const activePhoto = scenePhotoOk ? (scene?.photo ?? '') : (pregenPhoto ?? '');
+
+  const photoCalibrated = scenePhotoOk && !!scene?.photoVertices;
+  const v: SceneVertices | null = scene ? (photoCalibrated ? scene.photoVertices! : scene.vertices) : null;
+  // Show the trace overlay when we have the calibrated scene photo; for the pregen
+  // photo (which has no vertex mapping) we show the shape inset instead.
+  const showOverlay = photoCalibrated && !!v;
+
+  // Detect Pythagorean topics — only those use the concreteness-fading right-triangle figure.
+  // All other topics show the concept-map diagram in shape mode.
+  const isPythagorean = /pythag/i.test(conceptLabel);
+  const hasDiagram = !!(topicDiagram?.nodes?.length);
 
   const shown = (p: FigurePart) => revealed.includes(p);
   const u = figure.unitLabel ? ` ${figure.unitLabel}` : '';
@@ -84,24 +125,26 @@ export const ScenePanel: React.FC<Props> = ({
       {mode === 'real' && (
         <div className="absolute inset-0 animate-fadeIn">
           {photoOk ? (
-            <img src={scene.photo} alt={scene.title} className="absolute inset-0 w-full h-full object-cover" />
-          ) : (
+            <img src={activePhoto} alt={scene?.title ?? conceptLabel} className="absolute inset-0 w-full h-full object-cover" />
+          ) : scene ? (
             <div className="absolute inset-0"><scene.Illustration /></div>
+          ) : (
+            <TopicPlaceholder label={conceptLabel} />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/25" />
 
-          {showOverlay ? (
+          {showOverlay && v && scene ? (
             <TraceOverlay v={v} names={scene.names} val={val} shown={shown} focusPart={focusPart} />
-          ) : (
-            // Photo exists but not yet calibrated: show the shape as an inset rather
-            // than drawing lines that miss the ladder by 40 pixels.
+          ) : scene && !hasDiagram ? (
+            // No calibrated overlay: show the shape as a compact inset so the
+            // real-world photo still gives context while the triangle stays visible.
             <div className="absolute right-4 bottom-4 w-[34%] aspect-[16/10] rounded-2xl bg-[#0B1020]/80 backdrop-blur-md border border-white/15 p-2">
               <ShapeFigure figure={figure} names={scene.names} val={val} shown={shown} focusPart={focusPart} compact />
             </div>
-          )}
+          ) : null}
 
           <div className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/12 text-[12.5px] text-white/85 font-medium">
-            {scene.title}
+            {scene?.title ?? conceptLabel}
           </div>
         </div>
       )}
@@ -113,7 +156,17 @@ export const ScenePanel: React.FC<Props> = ({
           <div className="absolute inset-0 opacity-40"
                style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,.14) 1px, transparent 1px)', backgroundSize: '26px 26px' }} />
           <div className="absolute inset-0 pt-14 pb-4 px-6">
-            <ShapeFigure figure={figure} names={scene.names} val={val} shown={shown} focusPart={focusPart} />
+            {hasDiagram && !isPythagorean ? (
+              <ConceptMapRenderer diagram={topicDiagram!} />
+            ) : isPythagorean && scene ? (
+              // Pythagorean topics use the concreteness-fading right-triangle figure
+              <ShapeFigure figure={figure} names={scene.names} val={val} shown={shown} focusPart={focusPart} />
+            ) : hasDiagram ? (
+              // Fallback: pregen diagram exists but isPythagorean was true — show it
+              <ConceptMapRenderer diagram={topicDiagram!} />
+            ) : (
+              <TopicPlaceholder label={conceptLabel} />
+            )}
           </div>
         </div>
       )}
@@ -147,7 +200,7 @@ export const ScenePanel: React.FC<Props> = ({
         </div>
       )}
 
-      {!revealed.includes('triangle') && mode !== '3d' && mode !== 'chalk' && (
+      {!revealed.includes('triangle') && !hasDiagram && mode !== '3d' && mode !== 'chalk' && (
         <div className="absolute inset-x-0 bottom-5 z-20 flex justify-center">
           <span className="px-4 py-2 rounded-full bg-black/45 backdrop-blur-md text-[13px] text-white/75">
             {isLessonActive ? 'Dr. Marcus is setting the scene…' : 'Start the session and we’ll begin'}
@@ -296,3 +349,174 @@ const ShapeFigure: React.FC<{
     </svg>
   );
 };
+
+// ─── Concept-map diagram renderer ───────────────────────────────
+const CONCEPT_COLORS: Record<string, { border: string; bg: string; text: string }> = {
+  emerald: { border: '#10B981', bg: 'rgba(16,185,129,0.18)', text: '#34D399' },
+  sky:     { border: '#0EA5E9', bg: 'rgba(14,165,233,0.18)', text: '#38BDF8' },
+  violet:  { border: '#8B5CF6', bg: 'rgba(139,92,246,0.18)', text: '#A78BFA' },
+  rose:    { border: '#F43F5E', bg: 'rgba(244,63,94,0.18)',  text: '#FB7185' },
+  amber:   { border: '#F59E0B', bg: 'rgba(245,158,11,0.18)', text: '#FCD34D' },
+  blue:    { border: '#3B82F6', bg: 'rgba(59,130,246,0.18)', text: '#60A5FA' },
+  green:   { border: '#22C55E', bg: 'rgba(34,197,94,0.18)',  text: '#4ADE80' },
+  orange:  { border: '#F97316', bg: 'rgba(249,115,22,0.18)', text: '#FB923C' },
+};
+const DEFAULT_COLOR = { border: '#7C6CFF', bg: 'rgba(124,108,255,0.18)', text: '#A78BFA' };
+
+function wrapLabel(text: string, maxChars = 22): string[] {
+  if (text.length <= maxChars) return [text];
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const candidate = cur ? `${cur} ${w}` : w;
+    if (candidate.length <= maxChars) { cur = candidate; }
+    else { if (cur) lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return lines.slice(0, 2);
+}
+
+function buildLevelLayout(
+  nodes: ConceptMapNode[],
+  connections: ConceptMapConnection[],
+  W = 780, H = 440,
+): Array<ConceptMapNode & { x: number; y: number }> {
+  if (!nodes.length) return [];
+  const labelToId = new Map(nodes.map(n => [n.label, n.id]));
+  const inCount = new Map<string, number>(nodes.map(n => [n.id, 0]));
+  const outEdges = new Map<string, string[]>(nodes.map(n => [n.id, []]));
+  for (const c of connections) {
+    const f = labelToId.get(c.from), t = labelToId.get(c.to);
+    if (f && t) { inCount.set(t, (inCount.get(t) ?? 0) + 1); outEdges.get(f)?.push(t); }
+  }
+  // BFS level assignment
+  const levels = new Map<string, number>();
+  const queue: string[] = nodes.filter(n => !(inCount.get(n.id) ?? 0)).map(n => n.id);
+  if (!queue.length) nodes.forEach((n, i) => levels.set(n.id, Math.floor(i / 3)));
+  else queue.forEach(id => levels.set(id, 0));
+  let qi = 0;
+  while (qi < queue.length) {
+    const cur = queue[qi++]; const lv = levels.get(cur) ?? 0;
+    for (const to of outEdges.get(cur) ?? []) {
+      if (!levels.has(to)) { levels.set(to, lv + 1); queue.push(to); }
+    }
+  }
+  nodes.forEach(n => { if (!levels.has(n.id)) levels.set(n.id, 0); });
+  // Group by level
+  const byLevel = new Map<number, string[]>();
+  for (const [id, lv] of levels) { if (!byLevel.has(lv)) byLevel.set(lv, []); byLevel.get(lv)!.push(id); }
+  const maxLv = Math.max(...levels.values());
+  const rows = maxLv + 1;
+  const padY = 55, rowH = rows > 1 ? (H - padY * 2) / (maxLv) : 0;
+  const pos = new Map<string, { x: number; y: number }>();
+  for (let lv = 0; lv <= maxLv; lv++) {
+    const ids = byLevel.get(lv) ?? [];
+    const y = padY + lv * rowH;
+    ids.forEach((id, i) => pos.set(id, { x: (W / (ids.length + 1)) * (i + 1), y }));
+  }
+  return nodes.map(n => ({ ...n, x: pos.get(n.id)?.x ?? W / 2, y: pos.get(n.id)?.y ?? H / 2 }));
+}
+
+const NODE_W = 190, NODE_H = 76;
+
+const ConceptMapRenderer: React.FC<{ diagram: ConceptMapDiagram }> = ({ diagram }) => {
+  const { nodes = [], connections = [], title } = diagram;
+  if (!nodes.length) return null;
+  const laid = buildLevelLayout(nodes, connections);
+  const posMap = new Map(laid.map(n => [n.label, { x: n.x, y: n.y }]));
+
+  return (
+    <svg viewBox="0 0 780 460" className="w-full h-full" style={{ overflow: 'visible' }}>
+      <defs>
+        <marker id="cmArrow" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+          <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(255,255,255,0.4)" />
+        </marker>
+        <filter id="cmGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+
+      {/* Title */}
+      {title && (
+        <text x="390" y="22" textAnchor="middle" fontSize="14" fontWeight="600" fill="rgba(255,255,255,0.45)"
+              fontFamily="ui-sans-serif, system-ui, sans-serif">{title}</text>
+      )}
+
+      {/* Connections */}
+      {connections.map((conn, i) => {
+        const f = posMap.get(conn.from), t = posMap.get(conn.to);
+        if (!f || !t) return null;
+        // Bezier: exit bottom of from, enter top of to (vertical flow)
+        const sx = f.x, sy = f.y + NODE_H / 2 + 3;
+        const ex = t.x, ey = t.y - NODE_H / 2 - 3;
+        const cy1 = sy + (ey - sy) * 0.45, cy2 = ey - (ey - sy) * 0.45;
+        const d = `M${sx},${sy} C${sx},${cy1} ${ex},${cy2} ${ex},${ey}`;
+        const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+        return (
+          <g key={i}>
+            <path d={d} fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" markerEnd="url(#cmArrow)" />
+            {conn.label && (
+              <text x={mx} y={my} textAnchor="middle" fontSize="10" fill="rgba(255,255,255,0.38)"
+                    fontFamily="ui-sans-serif, system-ui, sans-serif"
+                    style={{ textShadow: '0 1px 4px #000' }}>{conn.label}</text>
+            )}
+          </g>
+        );
+      })}
+
+      {/* Nodes */}
+      {laid.map(node => {
+        const col = CONCEPT_COLORS[node.color ?? ''] ?? DEFAULT_COLOR;
+        const lines = wrapLabel(node.label);
+        const hasTwo = lines.length > 1;
+        const labelY = hasTwo ? node.y - 14 : node.y - 8;
+        return (
+          <g key={node.id} filter="url(#cmGlow)">
+            {/* Node background */}
+            <rect
+              x={node.x - NODE_W / 2} y={node.y - NODE_H / 2}
+              width={NODE_W} height={NODE_H} rx="14"
+              fill={col.bg} stroke={col.border} strokeWidth="1.5"
+            />
+            {/* Label (1-2 lines) */}
+            {lines.map((line, li) => (
+              <text key={li}
+                x={node.x} y={labelY + li * 18}
+                textAnchor="middle" fontSize="13.5" fontWeight="600" fill="white"
+                fontFamily="ui-sans-serif, system-ui, sans-serif">{line}</text>
+            ))}
+            {/* Sublabel */}
+            {node.sublabel && (
+              <text x={node.x} y={node.y + (hasTwo ? 18 : 12)}
+                textAnchor="middle" fontSize="10.5" fill="rgba(255,255,255,0.52)"
+                fontFamily="ui-sans-serif, system-ui, sans-serif">{node.sublabel}</text>
+            )}
+            {/* Category chip */}
+            {node.category && (
+              <text x={node.x} y={node.y + NODE_H / 2 - 7}
+                textAnchor="middle" fontSize="9" fontWeight="600" fill={col.text}
+                fontFamily="ui-sans-serif, system-ui, sans-serif"
+                style={{ textTransform: 'uppercase', letterSpacing: '0.1em' }}>{node.category}</text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+// ─── Topic placeholder when no photo or illustration available ───
+const TopicPlaceholder: React.FC<{ label: string }> = ({ label }) => (
+  <div className="absolute inset-0 flex items-center justify-center"
+       style={{ background: 'radial-gradient(120% 100% at 60% 40%, #1A2140 0%, #0B1020 70%)' }}>
+    <div className="absolute inset-0 opacity-20"
+         style={{ backgroundImage: 'radial-gradient(rgba(124,108,255,.5) 1px, transparent 1px)', backgroundSize: '44px 44px' }} />
+    <div className="relative z-10 text-center px-10">
+      <div className="text-[12px] uppercase tracking-[0.22em] text-white/30 font-semibold mb-3">Real World Connection</div>
+      <p className="text-[22px] font-semibold text-white/80 leading-snug max-w-sm">{label}</p>
+      <div className="mt-4 text-[13px] text-white/35">Ask Dr. Marcus to show you a real-world example</div>
+    </div>
+  </div>
+);

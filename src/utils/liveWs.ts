@@ -1,15 +1,30 @@
 /**
- * Resolve the Live voice WebSocket URL.
+ * Construct the WebSocket URL for the Gemini Live voice session.
  *
- * Firebase Hosting rewrites /api/** to Cloud Run reliably, but WebSocket
- * upgrades on /ws/** currently fall through as HTML 200. In production we
- * connect straight to the Cloud Run service (same project).
+ * Supports the dev server (same host), Firebase Hosting + Cloud Run,
+ * and an explicit override via VITE_LIVE_WS_BASE.
+ *
+ * When subjectId and conceptId are provided they are appended as query
+ * parameters so the server can load the curriculum intelligence context
+ * and inject it into the Gemini system instruction.
  */
-export function liveWebSocketUrl(topic: string, grade: string): string {
-  const params = `topic=${encodeURIComponent(topic)}&grade=${encodeURIComponent(grade)}`;
-  const explicit = (import.meta as any).env?.VITE_LIVE_WS_BASE as string | undefined;
+export function liveWebSocketUrl(
+  topic: string,
+  grade: string,
+  subjectId?: string,
+  conceptId?: string,
+): string {
+  const params = new URLSearchParams({
+    topic,
+    grade,
+    ...(subjectId ? { subjectId } : {}),
+    ...(conceptId ? { conceptId } : {}),
+  });
+  const queryString = params.toString();
 
+  const explicit = (import.meta as any).env?.VITE_LIVE_WS_BASE as string | undefined;
   let base = explicit?.replace(/\/$/, '');
+
   if (!base && typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host.endsWith('.web.app') || host.endsWith('.firebaseapp.com')) {
@@ -19,9 +34,9 @@ export function liveWebSocketUrl(topic: string, grade: string): string {
 
   if (base) {
     const wsBase = base.replace(/^http/, 'ws');
-    return `${wsBase}/ws/live?${params}`;
+    return `${wsBase}/ws/live?${queryString}`;
   }
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}/ws/live?${params}`;
+  return `${protocol}//${window.location.host}/ws/live?${queryString}`;
 }

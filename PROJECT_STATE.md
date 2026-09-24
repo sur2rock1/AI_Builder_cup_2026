@@ -107,3 +107,25 @@ misconceptions per concept (`src/curriculum/pythagoras.ts`).
 2. Do the model IDs in the repo actually resolve?
 3. What is the probe cap per concept before the tutor becomes tiring?
 4. What is our answer on storing a minor's learning data?
+
+---
+
+## Update — 2026-09-24: complete-idea architecture adopted
+
+**Product thesis (now):** one fixed, detailed base tutor persona for every learner → an evidence-based
+Learner Model per learner → a per-learner Teaching Plan compiled before and during each session.
+"Every child meets the same great teacher. Over time, that teacher learns them."
+
+**Source of truth for the build:** `docs/` — TUTOR_PERSONA, LEARNER_MODEL, TEACHING_PLAN,
+FUNCTIONAL_SPEC, TECHNICAL_SPEC, BUILD_PLAN (T00–T30), TRACEABILITY.
+
+**Official requirements re-verified 2026-09-24 (aibuildercup.com/themes.html):** 6 themes, still no
+education theme; Google AI models or agent platforms required; deploy on Cloud Run or Firebase; proposal
+PDF + public 3-minute video; criteria weights unchanged. No dates on the page — the 18 Oct deadline
+needs re-checking on Hack2skill.
+
+**New known risks from the audit:** the live session has no learner identity (T04); `learners` is
+publicly readable in firestore.rules (T02); three divergent persona prompts (T05–T07); model IDs still
+unverified (T01).
+
+**Open questions added:** OQ-1 persona name; OQ-3 second subject for the cross-subject proof.
