@@ -2,8 +2,7 @@
 // Textbook ingestion — any number of PDFs, any size.
 //
 // Gemini accepts a PDF of at most 50 MB / 1000 pages per request, even via
-// the Files API. A scanned textbook is often larger (the Sec 2A book is
-// ~119 MB). So:
+// the Files API. A scanned textbook is often larger. So:
 //
 //   1. SPLIT   each PDF into chunks well under the limit (pdf-lib, pure JS)
 //   2. UPLOAD  each chunk with the Files API (not inline base64)
@@ -11,7 +10,7 @@
 //   4. MERGE   chapters that straddle a chunk boundary, dedupe concepts,
 //              resolve prerequisites by name, renumber teaching order
 //   5. SAVE    into the subject — adding to it if it already exists, so
-//              Book 2A today and Book 2B tomorrow become one curriculum
+//              Book A today and Book B tomorrow become one curriculum
 //
 // It runs as a background JOB with progress, because a whole textbook takes
 // minutes and an HTTP request should not be held open that long.
@@ -20,7 +19,14 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { GoogleGenAI, createPartFromUri, FileState } from '@google/genai';
-import { CurriculumSubject, CurriculumConcept } from '../adaptive/learnerModel';
+import { spawn } from 'child_process';
+import {
+  CurriculumSubject,
+  CurriculumConcept,
+  PrerequisiteDetail,
+  MisconceptionDetail,
+  ChapterScopeMap,
+} from '../adaptive/learnerModel';
 import { getCurriculum, saveCurriculum } from './ingest';
 
 const MAX_CHUNK_PAGES = 60;
@@ -46,6 +52,52 @@ export interface IngestJob {
 }
 const jobs = new Map<string, IngestJob>();
 export const getJob = (id: string) => jobs.get(id) || null;
+
+// Path to the pre-generated asset cache
+const PREGEN_DIR = path.join(process.cwd(), 'data', 'pregenerated');
+
+/** Slugify a string the same way pregenerate-assets.ts does */
+function slugifyLabel(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
+}
+
+/**
+ * Spawn the pre-generation script in the background for any concept
+ * that does not yet have a pre-generated asset file.
+ * The script uses its own cache-skip logic (it will skip existing files).
+ * We unref() the child so it never blocks the server from exiting.
+ */
+function triggerPregenerationBackground(concepts: CurriculumConcept[], apiKey: string): void {
+  try {
+    const newOnes = concepts.filter(
+      c => !fs.existsSync(path.join(PREGEN_DIR, `${slugifyLabel(c.label)}.json`))
+    );
+    if (newOnes.length === 0) {
+      console.log('[Ingest] All concepts already pre-generated — skipping background pregen.');
+      return;
+    }
+    console.log(`[Ingest] Launching background pre-generation for ${newOnes.length} new concept(s)...`);
+    // Use tsx so TypeScript is handled; inherit env so GEMINI_API_KEY is available.
+    const child = spawn(
+      'npx',
+      ['tsx', 'scripts/pregenerate-assets.ts'],
+      {
+        env: { ...process.env, GEMINI_API_KEY: apiKey },
+        cwd: process.cwd(),
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+    child.stdout?.on('data', (d: Buffer) => process.stdout.write(`[pregen] ${d}`));
+    child.stderr?.on('data', (d: Buffer) => process.stderr.write(`[pregen] ${d}`));
+    child.on('exit', (code: number | null) => {
+      console.log(`[Ingest] Background pre-generation finished (exit ${code}).`);
+    });
+    child.unref();
+  } catch (err: any) {
+    console.warn('[Ingest] Could not spawn background pre-generation:', err?.message);
+  }
+}
 
 export interface IngestRequest {
   apiKey: string;
@@ -122,6 +174,9 @@ async function runJob(job: IngestJob, req: IngestRequest) {
   job.stage = 'done';
   job.message = `Added ${curriculum.concepts.length} concepts across ${chapters.length} chapters`;
   console.log(`[Ingest] ${job.message} in ${Math.round((Date.now() - job.startedAt) / 1000)}s`);
+
+  // Kick off background pre-generation for any newly ingested concepts
+  triggerPregenerationBackground(curriculum.concepts, req.apiKey);
 }
 
 function bookName(file: string) {
@@ -163,7 +218,6 @@ async function splitPdf(file: string, book: string): Promise<Chunk[]> {
     const copied = await doc.copyPages(src, Array.from({ length: to - from + 1 }, (_, i) => from - 1 + i));
     copied.forEach(p => doc.addPage(p));
     const bytes = await doc.save({ useObjectStreams: true });
-    // Image-heavy pages can still exceed the byte budget: halve until it fits.
     if (bytes.length > MAX_CHUNK_BYTES && to > from) {
       const mid = Math.floor((from + to) / 2);
       await write(from, mid);
@@ -181,22 +235,68 @@ async function splitPdf(file: string, book: string): Promise<Chunk[]> {
 }
 
 // ─── 2 + 3. Upload and extract ──────────────────────────────────
+
+// Rich types from the Gemini extraction schema
+interface ExtractedPrerequisiteDetail {
+  label: string;        // Name of the prerequisite concept
+  reason: string;       // Why it's needed for the current concept
+  checkQuestion: string; // Quick question to verify the student has this prereq
+}
+
+interface ExtractedMisconceptionDetail {
+  belief: string;           // What the student wrongly believes
+  triggerPattern?: string;  // What kind of question/context triggers it
+  probeQuestion: string;    // Question to surface the misconception
+  correctionHint: string;   // How to correct it if confirmed
+}
+
+interface ExtractedScopeMap {
+  inScope: string[];     // Topics explicitly covered in this chapter at this grade
+  advanced: string[];    // Topics mentioned but marked as extension/advanced
+  outOfScope: string[];  // Topics deliberately excluded at this grade
+  gradeNote?: string;    // Grade-specific note (e.g. "Grade 8 only covers positive roots")
+}
+
 interface ExtractedConcept {
   label: string;
-  prerequisites?: string[];          // by LABEL — resolved to ids after merging
-  commonMisconceptions?: string[];
+  prerequisites?: string[];            // prerequisite labels (simple strings, for backward compat)
+  prerequisiteDetails?: ExtractedPrerequisiteDetail[];  // rich prereq info
+  commonMisconceptions?: string[];     // simple strings
+  misconceptionDetails?: ExtractedMisconceptionDetail[]; // rich misconception info
   keyFacts?: string[];
   workedExamples?: string[];
   difficultyLevel?: number;
   order?: number;
 }
-interface ExtractedChapter { number?: number | null; title: string; concepts: ExtractedConcept[] }
+
+interface ExtractedChapter {
+  number?: number | null;
+  title: string;
+  scopeMap?: ExtractedScopeMap;
+  concepts: ExtractedConcept[];
+}
+
 interface ChunkExtraction { chunk: Chunk; chapters: ExtractedChapter[] }
 
+async function uploadWithRetry(ai: GoogleGenAI, chunk: Chunk): Promise<any> {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      return await ai.files.upload({ file: chunk.file, config: { mimeType: 'application/pdf', displayName: path.basename(chunk.file) } });
+    } catch (e: any) {
+      if (isRetryable(e) && attempt < 3) {
+        const wait = Math.min(30_000, 5_000 * 2 ** attempt);
+        console.warn(`[Ingest] File upload transient error (attempt ${attempt + 1}/4), retrying in ${wait / 1000}s: ${e?.message}`);
+        await sleep(wait);
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
 async function extractChunk(ai: GoogleGenAI, chunk: Chunk, req: IngestRequest): Promise<ChunkExtraction> {
-  const uploaded = await ai.files.upload({ file: chunk.file, config: { mimeType: 'application/pdf', displayName: path.basename(chunk.file) } });
+  const uploaded = await uploadWithRetry(ai, chunk);
   try {
-    // Wait for Gemini to finish processing the document.
     let f = uploaded;
     const until = Date.now() + 120_000;
     while (f.state === FileState.PROCESSING && Date.now() < until) {
@@ -215,55 +315,92 @@ async function extractChunk(ai: GoogleGenAI, chunk: Chunk, req: IngestRequest): 
   }
 }
 
+/** True for errors that are safe to retry (rate-limit / overload / server busy). */
+function isRetryable(e: any): boolean {
+  const msg = String(e?.message ?? e?.status ?? e?.code ?? '');
+  return /503|502|429|overload|too many|resource.exhausted|rate.limit|quota|temporarily|high demand|unavailable/i.test(msg);
+}
+
+async function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
 async function generateWithFallback(ai: GoogleGenAI, contents: any[]): Promise<string> {
   const order = [...(resolvedModel ? [resolvedModel] : []),
     ...MODEL_CANDIDATES.filter(m => m !== resolvedModel && !failedModels.has(m))];
   let lastErr: any;
   for (const model of order) {
-    try {
-      const call = ai.models.generateContent({ model, contents, config: { responseMimeType: 'application/json' } });
-      const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timed out')), CHUNK_TIMEOUT_MS));
-      const r: any = await Promise.race([call, timeout]);
-      const text = r.text || '';
-      if (!text) throw new Error('empty response');
-      if (resolvedModel !== model) console.log(`[Ingest] using ${model}`);
-      resolvedModel = model;
-      return text;
-    } catch (e: any) {
-      lastErr = e;
-      if (/not found|not supported|404/i.test(String(e?.message))) failedModels.add(model);
-      else throw e;   // real errors (quota, content) are retried by withRetry, not by switching model
+    // Up to 5 retries with exponential back-off for transient 503/429 errors
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const call = ai.models.generateContent({ model, contents, config: { responseMimeType: 'application/json' } });
+        const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timed out')), CHUNK_TIMEOUT_MS));
+        const r: any = await Promise.race([call, timeout]);
+        const text = r.text || '';
+        if (!text) throw new Error('empty response');
+        if (resolvedModel !== model) console.log(`[Ingest] using ${model}`);
+        resolvedModel = model;
+        return text;
+      } catch (e: any) {
+        lastErr = e;
+        if (/not found|not supported|404/i.test(String(e?.message))) {
+          failedModels.add(model);
+          break; // try next model
+        }
+        if (isRetryable(e) && attempt < 4) {
+          const wait = Math.min(60_000, 5_000 * 2 ** attempt); // 5s, 10s, 20s, 40s, 60s
+          console.warn(`[Ingest] ${model} returned transient error (attempt ${attempt + 1}/5), retrying in ${wait / 1000}s: ${e?.message}`);
+          await sleep(wait);
+          continue;
+        }
+        throw e; // non-retryable or exhausted retries
+      }
     }
   }
   throw lastErr || new Error('no model available');
 }
 
 function buildPrompt(chunk: Chunk, req: IngestRequest) {
-  return `You are a curriculum analyst reading part of a school textbook.
+  return `You are a curriculum analyst and expert teacher reading part of a school textbook.
 Book: "${chunk.book}". Level: ${req.grade}. Subject: "${req.subjectLabel}".
 This PDF is pages ${chunk.fromPage} to ${chunk.toPage} of the book.
 
-Identify every CHAPTER that appears in these pages (including one that starts
-before or continues after them) and the teachable CONCEPTS in each.
-
+Identify every CHAPTER that appears in these pages and the teachable CONCEPTS in each.
 Ignore front matter, contents pages, answer keys, glossaries and indexes.
 If these pages contain no teaching content, return {"chapters": []}.
 
-Return ONLY JSON:
+Return ONLY valid JSON matching this schema exactly:
 {
   "chapters": [
     {
       "number": 9,
-      "title": "Pythagoras' Theorem",
+      "title": "Chapter title exactly as printed in the book",
+      "scopeMap": {
+        "inScope": ["topic or skill explicitly taught in this chapter at this grade"],
+        "advanced": ["topic mentioned but marked extension or beyond this grade"],
+        "outOfScope": ["topic deliberately excluded — name it so a tutor knows NOT to go there"],
+        "gradeNote": "One sentence on what this grade level covers vs higher grades, or omit"
+      },
       "concepts": [
         {
           "label": "Finding the hypotenuse given both legs",
-          "prerequisites": ["labels of concepts this one depends on, from any chapter"],
-          "commonMisconceptions": ["specific error students make, phrased as the wrong belief"],
-          "keyFacts": ["rule or fact the student must know"],
-          "workedExamples": ["one-line summary of a worked example actually in these pages"],
+          "order": 1,
           "difficultyLevel": 2,
-          "order": 1
+          "keyFacts": ["a² + b² = c² where c is the hypotenuse"],
+          "workedExamples": ["Find c when a=3, b=4 → c=5"],
+          "prerequisiteDetails": [
+            {
+              "label": "Squaring and square roots",
+              "reason": "Students must square the legs and take the square root of the sum",
+              "checkQuestion": "What is the square root of 25?"
+            }
+          ],
+          "misconceptionDetails": [
+            {
+              "belief": "Students add the legs directly: a + b = c",
+              "triggerPattern": "Asked to find the hypotenuse without a diagram",
+              "probeQuestion": "In a right triangle with legs 3 and 4, what is the hypotenuse — is it 7?",
+              "correctionHint": "Show that 3+4=7 but 7²=49 ≠ 3²+4²=25. The theorem uses squares, not addition."
+            }
+          ]
         }
       ]
     }
@@ -271,41 +408,83 @@ Return ONLY JSON:
 }
 
 Rules:
-- Chapter "number" is the number printed in the book; null if none is shown.
+- Chapter "number" is the number printed in the book; null if none shown.
 - Use the chapter title exactly as printed.
-- Concepts are things a student can learn and be tested on — not section headings like "Exercise 9A".
-- 3 to 8 concepts per chapter. "order" is teaching order within the chapter.
-- difficultyLevel 1 (easy) to 5 (advanced), relative to this level.
-- commonMisconceptions must be specific and useful to a tutor. Do not invent
-  misconceptions unrelated to the content; 2 to 4 per concept.`;
+- Concepts are things a student can learn and be tested on — NOT section headings like "Exercise 9A".
+- 3 to 8 concepts per chapter. "order" is teaching order within the chapter (1 = first taught).
+- difficultyLevel 1 (easy intro) to 5 (advanced/extension), relative to this grade level.
+- scopeMap.outOfScope: name specific topics a tutor must NOT teach at this level (e.g. "3D Pythagoras", "proof of theorem").
+- prerequisiteDetails: 1–4 entries. Each entry must have label, reason AND checkQuestion.
+- misconceptionDetails: 2–4 entries per concept. Each must have belief, probeQuestion AND correctionHint. triggerPattern is optional.
+- ALL misconceptions must be specific to the content — do NOT invent generic ones.
+- If any field would be empty, omit it rather than including an empty array.`;
 }
 
 // ─── 4. Merge ───────────────────────────────────────────────────
-const norm = (s: string) => s.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const norm = (s: string) => s.toLowerCase().replace(/['']/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 const slug = (s: string) => norm(s).replace(/\s+/g, '-').slice(0, 60);
+
 const uniq = (a: string[], max: number) => {
   const seen = new Set<string>(); const out: string[] = [];
   for (const x of a) { const k = norm(x); if (x && !seen.has(k)) { seen.add(k); out.push(x); } }
   return out.slice(0, max);
 };
 
-function mergeIntoCurriculum(existing: CurriculumSubject | null, parts: ChunkExtraction[], req: IngestRequest): CurriculumSubject {
-  type Ch = { number: number | null; title: string; book: string; firstPage: number;
-              concepts: Map<string, ExtractedConcept & { firstSeen: number }> };
+/** Deduplicate rich objects by a string key extracted from each item. */
+function uniqRich<T>(items: T[], keyFn: (item: T) => string, max: number): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    const k = norm(keyFn(item));
+    if (item && k && !seen.has(k)) { seen.add(k); out.push(item); }
+  }
+  return out.slice(0, max);
+}
+
+/** Extract simple labels from rich prereq details, for the prerequisites[] field. */
+function prereqLabels(details: ExtractedPrerequisiteDetail[]): string[] {
+  return details.map(d => d.label).filter(Boolean);
+}
+
+/** Convert extracted rich prereq details to the stored type. */
+function prereqDetails(details: ExtractedPrerequisiteDetail[]): PrerequisiteDetail[] {
+  return details
+    .filter(d => d?.label && d?.reason && d?.checkQuestion)
+    .map(d => ({ label: d.label, reason: d.reason, checkQuestion: d.checkQuestion }));
+}
+
+function mergeIntoCurriculum(
+  existing: CurriculumSubject | null,
+  parts: ChunkExtraction[],
+  req: IngestRequest,
+): CurriculumSubject {
+  type Ch = {
+    number: number | null;
+    title: string;
+    book: string;
+    firstPage: number;
+    scopeMap: ExtractedScopeMap | undefined;
+    concepts: Map<string, ExtractedConcept & { firstSeen: number }>;
+  };
   const chapters = new Map<string, Ch>();
 
-  // Keep reading order: book, then page.
   parts.sort((a, b) => a.chunk.book.localeCompare(b.chunk.book) || a.chunk.fromPage - b.chunk.fromPage);
   let seq = 0;
   for (const part of parts) {
     for (const ch of part.chapters) {
       const num = typeof ch.number === 'number' ? ch.number : null;
-      // A chapter split across two chunks has the same number (or title) in both.
       const key = `${part.chunk.book}::${num ?? norm(ch.title)}`;
       if (!chapters.has(key)) {
-        chapters.set(key, { number: num, title: ch.title, book: part.chunk.book, firstPage: part.chunk.fromPage, concepts: new Map() });
+        chapters.set(key, {
+          number: num, title: ch.title, book: part.chunk.book,
+          firstPage: part.chunk.fromPage, scopeMap: ch.scopeMap,
+          concepts: new Map(),
+        });
       }
       const target = chapters.get(key)!;
+      // Merge scope map items if this chunk has a richer one
+      if (ch.scopeMap && !target.scopeMap) target.scopeMap = ch.scopeMap;
+
       for (const c of ch.concepts) {
         if (!c?.label) continue;
         const k = norm(c.label);
@@ -313,63 +492,144 @@ function mergeIntoCurriculum(existing: CurriculumSubject | null, parts: ChunkExt
         if (!prev) {
           target.concepts.set(k, { ...c, firstSeen: seq++ });
         } else {
+          // Merge simple arrays
           prev.prerequisites = uniq([...(prev.prerequisites || []), ...(c.prerequisites || [])], 6);
           prev.commonMisconceptions = uniq([...(prev.commonMisconceptions || []), ...(c.commonMisconceptions || [])], 5);
           prev.keyFacts = uniq([...(prev.keyFacts || []), ...(c.keyFacts || [])], 6);
           prev.workedExamples = uniq([...(prev.workedExamples || []), ...(c.workedExamples || [])], 4);
+          // Merge rich arrays
+          prev.prerequisiteDetails = uniqRich(
+            [...(prev.prerequisiteDetails || []), ...(c.prerequisiteDetails || [])],
+            d => d.label, 6);
+          prev.misconceptionDetails = uniqRich(
+            [...(prev.misconceptionDetails || []), ...(c.misconceptionDetails || [])],
+            d => d.belief, 5);
         }
       }
     }
   }
 
-  // Existing concepts from earlier uploads stay first; new chapters follow.
+  // Keep existing concepts from earlier uploads; new chapters follow.
   const concepts: CurriculumConcept[] = existing ? existing.concepts.map(c => ({ ...c })) : [];
   const existingIds = new Set(concepts.map(c => c.id));
+  const scopeMaps: ChapterScopeMap[] = existing?.scopeMaps ? [...existing.scopeMaps] : [];
+  const existingScopeMapTitles = new Set(scopeMaps.map(sm => norm(sm.chapterTitle)));
+
   const ordered = [...chapters.values()].sort((a, b) =>
     a.book.localeCompare(b.book) || (a.number ?? 1e9) - (b.number ?? 1e9) || a.firstPage - b.firstPage);
 
   for (const ch of ordered) {
     const chapterLabel = ch.number != null ? `Chapter ${ch.number}: ${ch.title}` : ch.title;
-    const list = [...ch.concepts.values()].sort((a, b) => (a.order ?? 99) - (b.order ?? 99) || a.firstSeen - b.firstSeen);
+
+    // Collect scope map for this chapter
+    if (ch.scopeMap) {
+      const smKey = norm(chapterLabel);
+      if (!existingScopeMapTitles.has(smKey)) {
+        existingScopeMapTitles.add(smKey);
+        scopeMaps.push({
+          chapterTitle: chapterLabel,
+          inScope: ch.scopeMap.inScope || [],
+          advanced: ch.scopeMap.advanced || [],
+          outOfScope: ch.scopeMap.outOfScope || [],
+          gradeNote: ch.scopeMap.gradeNote,
+        });
+      }
+    }
+
+    const list = [...ch.concepts.values()].sort(
+      (a, b) => (a.order ?? 99) - (b.order ?? 99) || a.firstSeen - b.firstSeen);
+
     for (const c of list) {
       const id = `${slug(ch.book)}--${ch.number ?? slug(ch.title)}--${slug(c.label)}`;
-      if (existingIds.has(id)) continue;   // re-uploading the same book is idempotent
+      if (existingIds.has(id)) continue;
       existingIds.add(id);
-      concepts.push({
+
+      // Build prereq labels from rich details if available, falling back to simple list
+      const richDetails = c.prerequisiteDetails || [];
+      const richLabels = richLabels_(richDetails);
+      const simpleLabels = c.prerequisites || [];
+      const allPrereqLabels = uniq([...richLabels, ...simpleLabels], 6);
+
+      // Build misconception details
+      const richMisconceptions = c.misconceptionDetails || [];
+      const simpleMisconceptions = c.commonMisconceptions || [];
+
+      const concept: CurriculumConcept = {
         id,
         label: c.label,
         subjectId: req.subjectId,
-        prerequisites: [],                  // resolved below
-        commonMisconceptions: uniq(c.commonMisconceptions || [], 5),
+        prerequisites: [],       // resolved below
+        commonMisconceptions: uniq([
+          ...richMisconceptions.map(m => m.belief),
+          ...simpleMisconceptions,
+        ], 5),
         keyFacts: uniq(c.keyFacts || [], 6),
         workedExamples: uniq(c.workedExamples || [], 4),
         difficultyLevel: Math.min(5, Math.max(1, Math.round(c.difficultyLevel || 2))) as 1 | 2 | 3 | 4 | 5,
         typicalTeachingOrder: 0,
         chapter: chapterLabel,
         book: ch.book,
-        ...( { _prereqLabels: c.prerequisites || [] } as any ),
-      } as CurriculumConcept);
+      };
+
+      // Attach rich details when available
+      if (richDetails.length > 0) {
+        concept.prerequisiteDetails = prereqDetails(richDetails);
+      }
+      if (richMisconceptions.length > 0) {
+        concept.misconceptionDetails = richMisconceptions
+          .filter(m => m?.belief && m?.probeQuestion && m?.correctionHint)
+          .map(m => ({
+            belief: m.belief,
+            triggerPattern: m.triggerPattern,
+            probeQuestion: m.probeQuestion,
+            correctionHint: m.correctionHint,
+          } as MisconceptionDetail))
+          .slice(0, 5);
+      }
+
+      // Stash labels for resolution after all concepts are inserted
+      (concept as any)._prereqLabels = allPrereqLabels;
+      concepts.push(concept);
     }
   }
 
-  // Resolve prerequisite LABELS to ids, now that every concept has one.
+  // Resolve prerequisite LABELS to IDs
   const byLabel = new Map(concepts.map(c => [norm(c.label), c.id]));
   for (const c of concepts as any[]) {
     if (c._prereqLabels) {
       c.prerequisites = uniq(
-        (c._prereqLabels as string[]).map(l => byLabel.get(norm(l))).filter((id): id is string => !!id && id !== c.id), 6);
+        (c._prereqLabels as string[])
+          .map((l: string) => byLabel.get(norm(l)))
+          .filter((id: string | undefined): id is string => !!id && id !== c.id),
+        6);
       delete c._prereqLabels;
     }
+    // Also resolve prerequisiteDetails labels → make sure they reference valid labels
+    if (c.prerequisiteDetails) {
+      c.prerequisiteDetails = (c.prerequisiteDetails as PrerequisiteDetail[])
+        .filter(d => d.label && d.reason && d.checkQuestion);
+    }
   }
+
   concepts.forEach((c, i) => { c.typicalTeachingOrder = i + 1; });
 
-  const books = uniq([...(existing?.source ? existing.source.split(' + ') : []), ...req.files.map(f => bookName(f.originalName))], 20);
+  const booksUsed = uniq([
+    ...(existing?.source ? existing.source.split(' + ') : []),
+    ...req.files.map(f => bookName(f.originalName)),
+  ], 20);
+
   return {
     id: req.subjectId,
     label: req.subjectLabel,
     grade: req.grade,
-    source: books.join(' + '),
+    source: booksUsed.join(' + '),
     concepts,
     prerequisiteMap: Object.fromEntries(concepts.map(c => [c.id, c.prerequisites])),
+    scopeMaps: scopeMaps.length > 0 ? scopeMaps : undefined,
   };
+}
+
+/** Extract simple label strings from rich prerequisite details. */
+function richLabels_(details: ExtractedPrerequisiteDetail[]): string[] {
+  return details.map(d => d?.label).filter(Boolean) as string[];
 }

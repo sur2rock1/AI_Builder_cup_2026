@@ -112,13 +112,41 @@ export interface AssessmentResult {
   masteryDelta: number;   // how much to adjust masteryScore (-20 to +15)
 }
 
+// ─── Rich misconception detail (populated from PDF extraction) ─
+export interface MisconceptionDetail {
+  belief: string;           // What the child wrongly believes
+  triggerPattern?: string;  // What kind of question/context triggers it
+  probeQuestion: string;    // Question to surface the misconception
+  correctionHint: string;   // How to correct it if confirmed
+}
+
+// ─── Rich prerequisite detail (populated from PDF extraction) ──
+export interface PrerequisiteDetail {
+  label: string;            // Human-readable prerequisite name
+  reason: string;           // Why this prereq matters for the current concept
+  checkQuestion: string;    // Quick question to verify the prereq is understood
+}
+
+// ─── Chapter scope map (populated from PDF extraction) ─────────
+export interface ChapterScopeMap {
+  chapterTitle: string;
+  inScope: string[];        // Topics explicitly covered in this chapter
+  advanced: string[];       // Topics mentioned but marked advanced/extension
+  outOfScope: string[];     // Topics deliberately excluded at this grade/level
+  gradeNote?: string;       // Grade-level context (e.g. "Grade 8 only covers...")
+}
+
 // ─── Curriculum concept (populated from PDF or hardcoded) ──────
 export interface CurriculumConcept {
   id: string;
   label: string;
   subjectId: string;
   prerequisites: string[];         // concept IDs that must be understood first
+  /** Rich prerequisite details with reason + check question (from PDF extraction). */
+  prerequisiteDetails?: PrerequisiteDetail[];
   commonMisconceptions: string[];  // known misconceptions for this concept
+  /** Rich misconception details with belief, probe, correction (from PDF extraction). */
+  misconceptionDetails?: MisconceptionDetail[];
   keyFacts: string[];
   workedExamples: string[];
   difficultyLevel: 1 | 2 | 3 | 4 | 5;
@@ -136,6 +164,8 @@ export interface CurriculumSubject {
   source: string;
   concepts: CurriculumConcept[];
   prerequisiteMap: Record<string, string[]>;  // conceptId → [prerequisite conceptIds]
+  /** Chapter scope maps extracted from the PDF textbook. */
+  scopeMaps?: ChapterScopeMap[];
 }
 
 // ─── Live-voice evidence layer ──────────────────────────────────

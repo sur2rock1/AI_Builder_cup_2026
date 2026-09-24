@@ -20,13 +20,12 @@
 // ─────────────────────────────────────────────────────────────────
 import { GoogleGenAI } from '@google/genai';
 
-const MODEL_CANDIDATES = ['gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+const MODEL_CANDIDATES = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
 const MAX_STEP = 20;
 const MAX_TURNS_IN_PROMPT = 14;
 const MAX_MISCONCEPTIONS = 4;
 
-let resolvedModel: string | null = null;
-const failedModels = new Set<string>();
+let resolvedModel: string | null = null;  // fast-path to last working model
 
 export interface Turn { role: 'tutor' | 'child' | 'board'; text: string; at: number }
 
@@ -107,11 +106,15 @@ JSON shape:
 
 async function callModel(apiKey: string, prompt: string): Promise<string> {
   const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+  // Per-call failed set: transient errors (rate-limit, 503) don't permanently block a model.
+  // resolvedModel (module-level) still fast-paths to the last working model.
+  const thisCallFailed = new Set<string>();
   const order = [
     ...(resolvedModel ? [resolvedModel] : []),
-    ...MODEL_CANDIDATES.filter(m => m !== resolvedModel && !failedModels.has(m)),
+    ...MODEL_CANDIDATES.filter(m => m !== resolvedModel),
   ];
   for (const model of order) {
+    if (thisCallFailed.has(model)) continue;
     try {
       const r = await ai.models.generateContent({
         model, contents: prompt,
@@ -124,7 +127,9 @@ async function callModel(apiKey: string, prompt: string): Promise<string> {
         return text;
       }
     } catch (e: any) {
-      failedModels.add(model);
+      thisCallFailed.add(model);
+      // If the resolved model failed, clear it so we don't keep fast-pathing to a broken one.
+      if (resolvedModel === model) resolvedModel = null;
       console.warn(`[LiveObserver] ${model} failed, skipping: ${String(e?.message || e).slice(0, 160)}`);
     }
   }
