@@ -12,7 +12,7 @@ const root = path.join(here, '..', '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pt-smoke-'));
 
 const script = `
-import { getOrCreateLearner, ensureSubject, ensureConceptState, recordReasoningEvidence, getLearner } from '${root}/src/adaptive/learnerStore.ts';
+import { getOrCreateLearner, ensureSubject, ensureConceptState, recordReasoningEvidence, getLearner, disputeMisconception } from '${root}/src/adaptive/learnerStore.ts';
 import { compileTeachingPlan } from '${root}/src/plan/compile.ts';
 import { compilePlanDelta, initialDeltaState } from '${root}/src/plan/delta.ts';
 
@@ -79,6 +79,15 @@ async function main() {
   const cs = learner.subjects.demo.conceptStates.c1;
   console.log('final ladder:', cs.ladder, 'masteryStatus:', cs.masteryStatus, 'pKnown:', cs.pKnown);
   if (cs.masteryStatus !== 'none') throw new Error('FAIL: masteryStatus should be none while a misconception stands (confirmed misconception blocks mastery)');
+
+  // T21 — disputing the confirmed misconception should drop it from the
+  // next compiled plan's watch-list (R-WATCH only surfaces suspected/confirmed).
+  const disputed = await disputeMisconception('stu1', 'demo', 'c1', 'c1::m1');
+  if (!disputed || disputed.status !== 'disputed') throw new Error('FAIL: dispute did not mark the ledger entry disputed');
+  learner = await getLearner('stu1');
+  const plan3 = compileTeachingPlan(learner, curriculum, { studentId: 'stu1', subjectId: 'demo', channel: 'voice', requestedConceptId: 'c1' });
+  console.log('plan3 watchMisconceptions after dispute:', plan3.watchMisconceptions.map(w => w.status + ':' + w.text));
+  if (plan3.watchMisconceptions.length !== 0) throw new Error('FAIL: disputed misconception should have dropped out of the watch-list');
 
   console.log('ALL SMOKE CHECKS PASSED');
 }

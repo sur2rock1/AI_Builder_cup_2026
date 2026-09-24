@@ -214,13 +214,18 @@ export interface LearningEvidence {
 export interface MisconceptionRecord {
   id: string;
   text: string;
-  status: 'suspected' | 'confirmed' | 'resolved';
+  status: 'suspected' | 'confirmed' | 'resolved' | 'disputed';
   /** Independent observations. Promotion to confirmed requires >= 2. */
   observations: number;
   firstSeen: number;
   lastSeen: number;
   /** Set when a later transfer item was answered soundly. */
   resolvedAt?: number;
+  /** Set when the learner (via the learner card, FR-22) disputes this entry.
+   * A disputed entry is excluded from the plan's watch-list until new evidence
+   * arrives (docs/FUNCTIONAL_SPEC.md J3) — it is not deleted, so the evidence
+   * trail stays intact for the parent portal replay. */
+  disputedAt?: number;
 }
 
 /** Which representation preceded a mastery gain, for THIS child on THIS concept. */

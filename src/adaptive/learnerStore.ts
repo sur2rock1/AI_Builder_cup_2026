@@ -8,7 +8,7 @@
 import {
   LearnerProfile, ConceptState, TeachingStrategy, MasteryLevel,
   AdaptiveSessionState, AssessmentResult, QuizAttempt,
-  EvidenceEvent, ErrorClass, Confidence3,
+  EvidenceEvent, ErrorClass, Confidence3, MisconceptionRecord,
 } from './learnerModel';
 import { getRepo } from './repo';
 import { updateMastery, BKTObservation } from './bkt';
@@ -144,6 +144,30 @@ export async function addGlobalInsight(studentId: string, insight: string): Prom
   await repo.saveProfile(learner);
 }
 
+/**
+ * T21 (FR-22) — the learner disputes a misconception ledger entry from the
+ * learner card ("That's not right"). We don't have a separate claim/dispute
+ * table (T14's Profiler/claimValidator isn't built yet), so this marks the
+ * ledger entry itself `disputed`; compileTeachingPlan's R-WATCH rule only
+ * surfaces `suspected`/`confirmed` entries, so a disputed one drops out of
+ * the plan immediately while staying in the evidence trail for replay.
+ */
+export async function disputeMisconception(
+  studentId: string, subjectId: string, conceptId: string, misconceptionId: string,
+): Promise<MisconceptionRecord | null> {
+  const repo = getRepo();
+  const learner = await repo.getProfile(studentId);
+  const cs = learner?.subjects?.[subjectId]?.conceptStates?.[conceptId];
+  if (!cs?.misconceptionLedger) return null;
+  const rec = cs.misconceptionLedger.find((r) => r.id === misconceptionId);
+  if (!rec) return null;
+  rec.status = 'disputed';
+  rec.disputedAt = Date.now();
+  learner!.updatedAt = Date.now();
+  await repo.saveProfile(learner!);
+  return rec;
+}
+
 export async function incrementSessionCount(studentId: string, subjectId: string, mins: number): Promise<void> {
   const repo = getRepo();
   const learner = await repo.getProfile(studentId);
@@ -179,7 +203,7 @@ export function endSession(id: string)                { activeSessions.delete(id
 //   4. Every event gets an id, a ladder level, an error class and is
 //      appended to the durable event log via the repository (T03/T10).
 // ─────────────────────────────────────────────────────────────────
-import { LearningEvidence, MisconceptionRecord, StrategyOutcome } from './learnerModel';
+import { LearningEvidence, StrategyOutcome } from './learnerModel';
 
 export interface RecordEvidenceInput {
   studentId: string;

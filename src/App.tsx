@@ -7,6 +7,11 @@ import {
   ConnectionStatus,
   DynamicLessonData,
   ConceptNode,
+  TeachingPlanUI,
+  ReasoningLogEntryUI,
+  DiagnosisUpdateUI,
+  EvidenceResultUI,
+  PlanUpdateUI,
 } from './types';
 import { AnimatedTutorCharacter } from './components/AnimatedTutorCharacter';
 import { DynamicBlackboard } from './components/DynamicBlackboard';
@@ -18,6 +23,7 @@ import { liveWebSocketUrl } from './utils/liveWs';
 import { authFetch } from './firebase/auth';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { LearnerProfilePanel } from './components/LearnerProfilePanel';
+import { TutorReasoningPanel } from './components/TutorReasoningPanel';
 import { CurriculumUpload } from './components/CurriculumUpload';
 import {
   LearnerProfileUI, AdaptiveSessionUI, AssessmentResultUI,
@@ -107,6 +113,11 @@ export const App: React.FC = () => {
   const [liveMisconceptions, setLiveMisconceptions] = useState<Array<{ id: string; text: string; status: string }>>([]);
   // Live learner picture from the server's observer (updated after every exchange).
   const [learnerSnap, setLearnerSnap] = useState<LearnerSnapshot | null>(null);
+
+  // T23 — Tutor's-reasoning panel state.
+  const [teachingPlan, setTeachingPlan] = useState<TeachingPlanUI | null>(null);
+  const [reasoningLog, setReasoningLog] = useState<ReasoningLogEntryUI[]>([]);
+  const [reasoningPanelOpen, setReasoningPanelOpen] = useState(false);
 
   const revealPart = useCallback((part: FigurePart | null) => {
     if (!part) return;
@@ -666,6 +677,11 @@ export const App: React.FC = () => {
           sessionStarted: Date.now(), interactionCount: 0, recentAttempts: [],
         });
         setCurrentConcept(json.currentConcept || null);
+        // T17/T18/T23 — the deterministic Teaching Plan compiled for this
+        // session, feeding the Tutor's-reasoning panel from the moment the
+        // lesson opens (before any live exchange has happened yet).
+        setTeachingPlan(json.plan || null);
+        setReasoningLog([]);
         // Panel stays closed — user can open it via the Profile button in the top nav
         // Load lesson for this concept
         if (json.currentConcept) loadLesson(json.currentConcept.label, grade);
@@ -805,6 +821,40 @@ export const App: React.FC = () => {
             });
           } else if (msg.type === 'learner_update' && msg.snapshot) {
             applyLearnerSnapshot(msg.snapshot as LearnerSnapshot);
+          } else if (msg.type === 'learner_update_v2' && msg.evidence) {
+            // T10/T23 — a real diagnosis + evidence record from
+            // recordReasoningEvidence, distinct from the older liveObserver
+            // snapshot above. Feeds the reasoning panel's live feed and
+            // nudges the profile panel's mastery display.
+            const evidence = msg.evidence as EvidenceResultUI;
+            const diagnosis = msg.diagnosis as DiagnosisUpdateUI | undefined;
+            setReasoningLog(prev => [...prev, {
+              id: evidence.eventId || `diag-${Date.now()}`,
+              timestamp: Date.now(),
+              kind: 'diagnosis',
+              diagnosis,
+              evidence,
+            }].slice(-40));
+            if (diagnosis) {
+              setLiveMastery(evidence.masteryAfter);
+              setLiveMisconceptions(evidence.ledger.map(m => ({ id: m.id, text: m.text, status: m.status })));
+            }
+          } else if (msg.type === 'plan_update' && msg.instruction) {
+            // T19/T20 — the in-session plan delta pushed after every
+            // diagnosis (src/plan/delta.ts). This is guidance for the panel
+            // and for a future direct-injection path (T19); it never talks
+            // to the voice model directly today.
+            setReasoningLog(prev => [...prev, {
+              id: `plan-${Date.now()}`,
+              timestamp: Date.now(),
+              kind: 'plan_update',
+              planUpdate: {
+                instruction: String(msg.instruction),
+                nextRepresentation: msg.nextRepresentation,
+                outcome: msg.outcome,
+                moveUsed: msg.moveUsed,
+              } as PlanUpdateUI,
+            }].slice(-40));
           } else if (msg.type === 'session_ready') {
             setConnectionStatus('connected');
             setLearnerSnap(null); setLiveMastery(0); setLiveMisconceptions([]); setLiveAssessment(null);
@@ -1284,6 +1334,12 @@ export const App: React.FC = () => {
         sessionId={sessionId}
         isVisible={profilePanelOpen}
         onToggle={() => setProfilePanelOpen(p => !p)}
+      />
+      <TutorReasoningPanel
+        plan={teachingPlan}
+        log={reasoningLog}
+        isVisible={reasoningPanelOpen}
+        onToggle={() => setReasoningPanelOpen(p => !p)}
       />
       <CurriculumUpload
         isOpen={uploadModalOpen}
