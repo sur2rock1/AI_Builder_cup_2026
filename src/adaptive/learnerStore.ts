@@ -1,28 +1,20 @@
 // ─────────────────────────────────────────────────────────────────
-// Learner Store — JSON file persistence + in-memory active sessions
+// Learner Store — orchestrates reads/writes through the repository
+// layer (src/adaptive/repo). (T03: was a direct JSON-file reader/writer;
+// now backend-agnostic and async. T10: records ladder level, mastery
+// status, cross-concept strategy profile and affect alongside the
+// existing BKT + misconception-ledger logic.)
 // ─────────────────────────────────────────────────────────────────
-import fs from 'fs';
-import path from 'path';
 import {
   LearnerProfile, ConceptState, TeachingStrategy, MasteryLevel,
   AdaptiveSessionState, AssessmentResult, QuizAttempt,
+  EvidenceEvent, ErrorClass, Confidence3,
 } from './learnerModel';
+import { getRepo } from './repo';
+import { updateMastery, BKTObservation } from './bkt';
+import { ladderLevelForDepth, updateLadder, computeMasteryStatus } from './ladder';
+import { recordStrategyOutcome } from './strategyProfile';
 
-const DATA_DIR  = path.join(process.cwd(), 'data');
-const PROFILES_FILE = path.join(DATA_DIR, 'learner-profiles.json');
-
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-function readProfiles(): Record<string, LearnerProfile> {
-  ensureDataDir();
-  if (!fs.existsSync(PROFILES_FILE)) return {};
-  try { return JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf-8')); } catch { return {}; }
-}
-function writeProfiles(p: Record<string, LearnerProfile>) {
-  ensureDataDir();
-  fs.writeFileSync(PROFILES_FILE, JSON.stringify(p, null, 2), 'utf-8');
-}
 function scoreToLevel(score: number): MasteryLevel {
   if (score === 0)  return 'not_started';
   if (score < 20)   return 'exposed';
@@ -34,47 +26,50 @@ function scoreToLevel(score: number): MasteryLevel {
 
 // ─── Public profile API ─────────────────────────────────────────
 
-export function getOrCreateLearner(studentId: string, name: string, grade: string): LearnerProfile {
-  const profiles = readProfiles();
-  if (profiles[studentId]) return profiles[studentId];
+export async function getOrCreateLearner(studentId: string, name: string, grade: string): Promise<LearnerProfile> {
+  const repo = getRepo();
+  const existing = await repo.getProfile(studentId);
+  if (existing) return existing;
   const fresh: LearnerProfile = {
     studentId, name, grade,
     createdAt: Date.now(), updatedAt: Date.now(),
     subjects: {}, globalInsights: [],
   };
-  profiles[studentId] = fresh;
-  writeProfiles(profiles);
+  await repo.saveProfile(fresh);
   return fresh;
 }
-export function getLearner(studentId: string): LearnerProfile | null {
-  return readProfiles()[studentId] || null;
+export async function getLearner(studentId: string): Promise<LearnerProfile | null> {
+  return getRepo().getProfile(studentId);
 }
-export function listLearners(): LearnerProfile[] {
-  return Object.values(readProfiles());
+export async function listLearners(): Promise<LearnerProfile[]> {
+  return getRepo().listProfiles();
+}
+export async function deleteLearner(studentId: string): Promise<void> {
+  return getRepo().deleteProfile(studentId);
 }
 
-export function ensureSubject(
+export async function ensureSubject(
   studentId: string, subjectId: string, subjectLabel: string, grade: string, curriculumSource: string
-): void {
-  const profiles = readProfiles();
-  const learner = profiles[studentId];
+): Promise<void> {
+  const repo = getRepo();
+  const learner = await repo.getProfile(studentId);
   if (!learner) return;
   if (!learner.subjects[subjectId]) {
     learner.subjects[subjectId] = {
       subjectId, subjectLabel, grade, curriculumSource,
       conceptStates: {}, sessionCount: 0, totalMinutes: 0, lastSession: Date.now(),
     };
+    await repo.saveProfile(learner);
   }
-  profiles[studentId] = learner;
-  writeProfiles(profiles);
 }
 
-export function ensureConceptState(
+export async function ensureConceptState(
   studentId: string, subjectId: string, conceptId: string,
-  label: string, initialStrategy: TeachingStrategy = 'direct_explanation'
-): ConceptState | null {
-  const profiles = readProfiles();
-  const learner = profiles[studentId];
+  label: string, initialStrategy: TeachingStrategy = 'direct_explanation',
+  conceptType: string = 'general',
+): Promise<ConceptState | null> {
+  const repo = getRepo();
+  const learner = await repo.getProfile(studentId);
   if (!learner?.subjects?.[subjectId]) return null;
   if (!learner.subjects[subjectId].conceptStates[conceptId]) {
     learner.subjects[subjectId].conceptStates[conceptId] = {
@@ -83,25 +78,26 @@ export function ensureConceptState(
       strategiesUsed: [initialStrategy], effectiveStrategies: [],
       ineffectiveStrategies: [], confirmedMisconceptions: [],
       suspectedMisconceptions: [], quizHistory: [], prerequisitesGapped: [], notes: [],
+      conceptType, masteryStatus: 'none',
     };
+    await repo.saveProfile(learner);
   }
-  profiles[studentId] = learner;
-  writeProfiles(profiles);
   return learner.subjects[subjectId].conceptStates[conceptId];
 }
 
-export function getConceptState(
+export async function getConceptState(
   studentId: string, subjectId: string, conceptId: string
-): ConceptState | null {
-  return getLearner(studentId)?.subjects?.[subjectId]?.conceptStates?.[conceptId] || null;
+): Promise<ConceptState | null> {
+  const learner = await getRepo().getProfile(studentId);
+  return learner?.subjects?.[subjectId]?.conceptStates?.[conceptId] || null;
 }
 
-export function recordAttempt(
+export async function recordAttempt(
   studentId: string, subjectId: string, conceptId: string,
   attempt: QuizAttempt, assessment: AssessmentResult
-): void {
-  const profiles = readProfiles();
-  const learner = profiles[studentId];
+): Promise<void> {
+  const repo = getRepo();
+  const learner = await repo.getProfile(studentId);
   if (!learner?.subjects?.[subjectId]?.conceptStates?.[conceptId]) return;
   const cs = learner.subjects[subjectId].conceptStates[conceptId];
 
@@ -136,28 +132,27 @@ export function recordAttempt(
   }
 
   learner.updatedAt = Date.now();
-  profiles[studentId] = learner;
-  writeProfiles(profiles);
+  await repo.saveProfile(learner);
 }
 
-export function addGlobalInsight(studentId: string, insight: string): void {
-  const profiles = readProfiles();
-  const learner = profiles[studentId];
+export async function addGlobalInsight(studentId: string, insight: string): Promise<void> {
+  const repo = getRepo();
+  const learner = await repo.getProfile(studentId);
   if (!learner) return;
   learner.globalInsights.push(`[${new Date().toISOString().slice(0,10)}] ${insight}`);
   if (learner.globalInsights.length > 30) learner.globalInsights = learner.globalInsights.slice(-30);
-  profiles[studentId] = learner; writeProfiles(profiles);
+  await repo.saveProfile(learner);
 }
 
-export function incrementSessionCount(studentId: string, subjectId: string, mins: number): void {
-  const profiles = readProfiles();
-  const learner = profiles[studentId];
+export async function incrementSessionCount(studentId: string, subjectId: string, mins: number): Promise<void> {
+  const repo = getRepo();
+  const learner = await repo.getProfile(studentId);
   if (!learner?.subjects?.[subjectId]) return;
   learner.subjects[subjectId].sessionCount += 1;
   learner.subjects[subjectId].totalMinutes += mins;
   learner.subjects[subjectId].lastSession = Date.now();
   learner.updatedAt = Date.now();
-  profiles[studentId] = learner; writeProfiles(profiles);
+  await repo.saveProfile(learner);
 }
 
 // ─── In-memory active sessions ──────────────────────────────────
@@ -172,22 +167,25 @@ export function updateSession(id: string, patch: Partial<AdaptiveSessionState>) 
 export function endSession(id: string)                { activeSessions.delete(id); }
 
 // ─────────────────────────────────────────────────────────────────
-// Live-voice evidence recording
+// Live-voice / text evidence recording
 //
-// Differs from recordAttempt() in three ways that matter:
+// Differs from recordAttempt() in several ways that matter:
 //   1. Mastery moves by a BKT posterior, not a hand-tuned delta.
 //   2. A misconception starts SUSPECTED and needs two independent
 //      observations before it is CONFIRMED — the false-positive guard.
 //   3. Strategy effectiveness is measured against an actual mastery
-//      GAIN, not against the model's opinion of what to do next.
+//      GAIN, tracked both per-concept (existing) and cross-concept by
+//      conceptType (new — src/adaptive/strategyProfile.ts).
+//   4. Every event gets an id, a ladder level, an error class and is
+//      appended to the durable event log via the repository (T03/T10).
 // ─────────────────────────────────────────────────────────────────
 import { LearningEvidence, MisconceptionRecord, StrategyOutcome } from './learnerModel';
-import { updateMastery, BKTObservation } from './bkt';
 
 export interface RecordEvidenceInput {
   studentId: string;
   subjectId: string;
   conceptId: string;
+  conceptType: string;
   difficultyLevel: number;
   promptType: LearningEvidence['promptType'];
   questionAsked: string;
@@ -201,26 +199,43 @@ export interface RecordEvidenceInput {
   responseLatencyMs?: number;
   helpRequested?: boolean;
   selfReportedConfusion?: boolean;
+  // T10 additions (all optional, backward compatible):
+  errorClass?: ErrorClass;
+  learnerConfidence?: Confidence3;
+  moveUsed?: string;
+  sessionId?: string;
+  itemId?: string;
+  planVersion?: string;
+  diagnosticianModel?: string;
+  source?: EvidenceEvent['source'];
 }
 
 export interface RecordEvidenceResult {
+  eventId: string;
   masteryBefore: number;
   masteryAfter: number;
   pKnown: number;
   derivation: string;
   newlyConfirmed: MisconceptionRecord[];
   ledger: MisconceptionRecord[];
+  ladderLevel: number;
+  masteryStatus: string;
 }
 
-export function recordReasoningEvidence(input: RecordEvidenceInput): RecordEvidenceResult | null {
-  const profiles = readProfiles();
-  const learner = profiles[input.studentId];
+function makeEventId(): string {
+  return `ev_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export async function recordReasoningEvidence(input: RecordEvidenceInput): Promise<RecordEvidenceResult | null> {
+  const repo = getRepo();
+  const learner = await repo.getProfile(input.studentId);
   const cs = learner?.subjects?.[input.subjectId]?.conceptStates?.[input.conceptId];
-  if (!cs) return null;
+  if (!learner || !cs) return null;
 
   if (!cs.evidenceLog) cs.evidenceLog = [];
   if (!cs.misconceptionLedger) cs.misconceptionLedger = [];
   if (!cs.strategyOutcomes) cs.strategyOutcomes = [];
+  if (!cs.conceptType) cs.conceptType = input.conceptType;
 
   const masteryBefore = cs.masteryScore;
   const now = Date.now();
@@ -280,17 +295,20 @@ export function recordReasoningEvidence(input: RecordEvidenceInput): RecordEvide
   cs.suspectedMisconceptions = cs.misconceptionLedger.filter(m => m.status === 'suspected').map(m => m.text);
   cs.confirmedMisconceptions = cs.misconceptionLedger.filter(m => m.status === 'confirmed').map(m => m.text);
 
-  // ── 4. Strategy outcome, judged by whether mastery actually went up.
+  // ── 4. Strategy outcome (per-concept, existing) + eventId + ladder.
+  const eventId = makeEventId();
   let so = cs.strategyOutcomes.find(s => s.strategy === input.strategyInUse);
   if (!so) {
     so = { strategy: input.strategyInUse, timesUsed: 0, timesFollowedByGain: 0 };
     cs.strategyOutcomes.push(so);
   }
   so.timesUsed += 1;
-  if (bkt.delta > 0) so.timesFollowedByGain += 1;
+  const ladderLevel = ladderLevelForDepth(input.understandingDepth);
+  const prevLadderLevel = cs.ladder?.highestLevel ?? 0;
+  const gained = bkt.delta > 0 || ladderLevel > prevLadderLevel;
+  if (gained) so.timesFollowedByGain += 1;
 
   if (!cs.strategiesUsed.includes(input.strategyInUse)) cs.strategiesUsed.push(input.strategyInUse);
-  // Needs a real track record before we declare a strategy effective or not.
   if (so.timesUsed >= 2) {
     const rate = so.timesFollowedByGain / so.timesUsed;
     const inEff = cs.effectiveStrategies.indexOf(input.strategyInUse);
@@ -304,7 +322,26 @@ export function recordReasoningEvidence(input: RecordEvidenceInput): RecordEvide
     }
   }
 
-  // ── 5. Append the evidence record.
+  // ── 5. T10: ladder state, mastery status, cross-concept strategy profile, affect.
+  cs.ladder = updateLadder(cs.ladder, ladderLevel, eventId);
+  cs.masteryStatus = computeMasteryStatus({
+    pKnown: bkt.pKnown,
+    ladder: cs.ladder,
+    anyConfirmedMisconceptionStanding: anyConfirmedStanding,
+    review: cs.review,
+  });
+
+  learner.strategyProfile = recordStrategyOutcome(
+    learner.strategyProfile, cs.conceptType, input.strategyInUse, gained, now,
+  );
+
+  if (input.selfReportedConfusion || input.helpRequested) {
+    learner.affect = learner.affect || { confusionSignals: {}, frustrationEvents: 0 };
+    const key = input.selfReportedConfusion ? 'self_reported_confusion' : 'help_requested';
+    learner.affect.confusionSignals[key] = (learner.affect.confusionSignals[key] || 0) + 1;
+  }
+
+  // ── 6. Append the evidence record (legacy capped mirror + durable event log).
   const evidence: LearningEvidence = {
     timestamp: now,
     conceptId: input.conceptId,
@@ -328,22 +365,52 @@ export function recordReasoningEvidence(input: RecordEvidenceInput): RecordEvide
   if (cs.evidenceLog.length > 200) cs.evidenceLog = cs.evidenceLog.slice(-200);
 
   learner.updatedAt = now;
-  profiles[input.studentId] = learner;
-  writeProfiles(profiles);
+  await repo.saveProfile(learner);
+
+  const fullEvent: EvidenceEvent = {
+    ...evidence,
+    eventId,
+    sessionId: input.sessionId || 'unknown',
+    subjectId: input.subjectId,
+    conceptType: cs.conceptType,
+    itemId: input.itemId,
+    ladderLevel: ladderLevel as EvidenceEvent['ladderLevel'],
+    errorClass: input.errorClass || inferErrorClass(input),
+    learnerConfidence: input.learnerConfidence,
+    moveUsed: input.moveUsed || 'unspecified',
+    representationUsed: input.strategyInUse,
+    planVersion: input.planVersion,
+    diagnosticianModel: input.diagnosticianModel,
+    source: input.source || 'voice',
+  };
+  await repo.appendEvent(input.studentId, fullEvent);
 
   return {
+    eventId,
     masteryBefore,
     masteryAfter: bkt.masteryScore,
     pKnown: bkt.pKnown,
     derivation: bkt.derivation,
     newlyConfirmed,
     ledger: cs.misconceptionLedger,
+    ladderLevel,
+    masteryStatus: cs.masteryStatus,
   };
 }
 
+/** Best-effort error class when the Diagnostician did not classify one explicitly. */
+function inferErrorClass(input: RecordEvidenceInput): ErrorClass {
+  if (input.candidateMisconceptions.length > 0) return 'misconception';
+  if (input.understandingDepth === 'guessed') return 'guess';
+  if (input.understandingDepth === 'confused') return 'attention';
+  if (input.understandingDepth === 'incorrect') return 'procedural';
+  return 'none';
+}
+
 /** Full evidence timeline for a concept — powers the parent portal replay. */
-export function getEvidenceLog(
+export async function getEvidenceLog(
   studentId: string, subjectId: string, conceptId: string
-): LearningEvidence[] {
-  return getConceptState(studentId, subjectId, conceptId)?.evidenceLog || [];
+): Promise<LearningEvidence[]> {
+  const cs = await getConceptState(studentId, subjectId, conceptId);
+  return cs?.evidenceLog || [];
 }

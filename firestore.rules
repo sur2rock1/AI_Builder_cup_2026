@@ -8,13 +8,22 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // Learner profiles hold a minor's evidence-based learning data.
+    // (T02 — fixes a public-read hole: this collection used to allow
+    // `read: if true` for everyone. All learner reads/writes now go
+    // through the server's Admin SDK, which bypasses these rules and
+    // enforces ownership itself — see server/middleware/requireAuth.ts.)
     match /learners/{learnerId} {
-      // Cloud Functions (Admin SDK) bypass rules. Client-side access is
-      // intentionally open for the current student-profile login UX.
-      allow read: if true;
-      allow create, update: if request.resource.data.keys().hasAll(['studentId', 'name', 'grade'])
-        && request.resource.data.studentId == learnerId;
-      allow delete: if false;
+      allow read, write: if false;
+    }
+    match /learners/{learnerId}/events/{eventId} {
+      allow read, write: if false;
+    }
+    match /learners/{learnerId}/plans/{planId} {
+      allow read, write: if false;
+    }
+    match /learners/{learnerId}/sessions/{sessionId} {
+      allow read, write: if false;
     }
 
     match /users/{userId} {

@@ -15,6 +15,7 @@ import { BottomBar } from './components/BottomBar';
 import { AudioManager } from './utils/audio';
 import { createDynamicLesson } from './utils/lessonGenerator';
 import { liveWebSocketUrl } from './utils/liveWs';
+import { authFetch } from './firebase/auth';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { LearnerProfilePanel } from './components/LearnerProfilePanel';
 import { CurriculumUpload } from './components/CurriculumUpload';
@@ -649,7 +650,7 @@ export const App: React.FC = () => {
   // ─── Adaptive session handlers ─────────────────────────────
   const handleStartSession = async (studentId: string, name: string, grade: string, subjectId: string) => {
     try {
-      const res = await fetch('/api/session/start', {
+      const res = await authFetch('/api/session/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId, name, grade, subjectId }),
@@ -686,7 +687,7 @@ export const App: React.FC = () => {
     if (!quiz) return;
 
     try {
-      const res = await fetch(`/api/session/${sessionId}/assess`, {
+      const res = await authFetch(`/api/session/${sessionId}/assess`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -774,6 +775,7 @@ export const App: React.FC = () => {
         grade,
         adaptiveSession?.subjectId,
         adaptiveSession?.currentConceptId,
+        adaptiveSession?.sessionId,
       );
 
       const socket = new WebSocket(wsUrl);
@@ -1000,7 +1002,7 @@ export const App: React.FC = () => {
   ) => {
     if (!loggedInStudent) return;
     try {
-      const res = await fetch('/api/session/start', {
+      const res = await authFetch('/api/session/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

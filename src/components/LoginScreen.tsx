@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Star, Sparkles, User, Plus, ArrowRight, Trash2 } from 'lucide-react';
+import { authFetch } from '../firebase/auth';
 
 /**
  * Minimal shape of a concept's progress as the UI needs it. Richer views
@@ -89,7 +90,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/learners')
+    authFetch('/api/learners')
       .then(r => r.json())
       .then(j => { setProfiles(j.learners || []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -101,7 +102,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
     setError('');
     try {
       const studentId = `student_${newName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
-      const res = await fetch('/api/learners', {
+      const res = await authFetch('/api/learners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId, name: newName.trim(), grade: newGrade }),

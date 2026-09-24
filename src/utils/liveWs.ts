@@ -13,12 +13,14 @@ export function liveWebSocketUrl(
   grade: string,
   subjectId?: string,
   conceptId?: string,
+  sessionId?: string,
 ): string {
   const params = new URLSearchParams({
     topic,
     grade,
     ...(subjectId ? { subjectId } : {}),
     ...(conceptId ? { conceptId } : {}),
+    ...(sessionId ? { sessionId } : { guest: '1' }),
   });
   const queryString = params.toString();
 

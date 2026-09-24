@@ -3,6 +3,7 @@ import {
   ArrowLeft, Brain, Clock, Star, BookOpen, AlertTriangle, TrendingUp,
   ChevronDown, ChevronRight, CheckCircle2, Circle, BarChart3, User, Lightbulb,
 } from 'lucide-react';
+import { authFetch } from '../firebase/auth';
 import type { StudentProfile, ConceptSummary, SubjectSummary } from './LoginScreen';
 
 interface ConceptState extends ConceptSummary {
@@ -76,7 +77,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
   const [expandedConcepts, setExpandedConcepts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetch('/api/learners')
+    authFetch('/api/learners')
       .then(r => r.json())
       .then(j => {
         const list: FullLearner[] = j.learners || [];
