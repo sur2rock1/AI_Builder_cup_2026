@@ -501,3 +501,55 @@ machine and checking the reasoning panel updates.
 **Verification done.** `npx tsc --noEmit` clean; `npm run build` (vite) succeeds; `esbuild
 server.ts` bundles cleanly; `npm run test:assessor` 13/13 unchanged; the extended smoke test
 (now covering dispute) passes.
+
+## D-2026-09-25-1 — liveObserver migrated onto the model gateway; responseMimeType bug fixed
+
+**Date:** 2026-09-25
+**Context:** User ran the live app and hit a real runtime warning: `[LiveObserver]
+observation skipped: no observer model available`. This is not the newer
+`assess_child_reasoning`/`reasoningAssessor.ts` diagnosis pipeline — it's an older,
+separate side-channel (`src/adaptive/liveObserver.ts`) that watches voice transcripts
+in the background and feeds the observer-panel `learner_update` WS message. A failure
+here never blocks the lesson itself; it only means that side panel's data goes stale.
+
+**Root cause:** `liveObserver.ts` predates `src/ai/gateway.ts` (built in T01) and was
+never migrated onto it — it kept its own independent `GoogleGenAI` client and
+`MODEL_CANDIDATES` list. This exact gap was already named in TRACEABILITY.md's NFR-02
+row ("not yet adopted by every caller listed in T01") but had not yet been fixed.
+
+**Options considered:**
+1. Patch `liveObserver.ts`'s own candidate list with different model IDs. Rejected —
+   treats the symptom, leaves the duplicated/drifting logic in place, and does nothing
+   for `assessmentEngine.ts`/`pdfIngest.ts`, which have the same gap.
+2. Migrate `liveObserver.ts`'s `callModel()` onto `generateText()` from the gateway.
+   Chosen — one resolution/fallback/DEMO_MODE-warning path for every caller; a future
+   model-ID fix only needs to happen once.
+
+**Decision:** Option 2. `liveObserver.ts` now calls `generateText({role: 'fast', ...})`
+from the gateway instead of maintaining its own client and candidate list.
+
+**Incidental finding while migrating:** `generateText()`'s `GenerateOptions` declared
+`responseMimeType`, and `generateJSON()` forwarded it, but the actual
+`ai.models.generateContent()` call never read `opts.responseMimeType` into the request
+config — JSON mode was never really requested from Gemini on any caller, including
+`generateJSON()`; every JSON caller was relying entirely on the markdown-fence-strip
+fallback after the fact, not real JSON mode. Fixed in the same pass and verified with a
+new `tests/smoke/gateway.mjs` that asserts the actual request payload.
+
+**Trade-offs / what this does NOT resolve:**
+- `assessmentEngine.ts` and `pdfIngest.ts` still call models directly — the NFR-02 gap
+  is narrowed, not closed.
+- **Whether the user's actual Gemini model IDs / API key / network are reachable is
+  still unconfirmed from this environment.** `npm run verify:models`, run through the
+  `mcp__remote-devices__device_bash` sandbox, fails every candidate with "fetch failed";
+  tracing it further shows `curl https://generativelanguage.googleapis.com/` from that
+  same sandbox returns exit 56 / "403 from proxy after CONNECT" — the remote-devices
+  tool's own egress-allowlist proxy blocks that host, independent of whether the user's
+  real setup works. This is a tooling limitation on my side, not evidence the fix
+  worked or didn't. The user needs to run `npm run verify:models` from their own
+  terminal (outside this sandboxed tool) to get a trustworthy signal.
+
+**Evidence:** `tsc --noEmit` clean; `npm run test:assessor` 13/13 passing (unchanged —
+this test doesn't touch `liveObserver.ts`); new `tests/smoke/gateway.mjs` passing
+(`generateJSON sent responseMimeType=application/json`; `generateText (no
+responseMimeType) sent config: null`).
