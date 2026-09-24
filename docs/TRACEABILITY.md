@@ -1,7 +1,7 @@
 # Traceability Matrix
 
 _Status legend: ⬜ not started · 🟨 in progress · ✅ done · ♻️ existing code reused_
-_Last updated: 2026-09-24 (after the T21-T23 learner-card/parent-portal/reasoning-panel commit)_
+_Last updated: 2026-09-25 (after the liveObserver→gateway migration + responseMimeType fix)_
 
 ## 1. Requirement → design → build → verify → demo
 
@@ -33,7 +33,7 @@ _Last updated: 2026-09-24 (after the T21-T23 learner-card/parent-portal/reasonin
 | FR-24 | Tutor's-reasoning panel | TP §7 | T23 | `TutorReasoningPanel.tsx` | Live update in demo | 0:45 + 1:30 | ✅ `src/components/TutorReasoningPanel.tsx` built: shows the compiled plan's target/reviews/prerequisites/representation-order/watch-list each with its `PlanReason` (rule + text), plus a live diagnosis+plan-delta feed. Wired to two WS message types (`learner_update_v2` enriched with diagnosis context, `plan_update`) that previously had no client handler at all. **Not verified with a real live WS run** — the stub has no scenario that lets `assess_child_reasoning` complete uncancelled; message construction was reviewed by hand and the underlying functions are smoke-tested |
 | FR-25 | Text channel | TS §4 | T08 | `/api/tutor/turn` | Curl script; EV-02 | — | ⬜ not started |
 | FR-26 | Seeded demo learners | FS §7 | T27 | `scripts/seed-demo.ts` | Load < 2 s | 0:45 | ⬜ not started |
-| NFR-02 | No silent model fallback in demo | TS §3 | T01 | `src/ai/gateway.ts` | `verify:models` | — | ✅ `src/ai/gateway.ts` + `npm run verify:models`; not yet adopted by every caller listed in T01 (`liveObserver.ts`, `assessmentEngine.ts`, `pdfIngest.ts` still call models directly) |
+| NFR-02 | No silent model fallback in demo | TS §3 | T01 | `src/ai/gateway.ts` | `verify:models` | — | 🟨 `src/ai/gateway.ts` + `npm run verify:models`; `liveObserver.ts` migrated 2026-09-25 (was the direct cause of a user-reported "no observer model available" error — it kept its own independent, unmigrated model-candidate list); `assessmentEngine.ts` and `pdfIngest.ts` still call models directly, still ungated by the demo-warning path. Also found+fixed in this pass: `generateText()` never actually placed `responseMimeType` on the request despite `generateJSON()` claiming to use it — verified by new `tests/smoke/gateway.mjs`. **Not independently verified against the user's real API key/network** — `verify:models` run through the `device_bash` sandbox fails with a proxy 403 on `generativelanguage.googleapis.com`, which is a sandbox limitation, not evidence either way about the user's own setup |
 | NFR-03 | Privacy | TS §8, LM §9 | T02, T30 | `firestore.rules`, routes | Emulator/anon read denied | 2:40 privacy | 🟨 `firestore.rules` closed (`learners/**` → `if false`, server-only); `requireAuth`/`requireOwnership` added but ship with a documented, logged DEMO_MODE/dev bypass because the client has no real per-profile sign-in yet (D-2026-09-24-3) — **not production-ready**; delete endpoint exists (T30) but not end-to-end reviewed |
 | NFR-04 | Cloud Run deploy | TS §9 | T29 | `scripts/deploy-cloudrun.sh` | Smoke test | — | 🟨 (existing deploy ♻️, not re-smoke-tested against this change set) |
 | EV-01 | Diagnosis accuracy | FS §5 | T24 | `eval/diagnosis/*` | Report | 2:40 | ⬜ |
@@ -71,3 +71,4 @@ about FR-16/FR-22 together.
 - D-2026-09-24-2 Plan compile is deterministic; GenAI only for diagnosis, profiling, teaching (DECISIONS.md)
 - D-2026-09-24-3 Build plan executed; requireAuth ships with a documented dev bypass pending real sign-in (DECISIONS.md)
 - D-2026-09-24-4 Learner card dispute simplified to the misconception ledger directly, pending a real Profiler/claim system (T14) (DECISIONS.md)
+- D-2026-09-25-1 liveObserver.ts migrated onto src/ai/gateway.ts; responseMimeType bug found and fixed in the gateway (DECISIONS.md)

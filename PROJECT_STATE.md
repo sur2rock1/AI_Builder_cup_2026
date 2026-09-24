@@ -217,3 +217,40 @@ Needs a check on the development machine before relying on it for the demo.
 4. T19: the formal latency spike/report for guidance injection.
 5. T14 (Profiler/claim validator) if there's time — would let the T21 dispute button operate on
    real claims instead of the ledger-entry simplification.
+
+## Update — 2026-09-25 (liveObserver/gateway fix + full build-plan cross-check)
+
+**Trigger:** user hit a real runtime error (`[LiveObserver] observation skipped: no
+observer model available`) and asked for a full cross-check against the build plan,
+not just a re-assertion that "everything's built."
+
+**Fixed this pass:**
+- `liveObserver.ts` migrated onto `src/ai/gateway.ts` (closes part of the NFR-02 gap
+  flagged in TRACEABILITY.md since 2026-09-24; see D-2026-09-25-1).
+- Found and fixed a real bug in the gateway itself: `responseMimeType` was declared and
+  forwarded by `generateJSON()` but never actually placed on the Gemini request —
+  JSON mode was never really requested from the model on any caller. New smoke test
+  (`tests/smoke/gateway.mjs`) verifies the fix at the request-payload level.
+
+**Still NOT confirmed:** whether the user's actual model IDs/API key/network work —
+my own `verify:models` check is unreliable from this sandboxed tool (proxy blocks
+`generativelanguage.googleapis.com`). Needs the user to run it themselves.
+
+**Cross-check verdict (full detail in docs/TRACEABILITY.md, updated same day):**
+Of BUILD_PLAN.md's 31 tasks (T00–T30), roughly a third are genuinely ✅ done and
+verified by a test, a third are 🟨 built but with a named, real gap (usually: the
+formal verification/eval named in the task's acceptance criteria hasn't been run
+against real usage, or a sibling caller wasn't migrated), and the rest — most notably
+**T02 (real per-profile auth — still a dev bypass), T08 (text channel), T12
+(confidence capture), T13 (onboarding UI), T14 (Profiler/claim validator), T15
+(spaced review scheduling), T19 (formal latency spike/measurement), T24–T27 (eval
+harnesses, seeded demo data)** — are ⬜ not started. This is not new information;
+TRACEABILITY.md already stated all of it honestly. The user's error was a concrete,
+correct signal that "built" in this repo currently means "code exists and unit/smoke
+tests pass," not "verified against a real live session with a real API key," and that
+distinction had not been surfaced clearly enough until this prompted a direct answer.
+
+**Top priorities unchanged:** 1) real per-profile Firebase sign-in (NFR-03), 2) verify
+the T21–T23 reasoning-panel/dispute flow and the new WS messages against an actual
+live session (not just smoke tests), 3) T24 diagnosis eval set, 4) T19 latency spike,
+5) T14 Profiler.
