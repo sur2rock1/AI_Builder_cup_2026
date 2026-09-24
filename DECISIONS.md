@@ -459,3 +459,45 @@ reproduction above, which exercises the same server.ts bundle and passed). Re-ru
 scheduling — the type exists, nothing schedules yet), T19's formal latency spike/report, T21–T23
 (learner card, parent-portal replay, tutor's-reasoning panel), T24–T27 (eval harnesses, seeded
 demo learners), T29–T30 (Cloud Run deploy smoke test, delete-endpoint end-to-end review).
+
+## 2026-09-24 — T21–T23 built; learner-card dispute simplified pending a real claim system (D-2026-09-24-4)
+
+**Context.** Per the priority list added to PROJECT_STATE.md after D-2026-09-24-3, built the
+learner-facing surface for the pipeline that already existed but was invisible: the Tutor's-
+reasoning panel (T23), the learner-card ladder/ledger/dispute (T21), and the parent-portal
+evidence replay (T22).
+
+**Decision on FR-22's dispute.** The spec (LEARNER_MODEL.md §5.2, FUNCTIONAL_SPEC.md J3) describes
+disputing a Profiler-generated **claim** with evidence refs. The Profiler and claim validator
+(T14) are not built. Rather than block T21 on T14, "That's not right" disputes the underlying
+`MisconceptionRecord` in the ledger directly — a new `disputed` status that
+`compileTeachingPlan`'s `R-WATCH` rule (already only watches `suspected`/`confirmed`) excludes
+automatically, so a dispute takes effect on the very next plan compile with no new plan-compiler
+code. Smoke-tested: disputing a confirmed misconception removes it from the next plan's
+`watchMisconceptions`.
+
+**Trade-off, stated plainly.** This is not the claim system the spec describes — there's no
+evidence-cited, parent-reviewable claim object, and disputing a ledger entry has a narrower
+scope (it affects the teaching plan, not a "what I've learned about you" summary sentence). It
+is a real, working, demoable simplification, not a mock. If T14 lands later, migrating the
+dispute UI to operate on claims instead of ledger entries is a contained change (same button,
+different backing id).
+
+**T23's reasoning panel.** Reuses the `TeachingPlan`'s existing `PlanReason{rule, text,
+evidenceRefs}` on every field (already returned by `/api/session/start`) rather than inventing
+new explanation text — the panel is a renderer over data the compiler already produces, which is
+also why it needed no new backend logic beyond enriching one WS message
+(`learner_update_v2`) with the diagnosis context that was already being computed and discarded.
+
+**Verification gap.** No live-WS run exercises the enriched `learner_update_v2`/`plan_update`
+messages end-to-end — `tests/live/genai-live-stub.mjs` has no scenario that lets
+`assess_child_reasoning` finish without a `toolCallCancellation`, and `npm run test:live` remains
+unreliable in this sandboxed environment (per D-2026-09-24-3). The underlying calls
+(`recordReasoningEvidence`, `compilePlanDelta`, `disputeMisconception`) are smoke-tested directly;
+the WS message construction was reviewed by hand. **Follow-up:** either add a stub scenario that
+completes `assess_child_reasoning`, or verify by running a real lesson on the development
+machine and checking the reasoning panel updates.
+
+**Verification done.** `npx tsc --noEmit` clean; `npm run build` (vite) succeeds; `esbuild
+server.ts` bundles cleanly; `npm run test:assessor` 13/13 unchanged; the extended smoke test
+(now covering dispute) passes.

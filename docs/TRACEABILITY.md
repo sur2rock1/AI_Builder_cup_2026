@@ -1,7 +1,7 @@
 # Traceability Matrix
 
 _Status legend: ⬜ not started · 🟨 in progress · ✅ done · ♻️ existing code reused_
-_Last updated: 2026-09-24 (after the T00-T04/T05-T07/T09-T11(partial)/T17-T18/T20 commit)_
+_Last updated: 2026-09-24 (after the T21-T23 learner-card/parent-portal/reasoning-panel commit)_
 
 ## 1. Requirement → design → build → verify → demo
 
@@ -10,7 +10,7 @@ _Last updated: 2026-09-24 (after the T00-T04/T05-T07/T09-T11(partial)/T17-T18/T2
 | FR-01 | One base persona for everyone, versioned | PER §1–3, §19 | T05, T06, T07 | `src/persona/*` | Composer snapshots; P-01…P-18 | 2:15 architecture | ✅ composer live-verified (WS run shows `[persona v1.0.0]` prompt); snapshot tests (P-01…P-18) not yet written |
 | FR-02 | Teach-before-test session arc | PER §4 | T05, T07 | `persona/core.ts` | P-16 | 1:30 live | 🟨 arc encoded in `core.ts`/`compose.ts`; P-16 not run |
 | FR-03 | Reasoning elicited after every answer | PER H1, §6 | T05, T07 | `persona/core.ts`, `moves.ts` | P-01, P-02 | 1:30 live | 🟨 `assess_child_reasoning` now actually reachable from the live tool list (was dead code); P-01/P-02 rates not measured |
-| FR-04 | Move ID + reason per turn | PER §6 | T05, T10, T23 | `moves.ts`, `EvidenceEvent.moveUsed` | Event field coverage 100% | Reasoning panel | 🟨 `moveUsed` field exists and is populated from `assess_child_reasoning`; coverage not measured; no reasoning-panel UI yet (T23) |
+| FR-04 | Move ID + reason per turn | PER §6 | T05, T10, T23 | `moves.ts`, `EvidenceEvent.moveUsed` | Event field coverage 100% | Reasoning panel | 🟨 `moveUsed` populated from `assess_child_reasoning`; now rendered live in `TutorReasoningPanel.tsx` (T23 done); coverage still not measured |
 | FR-05 | Age-band surface | PER §12.1 | T05, T06 | `ageBands.ts` | P-14; snapshots | 0:45 two learners | 🟨 `ageBands.ts` built and wired into the composer; not snapshot-tested across all 4 bands |
 | FR-06 | Subject modes | PER §12.2 | T05, T06 | `subjectModes.ts` | Text-mode interpretive run | (optional) | 🟨 `subjectModes.ts` built and wired; no interpretive text-mode run yet (needs T08) |
 | FR-07 | Safety / safeguarding | PER §16 | T05, T26 | `safety.ts` | P-13 | — | 🟨 `safety.ts` built and included in every composed prompt; P-13 not run |
@@ -28,9 +28,9 @@ _Last updated: 2026-09-24 (after the T00-T04/T05-T07/T09-T11(partial)/T17-T18/T2
 | FR-19 | In-session plan deltas + guidance | TP §6, TS §5.3 | T19, T20 | `src/plan/delta.ts`, injector | Spike report; latency | 1:30 switch | 🟨 `compilePlanDelta` wired fire-and-forget into the live WS (`plan_update` message) after every `assess_child_reasoning` call; the formal T19 latency spike (≥10 exchanges, p50/p95, options A/B/C) was not run — a DECISIONS.md entry with those numbers is still owed |
 | FR-20 | Limits enforced | PER §14 | T20 | `delta.ts`, `config.ts` | P-09; TP-06 | — | ✅ probe budget, retry cap → PARK_AND_ESCALATE, consecutive-failure → ENCOURAGE_RESET all implemented and smoke-tested (misconception-confirmed path); P-09/TP-06 not run formally |
 | FR-21 | Spaced review at session start | LM §7.2, TP §4.1 | T15, T18 | `review.ts` | TP-04 | 0:45 returning learner | ⬜ `R-REVIEW` rule reads `review.nextDueAt` in the compiler, but nothing ever advances/schedules `ReviewState` (T15 not started), so `reviewItems` is always empty in practice |
-| FR-22 | Learner card + dispute | LM §8 | T21 | `LearnerCard.tsx` | J3 walkthrough | 1:30 | ⬜ (♻️ `LearnerProfilePanel` unchanged) |
-| FR-23 | Parent portal replay | LM §8 | T22 | `ParentPortal.tsx` | J4 walkthrough | (optional) | ⬜ (♻️ `ParentPortal.tsx` only got an `authFetch` swap; no evidence-replay UI) |
-| FR-24 | Tutor's-reasoning panel | TP §7 | T23 | `TutorReasoningPanel.tsx` | Live update in demo | 0:45 + 1:30 | ⬜ not started |
+| FR-22 | Learner card + dispute | LM §8 | T21 | `LearnerCard.tsx` | J3 walkthrough | 1:30 | 🟨 ♻️ `LearnerProfilePanel.tsx` extended (not a new `LearnerCard.tsx`) with ladder/mastery-status badges and a real per-entry misconception ledger + "That's not right" dispute button, wired to a new dispute route; simplified vs. spec — disputes the ledger entry directly since the Profiler/claim validator (T14) isn't built, so there are no scoped "claims" yet, only misconceptions; J3 not walked through end-to-end with a real session |
+| FR-23 | Parent portal replay | LM §8 | T22 | `ParentPortal.tsx` | J4 walkthrough | (optional) | ✅ ♻️ `ParentPortal.tsx` gains ladder/mastery-status, the real ledger (status + observation count, dispute-aware), and a "View evidence" replay per concept from `GET /api/learners/:id/events` — claim→evidence→exchanges in 2 clicks per FR-23's acceptance criterion; J4 not walked through with a real multi-session learner |
+| FR-24 | Tutor's-reasoning panel | TP §7 | T23 | `TutorReasoningPanel.tsx` | Live update in demo | 0:45 + 1:30 | ✅ `src/components/TutorReasoningPanel.tsx` built: shows the compiled plan's target/reviews/prerequisites/representation-order/watch-list each with its `PlanReason` (rule + text), plus a live diagnosis+plan-delta feed. Wired to two WS message types (`learner_update_v2` enriched with diagnosis context, `plan_update`) that previously had no client handler at all. **Not verified with a real live WS run** — the stub has no scenario that lets `assess_child_reasoning` complete uncancelled; message construction was reviewed by hand and the underlying functions are smoke-tested |
 | FR-25 | Text channel | TS §4 | T08 | `/api/tutor/turn` | Curl script; EV-02 | — | ⬜ not started |
 | FR-26 | Seeded demo learners | FS §7 | T27 | `scripts/seed-demo.ts` | Load < 2 s | 0:45 | ⬜ not started |
 | NFR-02 | No silent model fallback in demo | TS §3 | T01 | `src/ai/gateway.ts` | `verify:models` | — | ✅ `src/ai/gateway.ts` + `npm run verify:models`; not yet adopted by every caller listed in T01 (`liveObserver.ts`, `assessmentEngine.ts`, `pdfIngest.ts` still call models directly) |
@@ -46,8 +46,8 @@ _Last updated: 2026-09-24 (after the T00-T04/T05-T07/T09-T11(partial)/T17-T18/T2
 |---|---|---|---|---|---|
 | Fixed persona + adaptive plan | Strong (versioned, testable, now actually running live) | Moderate | Strong | Moderate | Composer snapshots (not yet written), EV-03 |
 | Async reasoning diagnosis (closed catalogue) | Strong (now wired into the live path — was dead code before this pass) | Strong | Strong | Moderate | EV-01 |
-| Evidence-cited learner model + claim validator | Moderate (ladder/strategy done; claims/validator not built) | Moderate | Strong | Weak (no learner-facing UI yet) | Validator tests, parent replay — both not yet run |
-| Deterministic plan with reasons | Strong (compiler + delta done, smoke-tested) | Moderate | Moderate | Weak (no reasoning panel yet) | Smoke test now; TP suite still owed |
+| Evidence-cited learner model + claim validator | Moderate (ladder/strategy done; no real claims/validator, T14) | Moderate | Strong | Moderate (ledger + dispute now visible on the learner card and parent portal) | Smoke test covers dispute; validator tests still owed |
+| Deterministic plan with reasons | Strong (compiler + delta done, smoke-tested) | Moderate | Moderate | Strong (Tutor's-reasoning panel shows every rule+reason live) | Smoke test now; TP suite and a real live-WS run still owed |
 | Spaced review / durable mastery | Weak (mastery-status rule done; scheduling not built) | Moderate | Moderate | Weak | Review tests — not yet written |
 | Simulated-learner A/B | Not yet demonstrated | Not yet demonstrated | Not yet demonstrated | — | EV-02 |
 | Voice + board | Moderate | Strong | Weak (commoditised) | Strong | Existing |
@@ -55,12 +55,19 @@ _Last updated: 2026-09-24 (after the T00-T04/T05-T07/T09-T11(partial)/T17-T18/T2
 **Gap to watch (unchanged):** Impact is evidenced only by simulated learners unless even a small
 real-user test (e.g. 3–5 children, with parental consent) is run before 17 Oct.
 
-**New gap surfaced this pass:** NFR-03 (privacy) is not actually met end-to-end yet — the
-Firestore side is locked down, but the API-layer auth has a documented dev bypass until real
-per-profile sign-in exists (D-2026-09-24-3). A skeptical judge should be told this proactively
-rather than asked about it.
+**Gap surfaced in the previous pass (still open):** NFR-03 (privacy) is not actually met
+end-to-end yet — the Firestore side is locked down, but the API-layer auth has a documented dev
+bypass until real per-profile sign-in exists (D-2026-09-24-3). A skeptical judge should be told
+this proactively rather than asked about it.
+
+**New gap surfaced this pass:** T21's dispute is a pragmatic simplification, not the spec's
+claim system — there is no Profiler (T14) generating scoped, evidence-cited claims yet, so
+"That's not right" disputes a raw misconception-ledger entry rather than a parent-reviewable
+claim. This is honest and functional but should be named as a simplification if a judge asks
+about FR-16/FR-22 together.
 
 ## 3. Decision references
 - D-2026-09-24-1 Persona stays fixed; the per-learner Teaching Plan adapts (DECISIONS.md)
 - D-2026-09-24-2 Plan compile is deterministic; GenAI only for diagnosis, profiling, teaching (DECISIONS.md)
 - D-2026-09-24-3 Build plan executed; requireAuth ships with a documented dev bypass pending real sign-in (DECISIONS.md)
+- D-2026-09-24-4 Learner card dispute simplified to the misconception ledger directly, pending a real Profiler/claim system (T14) (DECISIONS.md)

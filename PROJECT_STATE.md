@@ -179,3 +179,41 @@ T17 — done, T23, T24):**
    works"; nothing quantifies detection/false-positive rate.
 4. T19: run the formal latency spike (≥10 exchanges) and record p50/p95 in DECISIONS.md — the
    fire-and-forget wiring shipped without that measurement.
+
+---
+
+## Update — 2026-09-24 (later still): T21-T23 built — learner card, parent portal, reasoning panel
+
+Commit `11dc4e5`. Closes the "no visible surface" gap flagged in the previous update: the
+ladder/ledger/plan pipeline (T09-T10, T17-T20) is now actually shown to a learner, a parent and
+a judge.
+
+- **Tutor's-reasoning panel** (`TutorReasoningPanel.tsx`, new, toggled from the left edge): the
+  compiled plan's target/reviews/prerequisites/representation-order/watch-list, each with its
+  rule id + reason text straight from the compiler, plus a live feed of every diagnosis and the
+  plan delta it triggered. This is the single highest-value addition for judges — it makes the
+  "deterministic plan with reasons" claim inspectable in real time instead of asserted in docs.
+- **Learner card dispute**: "That's not right" on a misconception, on the existing
+  `LearnerProfilePanel`. Deliberately simplified — see D-2026-09-24-4 — to operate on the
+  misconception ledger directly rather than a Profiler-generated claim, since T14 isn't built.
+  Honest about the gap rather than faking a claim system.
+- **Parent portal evidence replay**: ladder/mastery-status badges, the real per-entry ledger, and
+  a "View evidence" button per concept that replays the actual question → answer → reasoning →
+  classification chain from the events already being recorded.
+
+**Verified:** `tsc --noEmit` clean, `vite build` succeeds, `esbuild server.ts` bundles,
+`test:assessor` 13/13, extended smoke test (now covers dispute) passes.
+
+**Not verified:** a real live-WS run of the new WS message enrichment — the test harness's stub
+has no scenario for it and `npm run test:live` remains unreliable in this sandboxed environment.
+Needs a check on the development machine before relying on it for the demo.
+
+**Updated priority list** (supersedes the previous one — T21-T23 are now off it):
+1. Real per-profile Firebase sign-in (closes the NFR-03 dev-bypass gap, D-2026-09-24-3) —
+   still the most important compliance-shaped gap.
+2. Verify the reasoning panel and dispute flow against a **real** live session on your machine
+   (not the sandboxed bridge) — this is currently the least-verified part of the newest work.
+3. T24: diagnosis eval set — still the single biggest unsupported technical claim.
+4. T19: the formal latency spike/report for guidance injection.
+5. T14 (Profiler/claim validator) if there's time — would let the T21 dispute button operate on
+   real claims instead of the ledger-entry simplification.
