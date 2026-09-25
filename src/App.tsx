@@ -23,6 +23,7 @@ import {
   CurriculumConceptUI,
 } from './types';
 import { LoginScreen, StudentProfile } from './components/LoginScreen';
+import { logout } from './firebase/auth';
 import { SubjectSelector } from './components/SubjectSelector';
 import { ParentPortal } from './components/ParentPortal';
 import {
@@ -31,33 +32,17 @@ import {
 } from './components/TeachingCanvas';
 
 import type { LearnerSnapshot } from './adaptive/liveObserver';
-import { ImmersiveStage, PresenterMedia } from './components/ImmersiveStage';
+import { ImmersiveStage } from './components/ImmersiveStage';
 import { PanelMode } from './components/ScenePanel';
 import { getScene, PYTHAGORAS_SCENES } from './scenes/pythagorasScenes';
 
 // Which teaching surface to render.
-//   'immersive' — presenter on a stage beside a real whiteboard (current)
+//   'immersive' — Lumen orb beside the fading board (current)
 //   'canvas'    — flat light teaching canvas
 //   'legacy'    — the original six-tab blackboard
 // Kept as a flag so there is always a working fallback close to the deadline.
 type BoardSurface = 'immersive' | 'canvas' | 'legacy';
 const BOARD_SURFACE: BoardSurface = 'immersive';
-
-// Pre-generated presenter media. Drop files into /public/presenter/ and list
-// them here — nothing is generated at runtime, so there is no added latency
-// and no third-party avatar service sitting in the live path.
-// Until these exist the stage renders a lit silhouette instead.
-const PRESENTER: PresenterMedia = {
-  // Produced by `npm run gen:assets`. Used only if the file exists.
-  still: '/presenter/stage.jpg',
-  // clips: {
-  //   idle:        '/presenter/idle.mp4',
-  //   talking:     '/presenter/talking.mp4',
-  //   thinking:    '/presenter/thinking.mp4',
-  //   pointing:    '/presenter/pointing.mp4',
-  //   encouraging: '/presenter/encouraging.mp4',
-  // },
-};
 
 export const App: React.FC = () => {
   // ─── Navigation / screen state ───────────────────────────────
@@ -86,7 +71,7 @@ export const App: React.FC = () => {
   // Lesson opens on a real situation, then fades to the bare shape (concreteness fading).
   const [panelMode, setPanelMode] = useState<PanelMode>('real');
   // True while the server is checking an answer. Shown to the child so a short
-  // pause reads as "he's thinking about what I said", not as a hang.
+  // pause reads as "Lumen is thinking about what I said", not as a hang.
   const [tutorThinking, setTutorThinking] = useState(false);
   const thinkingTimerRef = useRef<number | null>(null);
   const setThinking = useCallback((on: boolean) => {
@@ -132,14 +117,14 @@ export const App: React.FC = () => {
     isBlinking: false,
     isNodding: false,
     eyebrowsRaised: false,
-    name: 'Dr. Marcus Vance',
-    title: 'Senior AI Educator',
+    name: 'Lumen',
+    title: 'AI learning companion',
   });
 
   // Voice & Transcripts State
   const [outputTranscript, setOutputTranscript] = useState<TranscriptEntry | null>({
     id: 'welcome-0',
-    text: `Hello! I am Dr. Marcus Vance, your real-time AI tutor. What topic or concept would you like to explore today? Type any topic on the fly or click "Start Voice Lesson" to ask me directly!`,
+    text: `Hello! I am Lumen, your real-time AI tutor. What topic or concept would you like to explore today? Type any topic on the fly or click "Start Voice Lesson" to ask me directly!`,
     timestamp: Date.now(),
   });
   const [inputTranscript, setInputTranscript] = useState<TranscriptEntry | null>(null);
@@ -918,11 +903,11 @@ export const App: React.FC = () => {
   };
 
   // ─── Screen navigation handlers ─────────────────────────────
-  const handleLogin = (profile: StudentProfile) => {
+  const handleLogin = useCallback((profile: StudentProfile) => {
     setLoggedInStudent(profile);
     setGrade(profile.grade);
     setScreen('subject-select');
-  };
+  }, []);
 
   const handleSubjectConceptSelect = async (
     subjectId: string, subjectLabel: string,
@@ -963,7 +948,7 @@ export const App: React.FC = () => {
     loadLesson(conceptLabel, studentGrade);
     setOutputTranscript({
       id: `welcome-${Date.now()}`,
-      text: `Hi ${loggedInStudent?.name || 'there'}! Today we are diving into "${conceptLabel}". I have prepared this session just for you — let's go!`,
+      text: `Hi ${loggedInStudent?.name || 'there'} — I'm Lumen. Today we are diving into "${conceptLabel}". I have prepared this session just for you — let's go!`,
       timestamp: Date.now(),
     });
   };
@@ -983,12 +968,15 @@ export const App: React.FC = () => {
       <>
         <ParentPortal
           onBack={() => setScreen(loggedInStudent ? 'subject-select' : 'login')}
+          onSignOut={async () => { setLoggedInStudent(null); await logout(); setScreen('login'); }}
+          onUploadCurriculum={() => setUploadModalOpen(true)}
           initialStudentId={loggedInStudent?.studentId}
         />
         <CurriculumUpload
           isOpen={uploadModalOpen}
           onClose={() => setUploadModalOpen(false)}
           onCurriculumLoaded={handleCurriculumLoaded}
+          defaultStudentId={loggedInStudent?.studentId}
         />
       </>
     );
@@ -1001,7 +989,8 @@ export const App: React.FC = () => {
           key={curriculaVersion}
           student={loggedInStudent as any}
           onSelectSubjectConcept={handleSubjectConceptSelect}
-          onLogout={() => { setLoggedInStudent(null); setScreen('login'); }}
+          onLogout={async () => { setLoggedInStudent(null); await logout(); setScreen('login'); }}
+          onSignOut={async () => { setLoggedInStudent(null); await logout(); setScreen('login'); }}
           onUploadCurriculum={() => setUploadModalOpen(true)}
           onParentPortal={() => setScreen('parent-portal')}
         />
@@ -1009,6 +998,7 @@ export const App: React.FC = () => {
           isOpen={uploadModalOpen}
           onClose={() => setUploadModalOpen(false)}
           onCurriculumLoaded={(sid, label) => { handleCurriculumLoaded(sid, label); setUploadModalOpen(false); }}
+          defaultStudentId={loggedInStudent.studentId}
         />
       </>
     );
@@ -1089,7 +1079,7 @@ export const App: React.FC = () => {
       {/* MAIN WORKSPACE */}
       <main id="main-workspace" className="flex-1 w-full flex flex-row overflow-hidden min-h-0">
         {/* Left: Animated Vector Character Tutor — only for the non-immersive surfaces,
-            since the immersive stage carries its own presenter. */}
+            since the immersive stage carries its own orb. */}
         {BOARD_SURFACE !== 'immersive' && (
         <section
           id="animated-tutor-section"
@@ -1131,7 +1121,6 @@ export const App: React.FC = () => {
               scene={getScene(sceneId)}
               scene3d={blackboard.lessonData?.scene3d}
               tutorLine={outputTranscript?.text}
-              presenter={PRESENTER}
               studentName={loggedInStudent?.name}
               onChangeTopic={() => setScreen('subject-select')}
               onOpenProfile={() => setProfilePanelOpen(p => !p)}
@@ -1215,6 +1204,7 @@ export const App: React.FC = () => {
         isOpen={uploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
         onCurriculumLoaded={handleCurriculumLoaded}
+        defaultStudentId={loggedInStudent?.studentId}
       />
 
       {/* BOTTOM CONTROL BAR — immersive stage supplies its own, so skip it there. */}

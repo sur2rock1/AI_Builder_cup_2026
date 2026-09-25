@@ -34,11 +34,22 @@ function scoreToLevel(score: number): MasteryLevel {
 
 // ─── Public profile API ─────────────────────────────────────────
 
-export function getOrCreateLearner(studentId: string, name: string, grade: string): LearnerProfile {
+export function getOrCreateLearner(
+  studentId: string, name: string, grade: string,
+  ownerUid?: string, parentUid?: string, email?: string,
+): LearnerProfile {
   const profiles = readProfiles();
-  if (profiles[studentId]) return profiles[studentId];
+  if (profiles[studentId]) {
+    const cur = profiles[studentId];
+    let changed = false;
+    if (ownerUid && cur.ownerUid !== ownerUid) { cur.ownerUid = ownerUid; changed = true; }
+    if (parentUid && cur.parentUid !== parentUid) { cur.parentUid = parentUid; changed = true; }
+    if (email && cur.email !== email) { cur.email = email; changed = true; }
+    if (changed) { cur.updatedAt = Date.now(); writeProfiles(profiles); }
+    return cur;
+  }
   const fresh: LearnerProfile = {
-    studentId, name, grade,
+    studentId, name, grade, ownerUid, parentUid, email,
     createdAt: Date.now(), updatedAt: Date.now(),
     subjects: {}, globalInsights: [],
   };
@@ -49,8 +60,12 @@ export function getOrCreateLearner(studentId: string, name: string, grade: strin
 export function getLearner(studentId: string): LearnerProfile | null {
   return readProfiles()[studentId] || null;
 }
-export function listLearners(): LearnerProfile[] {
-  return Object.values(readProfiles());
+export function listLearners(uid?: string, asParent = false): LearnerProfile[] {
+  const all = Object.values(readProfiles());
+  if (!uid) return all;
+  return asParent
+    ? all.filter(l => l.parentUid === uid)
+    : all.filter(l => l.ownerUid === uid);
 }
 
 export function ensureSubject(

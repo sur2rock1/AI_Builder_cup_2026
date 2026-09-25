@@ -2,8 +2,8 @@
 
 **Branch:** `feature/lumen-companion`  
 **Plan source:** [`lumen-learning-companion.md`](lumen-learning-companion.md)  
-**Status:** plan locked; product code starts at Phase 0 on this branch.  
-**Do not open a second Live socket.** Cloud Run stays the mouth. Firebase AI Logic is text only.
+**Status:** Phase 0 shipped. Next is Phase 1 (hybrid extract + preview). Voice cross-check is now Phase 4.  
+**Do not open a second Live socket.** Cloud Run stays the mouth. Firebase AI Logic is text only. Firecrawl is studio only.
 
 ---
 
@@ -13,7 +13,7 @@
 |---|---|
 | Name | **Lumen** (alts Mira / Sage stay in the doc only) |
 | Course brain | Keep extending `server.ts` + `liveConfig.ts` |
-| Auth for the cup | Named profiles (already on `/api/learners`) |
+| Auth for the cup | Parent creates child logins; kids sign in themselves (`parentUid` / `ownerUid`) |
 | Default lesson | **15 min** (Live audio-only limit) |
 | Cross-questions | In-session: elicit → one probe. Never dump the answer |
 | Homework across days | Firestore `tasks/*`, not Live resume |
@@ -24,6 +24,7 @@
 | AI Logic Live in the browser | **Out** (Preview, no VAD, tools coming soon) |
 | Gemma | **Out** (that was [Gamma](https://gamma.app/docs/Lumen-pdlxdx2dgtash69)) |
 | Higgsfield / Firecrawl | Studio only, never a Live tool |
+| Subjects | **Firestore programs on `learners/{id}`.** Pythagoras is a cup **example** seed, not the product. No global built-in catalogue. Adult / 18+ documented only. |
 
 **Artifacts already made (not product code):**
 
@@ -47,7 +48,7 @@ No phase is “done” until **all four** pass:
 
 If a check fails, fix on this branch before starting the next phase. Do not ship a phase that only “looks right” in isolation.
 
-After a phase that touches voice (`1`, `6`): also run `npm run diagnose:voice` against real Gemini.
+After a phase that touches voice (`4`, `9`): also run `npm run diagnose:voice` against real Gemini.
 
 After a phase that touches UI: exercise the flow in the browser (start → speak → board → wrap), not a single screenshot.
 
@@ -59,16 +60,65 @@ After a phase that touches UI: exercise the flow in the browser (start → speak
 
 **Verify**
 
-- [ ] Grep learner UI + spoken prompt: no Vance / Dr. Marcus
-- [ ] Local `npm run dev` → first screen / spoken hello uses Lumen
-- [ ] Parent portal title can still mention the product name; no leaderboard added
-- [ ] `npm run lint` and `npm test`
+- [x] Grep learner UI + spoken prompt: no Vance / Dr. Marcus
+- [x] Local `npm run dev` → first screen / spoken hello uses Lumen
+- [x] Parent portal title can still mention the product name; no leaderboard added
+- [x] `npm run lint` and `npm test`
 
 **Not this phase.** Chip resolver, captions persist, digest.
 
 ---
 
-## Phase 1 — Cross-check in classic
+## Phase 1 — Hybrid extract + preview
+
+**Ship.** Parent or kid types a topic and/or adds files. Cloud Run runs Firecrawl **parse** (files) and Firecrawl **search + scrape** (topic / links) in `Promise.all`. Gemini shapes a concept preview for the learner’s grade. **Nothing is written to Firestore or `curricula.json` until confirm.**
+
+**Verify**
+
+- [ ] Topic-only (no file) still previews internet sources with attribution
+- [ ] File-only still previews if search fails; one rail failing does not empty the other
+- [ ] Dual progress (Files / Internet) updates while the job runs
+- [ ] Confirm is disabled until `stage === preview`
+- [ ] `npm run lint` and `npm test`
+
+**Not this phase.** Firestore write. Program generation. Voice.
+
+---
+
+## Phase 2 — Confirm → Firestore material
+
+**Ship.** Confirm screen: suggested title, topics, key concepts, sources, estimated minutes, age-band line. On **Save and build program**, Admin writes `learners/{id}/materials/{materialId}`. Client rules: parent or owner can **read**; clients cannot write.
+
+**Verify**
+
+- [ ] Refresh after confirm: parent and child can read the material
+- [ ] Unauthenticated write is rejected
+- [ ] Parent cannot write to another family’s learner
+- [ ] Extract without confirm leaves no material doc
+- [ ] `npm run lint` && `npm test`
+
+**Not this phase.** Live captions. Voice picker.
+
+---
+
+## Phase 3 — Generate program
+
+**Ship.** After the material write, Gemini builds an age-mapped program (lessons, quizzes, multimedia *outlines*) using difficulty / pacing / presentation for the child’s mapped band. Admin writes `learners/{id}/programs/{programId}` and the concept graph so SubjectSelector / Live can start.
+
+**Verify**
+
+- [ ] Maya (Primary 6) gets preteen pacing (~15–20 min lessons), not teen essays
+- [ ] Program survives reload and appears in the subject list
+- [ ] Live still one socket; Firecrawl is not in `liveConfig` tools
+- [ ] Adult / 18+ bands are not offered in the UI
+- [ ] Browser: compose → preview → confirm → program ready → start a lesson
+- [ ] `npm run lint` && `npm test`
+
+**Not this phase.** Cross-check prompt. Growing chips.
+
+---
+
+## Phase 4 — Cross-check in classic
 
 **Ship.** Elicit + one probe live in the **classic** spoken rules (not only `VOICE_MODE=adaptive`). Probe cap (~2 per concept). Tutor still does not state the answer.
 
@@ -83,7 +133,7 @@ After a phase that touches UI: exercise the flow in the browser (start → speak
 
 ---
 
-## Phase 2 — Captions in Firestore
+## Phase 5 — Captions in Firestore
 
 **Ship.** On `turnComplete`, write the joined child + tutor caption to `sessions/{id}/turns/{turnId}`. Session doc has `learnerId`, `intent`, `startedAt`, `status`.
 
@@ -99,7 +149,7 @@ After a phase that touches UI: exercise the flow in the browser (start → speak
 
 ---
 
-## Phase 3 — Session clock + take-home task
+## Phase 6 — Session clock + take-home task
 
 **Ship.** Start picker 10 / 15 / 20 (default 15) on `sessions/{id}.durationMin`. At `durationMin - 2` (or `goAway`), wrap and write **one** task to `learners/{id}/tasks/{taskId}`. Next open: “Did you try X?” then elicit method.
 
@@ -116,7 +166,7 @@ After a phase that touches UI: exercise the flow in the browser (start → speak
 
 ---
 
-## Phase 4 — Profile + growing chips
+## Phase 7 — Profile + growing chips
 
 **Ship.** First-meet: name, ageBand, grade, preferredLang; subjects + interests can wait one session. Chip resolver returns **at most four** chips from profile + open tasks + last digest + `examDate` + `nextIntentHint`. Store `sessions/{id}.offeredChips` and `intent`.
 
@@ -130,11 +180,11 @@ After a phase that touches UI: exercise the flow in the browser (start → speak
 - [ ] Day-0 screen ≠ week-5 screen; spoken question is still “What do you need today?”
 - [ ] Browser: first-meet → day-0 chips → lesson still connects Live
 
-**Not this phase.** AI Logic wording (chips can use raw Firestore strings until Phase 5).
+**Not this phase.** AI Logic wording (chips can use raw Firestore strings until Phase 8).
 
 ---
 
-## Phase 5 — AI digest (Firebase AI Logic text)
+## Phase 8 — AI digest (Firebase AI Logic text)
 
 **Ship.** After `endedAt`, `getGenerativeModel` structured JSON → `sessions/{id}.aiDigest` (`recap`, `strengths`, `examFocus`, `nextIntent`). Cloud Run or a Function. Same models already wired in `src/firebase/client.ts`.
 
@@ -151,7 +201,7 @@ After a phase that touches UI: exercise the flow in the browser (start → speak
 
 ---
 
-## Phase 6 — Voice + language
+## Phase 9 — Voice + language
 
 **Ship.** `speechConfig.voiceName` picker (today hardcoded `Puck`). `langHint` in the system instruction. Mid-lesson voice change = reconnect.
 
@@ -164,7 +214,7 @@ After a phase that touches UI: exercise the flow in the browser (start → speak
 
 ---
 
-## Phase 7 — Any-topic fading board
+## Phase 10 — Any-topic fading board
 
 **Ship.** Common tools always on. Pack tools for the loaded subject. Generic fallback: chalk + photo if the pack has no `show_shape`. Science (photosynthesis) is the second demo topic.
 
@@ -178,7 +228,7 @@ After a phase that touches UI: exercise the flow in the browser (start → speak
 
 ---
 
-## Phase 8 — Knobs + App Check
+## Phase 11 — Knobs + App Check
 
 **Ship.** Remote Config: `LIVE_MODEL`, `default_voice`, `default_duration_min`. App Check before any **client** AI Logic call.
 
@@ -191,7 +241,7 @@ After a phase that touches UI: exercise the flow in the browser (start → speak
 
 ---
 
-## Phase 9 — Teacher (later)
+## Phase 12 — Teacher (later)
 
 **Ship.** Class heat on misconception ids. Third actor.
 
@@ -206,13 +256,16 @@ After a phase that touches UI: exercise the flow in the browser (start → speak
 
 | Capability | Lands in |
 |---|---|
-| Method ledger (already sketched) | Phase 1 on by default; persist in Phase 2 |
-| BKT | Already in `bkt.ts`; persist snapshots in Phase 2–3 |
-| Captions + next-session brief | Phases 2–3 |
-| Growing chips | Phase 4, labels from Phase 5 |
-| Any uploaded textbook + fade | Phase 7 (ingest already exists) |
+| Hybrid Firecrawl extract + preview | Phase 1 |
+| Confirm → `learners/…/materials` | Phase 2 |
+| Age-mapped program + Live graph | Phase 3 |
+| Method ledger (already sketched) | Phase 4 on by default; persist in Phase 5 |
+| BKT | Already in `bkt.ts`; persist snapshots in Phase 5–6 |
+| Captions + next-session brief | Phases 5–6 |
+| Growing chips | Phase 7, labels from Phase 8 |
+| Any uploaded textbook + fade | Phase 10 (program graph from Phase 3) |
 
-Until Phases 1–2 ship, Lumen is still a voice demo with a Pythagoras-shaped memory.
+Until Phase 10, the board pack is still Pythagoras-shaped in code. The **subject list and concept graph** already come from `learners/{id}/programs` in Firestore. `src/curriculum/pythagoras.ts` is a seed example for the Secondary 2 cup demo, not a special runtime path.
 
 ---
 

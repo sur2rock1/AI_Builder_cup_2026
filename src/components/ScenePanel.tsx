@@ -150,7 +150,7 @@ export const ScenePanel: React.FC<Props> = ({
       {!revealed.includes('triangle') && mode !== '3d' && mode !== 'chalk' && (
         <div className="absolute inset-x-0 bottom-5 z-20 flex justify-center">
           <span className="px-4 py-2 rounded-full bg-black/45 backdrop-blur-md text-[13px] text-white/75">
-            {isLessonActive ? 'Dr. Marcus is setting the scene…' : 'Start the session and we’ll begin'}
+            {isLessonActive ? 'Lumen is setting the scene…' : 'Start the session and we’ll begin'}
           </span>
         </div>
       )}

@@ -3,6 +3,8 @@ import {
   ArrowLeft, Brain, Clock, Star, BookOpen, AlertTriangle, TrendingUp,
   ChevronDown, ChevronRight, CheckCircle2, Circle, BarChart3, User, Lightbulb,
 } from 'lucide-react';
+import { authFetch, logout } from '../firebase/auth';
+import { Icon8 } from './Icon8';
 import type { StudentProfile, ConceptSummary, SubjectSummary } from './LoginScreen';
 
 interface ConceptState extends ConceptSummary {
@@ -63,31 +65,91 @@ function relativeTime(ts: number): string {
   return `${Math.round(d/86400)}d ago`;
 }
 
+const GRADE_OPTIONS = [
+  'Primary 4 (Grade 4)', 'Primary 5 (Grade 5)', 'Primary 6 (Grade 6)',
+  'Secondary 1 (Grade 7)', 'Secondary 2 (Grade 8)', 'Secondary 3 (Grade 9)',
+  'Secondary 4 (Grade 10)', 'JC1 / Grade 11', 'JC2 / Grade 12',
+];
+
 interface ParentPortalProps {
   onBack: () => void;
+  onSignOut?: () => void;
+  onUploadCurriculum?: () => void;
   initialStudentId?: string;
 }
 
-export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStudentId }) => {
+export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, onSignOut, onUploadCurriculum, initialStudentId }) => {
   const [learners, setLearners] = useState<FullLearner[]>([]);
   const [selected, setSelected] = useState<FullLearner | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedConcepts, setExpandedConcepts] = useState<Set<string>>(new Set());
+  const [childName, setChildName] = useState('');
+  const [childGrade, setChildGrade] = useState('Secondary 2 (Grade 8)');
+  const [childEmail, setChildEmail] = useState('');
+  const [childPassword, setChildPassword] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [addErr, setAddErr] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
+
+  const applyList = (list: FullLearner[]) => {
+    setLearners(list);
+    if (initialStudentId) {
+      const target = list.find(l => l.studentId === initialStudentId);
+      if (target) {
+        setSelected(target);
+        if (Object.keys(target.subjects).length === 1) setSelectedSubject(Object.keys(target.subjects)[0]);
+      }
+    }
+  };
 
   useEffect(() => {
-    fetch('/api/learners')
+    authFetch('/api/learners')
       .then(r => r.json())
       .then(j => {
-        const list: FullLearner[] = j.learners || [];
-        setLearners(list);
-        if (initialStudentId) {
-          const target = list.find(l => l.studentId === initialStudentId);
-          if (target) { setSelected(target); if (Object.keys(target.subjects).length === 1) setSelectedSubject(Object.keys(target.subjects)[0]); }
-        }
+        applyList(j.learners || []);
         setLoading(false);
       }).catch(() => setLoading(false));
   }, [initialStudentId]);
+
+  const handleSignOut = async () => {
+    if (onSignOut) { onSignOut(); return; }
+    await logout();
+    onBack();
+  };
+
+  const addChild = async () => {
+    if (!childName.trim() || !childEmail.trim() || !childPassword) {
+      setAddErr('Name, email and password are required so your child can sign in.');
+      return;
+    }
+    setAdding(true);
+    setAddErr('');
+    try {
+      const res = await authFetch('/api/household/children', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: childName.trim(),
+          grade: childGrade,
+          email: childEmail.trim(),
+          password: childPassword,
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Could not create the child login');
+      setLearners(prev => [j.learner, ...prev]);
+      setSelected(j.learner);
+      setSelectedSubject(null);
+      setChildName('');
+      setChildEmail('');
+      setChildPassword('');
+      setAddOpen(false);
+    } catch (e) {
+      setAddErr((e as Error).message);
+    } finally {
+      setAdding(false);
+    }
+  };
 
   const toggleConcept = (id: string) => {
     setExpandedConcepts(prev => {
@@ -119,25 +181,69 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
       {/* Header */}
       <div className="flex-shrink-0 px-4 pt-5 pb-4 border-b border-white/5">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2">
+          {initialStudentId ? (
+            <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          ) : null}
+          <div className="flex items-center gap-2 flex-1">
             <Brain className="w-5 h-5 text-indigo-400" />
-            <h1 className="text-white font-bold">Parent & Teacher Portal</h1>
+            <h1 className="text-white font-bold">Lumen · Parent dashboard</h1>
           </div>
+          {onUploadCurriculum && (
+            <button onClick={onUploadCurriculum} className="text-slate-400 hover:text-white text-xs flex items-center gap-1.5">
+              <Icon8 name="plus" size={14} /> Add materials
+            </button>
+          )}
+          <button onClick={handleSignOut} className="text-slate-400 hover:text-white text-xs flex items-center gap-1.5">
+            <Icon8 name="logout" size={14} /> Sign out
+          </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-3xl mx-auto space-y-6">
 
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-white font-semibold text-sm">Your children</h2>
+                <p className="text-slate-400 text-xs mt-1">
+                  Create a login for each child. They sign in with that email. You stay here to see how they are learning.
+                </p>
+              </div>
+              <button type="button" onClick={() => { setAddOpen(o => !o); setAddErr(''); }}
+                className="flex-shrink-0 flex items-center gap-1.5 text-xs text-indigo-200 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/40 px-3 py-1.5 rounded-lg">
+                <Icon8 name="plus" size={14} /> Add child
+              </button>
+            </div>
+            {addOpen && (
+              <form className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); addChild(); }}>
+                <input value={childName} onChange={e => setChildName(e.target.value)} placeholder="Child's name"
+                  className="bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-white placeholder-slate-500 outline-none text-sm" />
+                <select value={childGrade} onChange={e => setChildGrade(e.target.value)}
+                  className="bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-white outline-none text-sm">
+                  {GRADE_OPTIONS.map(g => <option key={g}>{g}</option>)}
+                </select>
+                <input type="email" value={childEmail} onChange={e => setChildEmail(e.target.value)} placeholder="Child's email"
+                  className="bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-white placeholder-slate-500 outline-none text-sm" />
+                <input type="password" value={childPassword} onChange={e => setChildPassword(e.target.value)} placeholder="Child's password (min 6)"
+                  className="bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-white placeholder-slate-500 outline-none text-sm" />
+                {addErr && <p className="text-rose-400 text-xs sm:col-span-2">{addErr}</p>}
+                <button type="submit" disabled={adding}
+                  className="sm:col-span-2 bg-gradient-to-r from-violet-600 to-indigo-600 disabled:opacity-50 text-white font-semibold py-2 rounded-xl text-sm">
+                  {adding ? 'Creating login…' : 'Create child login'}
+                </button>
+              </form>
+            )}
+          </div>
+
           {/* ─── No learners ─── */}
-          {learners.length === 0 && (
-            <div className="text-center py-12 text-slate-400">
+          {learners.length === 0 && !addOpen && (
+            <div className="text-center py-10 text-slate-400">
               <User className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">No learner profiles yet.</p>
-              <p className="text-sm mt-1">Ask your child to log in and create their profile first.</p>
+              <p className="font-medium">No children linked yet.</p>
+              <p className="text-sm mt-1">Add a child login above. Maya and Ada are the cup demo students.</p>
             </div>
           )}
 

@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Mic, MicOff, Maximize2, Volume2, Box, PenLine, Target, ChevronRight, HelpCircle, Repeat, Gauge, Hand } from 'lucide-react';
+import React from 'react';
+import { Mic, MicOff, Target, ChevronRight, HelpCircle, Repeat, Gauge, Hand } from 'lucide-react';
 import { ScenePanel, PanelMode } from './ScenePanel';
 import { SceneDef } from '../scenes/pythagorasScenes';
 import { Scene3DData } from '../types';
 import { FigureSpec, FigurePart, StudentThinking, LiveAssessment, BoardNote } from './TeachingCanvas';
 import type { LearnerSnapshot, Level } from '../adaptive/liveObserver';
+import { LumenOrb } from './LumenOrb';
 
 const LEVEL_TEXT: Record<Level, string> = {
   not_yet_seen: 'Just getting started',
@@ -17,26 +18,9 @@ const LEVEL_TEXT: Record<Level, string> = {
 // ─────────────────────────────────────────────────────────────────
 // ImmersiveStage — the lesson as a place, not a dashboard.
 //
-// A presenter stands in a real environment beside a real whiteboard.
-// The board is written on in marker, in the tutor's hand, as they speak.
-//
-// Presenter media is PRE-GENERATED, not streamed. See PRESENTER_CLIPS:
-// a small library of short looping clips (idle / talking / thinking /
-// pointing / encouraging) selected by audio level and lesson state.
-// Nothing is generated at runtime, so there is no added latency and no
-// third-party avatar service in the live path.
+// Lumen is an orb, never a human avatar. The board is the visual;
+// the orb is presence (idle glow / voice motion / thinking spin).
 // ─────────────────────────────────────────────────────────────────
-
-export type PresenterMood = 'idle' | 'talking' | 'thinking' | 'pointing' | 'encouraging';
-
-export interface PresenterMedia {
-  /** Looping clips per mood. Any missing mood falls back to `idle`, then to the still. */
-  clips?: Partial<Record<PresenterMood, string>>;
-  /** Single still, used as poster and as the fallback when no clip exists. */
-  still?: string;
-  /** Full-bleed environment behind the presenter. */
-  background?: string;
-}
 
 interface Props {
   conceptLabel: string;
@@ -62,7 +46,6 @@ interface Props {
   scene: SceneDef;
   scene3d?: Scene3DData;
   tutorLine?: string;
-  presenter?: PresenterMedia;
   studentName?: string;
   onPanelModeChange: (m: PanelMode) => void;
   onConfusion: (signal: string) => void;
@@ -71,49 +54,13 @@ interface Props {
   onOpenProfile: () => void;
 }
 
-const MARKER = { ink: '#1F2430', blue: '#2563EB', red: '#DC2626', green: '#059669', amber: '#D97706' };
-
 export const ImmersiveStage: React.FC<Props> = ({
   conceptLabel, subject, grade, figure, revealed, focusPart,
   studentThinking, assessment, notes, liveNotes, masteryScore, misconceptions,
   isLessonActive, isSpeaking, isThinking, learner, mouthOpenness, micLevel,
-  panelMode, scene, scene3d, tutorLine, presenter, studentName,
+  panelMode, scene, scene3d, tutorLine, studentName,
   onPanelModeChange, onConfusion, onToggleLesson, onChangeTopic, onOpenProfile,
 }) => {
-  const shown = (p: FigurePart) => revealed.includes(p);
-  const isFocus = (p: FigurePart) => focusPart === p;
-
-  // Pick the clip for the current moment. No runtime generation — just selection.
-  const mood: PresenterMood =
-    !isLessonActive ? 'idle'
-    : isThinking || assessment?.shouldProbe ? 'thinking'
-    : focusPart ? 'pointing'
-    : isSpeaking ? 'talking'
-    : 'idle';
-  const clip = presenter?.clips?.[mood] || presenter?.clips?.idle;
-  const [stillOk, setStillOk] = useState(false);
-  useEffect(() => {
-    if (!presenter?.still) { setStillOk(false); return; }
-    const img = new Image();
-    img.onload = () => setStillOk(true);
-    img.onerror = () => setStillOk(false);
-    img.src = presenter.still;
-  }, [presenter?.still]);
-  const still = stillOk ? presenter?.still : undefined;
-
-  const geo = useMemo(() => {
-    const { a, b } = figure;
-    const c = Math.sqrt(a * a + b * b);
-    const BOX = 210;
-    const s = BOX / Math.max(a, b);
-    const w = a * s, h = b * s;
-    const ox = 250 - w / 2, oy = 165 + h / 2;
-    return { c, w, h, A: { x: ox, y: oy - h }, B: { x: ox + w, y: oy }, C: { x: ox, y: oy } };
-  }, [figure]);
-  const { A, B, C, w, h, c } = geo;
-  const u = figure.unitLabel ? ` ${figure.unitLabel}` : '';
-  const num = (v: number) => (Number.isInteger(v) ? v : v.toFixed(1));
-
   return (
     <div className="w-full h-full flex flex-col bg-[#0C0F16] text-white overflow-hidden">
 
@@ -155,36 +102,20 @@ export const ImmersiveStage: React.FC<Props> = ({
         {/* THE STAGE */}
         <div className="flex-1 min-w-0 relative overflow-hidden">
 
-          {/* ── Stage layer ─────────────────────────────────────
-               With generated media: a single full-frame shot of the presenter in
-               a real place (still, or a looping clip per mood — same framing).
-               Without it: an ambient environment and a voice orb, so nothing on
-               screen ever looks like a missing image. */}
-          {clip ? (
-            <video key={clip} src={clip} poster={still} autoPlay loop muted playsInline
-                   className="absolute inset-0 w-full h-full object-cover" />
-          ) : still ? (
-            <img src={still} alt="Dr. Marcus Vance"
-                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
-                 style={{ transform: `scale(${1.02 + mouthOpenness * 0.006})` }} />
-          ) : (
-            <AmbientStage />
-          )}
+          <AmbientStage />
           <div className="absolute inset-0 pointer-events-none"
                style={{ background: 'linear-gradient(90deg, rgba(6,9,18,.10) 0%, rgba(6,9,18,.0) 30%, rgba(6,9,18,.45) 100%)' }} />
           <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#060912] to-transparent pointer-events-none" />
 
-          {!clip && !still && (
-            <div className="absolute left-[4%] top-[14%] w-[26%] flex flex-col items-center">
-              <VoiceOrb speaking={isSpeaking} level={mouthOpenness} active={isLessonActive} thinking={!!isThinking} />
-              <div className="mt-5 text-center">
-                <div className="text-[19px] font-semibold text-white">Dr. Marcus</div>
-                <div className="text-[13px] text-white/55 mt-0.5">
-                  {isThinking ? 'thinking about what you said…' : isSpeaking ? 'speaking…' : isLessonActive ? 'listening' : 'ready when you are'}
-                </div>
+          <div className="absolute left-[4%] top-[14%] w-[26%] flex flex-col items-center">
+            <LumenOrb size={210} speaking={isSpeaking} level={mouthOpenness} active={isLessonActive} thinking={!!isThinking} />
+            <div className="mt-5 text-center">
+              <div className="text-[19px] font-semibold text-white">Lumen</div>
+              <div className="text-[13px] text-white/55 mt-0.5">
+                {isThinking ? 'thinking about what you said…' : isSpeaking ? 'speaking…' : isLessonActive ? 'listening' : 'ready when you are'}
               </div>
             </div>
-          )}
+          </div>
 
           {/* ── The lens: real world → shape → 3D ───────────────── */}
           <div className="absolute right-[2.5%] top-[5%] w-[66%] aspect-[16/10] max-h-[80%]">
@@ -213,7 +144,7 @@ export const ImmersiveStage: React.FC<Props> = ({
                   <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-bounce" style={{ animationDelay: '300ms' }} />
                 </span>
-                Dr. Marcus heard you — thinking about your answer
+                Lumen heard you — thinking about your answer
               </p>
             </div>
           )}
@@ -310,17 +241,20 @@ export const ImmersiveStage: React.FC<Props> = ({
             <section className="p-4 border-b border-white/[0.06]">
               <h3 className="text-[10px] uppercase tracking-[0.16em] text-white/35 font-semibold mb-2.5">Ideas this session</h3>
               <ul className="space-y-2">
-                {Object.entries(learner.byConcept).map(([id, c]) => (
+                {Object.entries(learner.byConcept).map(([id, c]) => {
+                  const row = c as { label: string; understanding: number };
+                  return (
                   <li key={id}>
                     <div className="flex justify-between text-[12px] text-white/70">
-                      <span className={`truncate ${id === learner.concept.id ? 'text-white font-medium' : ''}`}>{c.label}</span>
-                      <span className="text-white/40 shrink-0 ml-2">{c.understanding}%</span>
+                      <span className={`truncate ${id === learner.concept.id ? 'text-white font-medium' : ''}`}>{row.label}</span>
+                      <span className="text-white/40 shrink-0 ml-2">{row.understanding}%</span>
                     </div>
                     <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.max(3, c.understanding)}%`, background: 'linear-gradient(90deg,#4ADE80,#7C6CFF)' }} />
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.max(3, row.understanding)}%`, background: 'linear-gradient(90deg,#4ADE80,#7C6CFF)' }} />
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </section>
           )}
@@ -382,22 +316,3 @@ const AmbientStage: React.FC = () => (
   </div>
 );
 
-/** The tutor's presence without a face: a light that breathes when idle and moves with the voice. */
-const VoiceOrb: React.FC<{ speaking: boolean; level: number; active: boolean; thinking?: boolean }> = ({ speaking, level, active, thinking }) => {
-  const s = 1 + (speaking ? level * 0.22 : 0);
-  return (
-    <div className="relative w-[210px] h-[210px] grid place-items-center">
-      <div className={`absolute inset-0 rounded-full blur-2xl ${active && !speaking ? 'animate-pulse' : ''}`}
-           style={{ background: 'radial-gradient(circle, rgba(124,108,255,.55), rgba(34,211,238,.18) 55%, transparent 72%)',
-                    transform: `scale(${1.05 + (speaking ? level * 0.35 : 0)})`, transition: 'transform .12s' }} />
-      {thinking && (
-        <div className="absolute w-[168px] h-[168px] rounded-full border-2 border-white/10 border-t-white/70 animate-spin"
-             style={{ animationDuration: '1.1s' }} />
-      )}
-      <div className="relative w-[128px] h-[128px] rounded-full"
-           style={{ background: 'radial-gradient(circle at 35% 30%, #FFFFFF 0%, #C7BFFF 22%, #7C6CFF 55%, #3B2FB8 100%)',
-                    boxShadow: '0 0 60px rgba(124,108,255,.65), inset 0 -10px 30px rgba(20,10,80,.45)',
-                    transform: `scale(${s})`, transition: 'transform .1s' }} />
-    </div>
-  );
-};

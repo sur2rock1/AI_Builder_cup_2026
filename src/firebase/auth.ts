@@ -1,6 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  updateProfile,
   signOut,
   onAuthStateChanged,
   type User,
@@ -9,11 +10,17 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFirebaseAuth, getFirebaseDb, getFirebaseStorage } from './client';
 
-export async function registerWithEmail(email: string, password: string, displayName?: string) {
+export type AccountRole = 'parent' | 'learner';
+
+export async function registerWithEmail(
+  email: string, password: string, displayName?: string, role: AccountRole = 'learner',
+) {
   const cred = await createUserWithEmailAndPassword(getFirebaseAuth(), email, password);
+  if (displayName) await updateProfile(cred.user, { displayName });
   await setDoc(doc(getFirebaseDb(), 'users', cred.user.uid), {
     email,
     displayName: displayName || null,
+    role,
     createdAt: serverTimestamp(),
   }, { merge: true });
   return cred.user;
@@ -30,6 +37,23 @@ export async function logout() {
 
 export function watchAuth(callback: (user: User | null) => void) {
   return onAuthStateChanged(getFirebaseAuth(), callback);
+}
+
+export async function getIdToken(): Promise<string | null> {
+  const user = getFirebaseAuth().currentUser;
+  if (!user) return null;
+  return user.getIdToken();
+}
+
+/** fetch() with the signed-in Firebase ID token. */
+export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  const token = await getIdToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (init.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  return fetch(input, { ...init, headers });
 }
 
 /** Upload multimedia to the signed-in user's Storage folder. */

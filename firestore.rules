@@ -8,13 +8,34 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function canSeeLearner(learnerId) {
+      let d = get(/databases/$(database)/documents/learners/$(learnerId)).data;
+      return isSignedIn()
+        && d != null
+        && (d.ownerUid == request.auth.uid || d.parentUid == request.auth.uid);
+    }
+
     match /learners/{learnerId} {
-      // Cloud Functions (Admin SDK) bypass rules. Client-side access is
-      // intentionally open for the current student-profile login UX.
-      allow read: if true;
-      allow create, update: if request.resource.data.keys().hasAll(['studentId', 'name', 'grade'])
-        && request.resource.data.studentId == learnerId;
+      allow read: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        resource.data.parentUid == request.auth.uid
+      );
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasAll(['studentId', 'name', 'grade']);
+      allow update: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid;
       allow delete: if false;
+
+      match /materials/{materialId} {
+        allow read: if canSeeLearner(learnerId);
+        allow write: if false;
+      }
+      match /programs/{programId} {
+        allow read: if canSeeLearner(learnerId);
+        allow write: if false;
+      }
     }
 
     match /users/{userId} {

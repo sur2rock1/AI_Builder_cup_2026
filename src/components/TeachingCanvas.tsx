@@ -411,7 +411,7 @@ export const TeachingCanvas: React.FC<Props> = ({
       {/* ── Confusion vocabulary: always available, always welcomed ── */}
       <div className="shrink-0 px-6 py-3 bg-white border-t border-[#E3E6EC] flex items-center gap-2 flex-wrap">
         <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8A93A3] mr-1">
-          Tell Dr. Vance
+          Tell Lumen
         </span>
         {[
           { icon: HelpCircle, label: "I don't get it", signal: 'dont_understand' },

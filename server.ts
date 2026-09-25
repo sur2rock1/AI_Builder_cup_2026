@@ -23,11 +23,15 @@ import {
   VoiceMode, liveConfigFor, classicSystemInstruction, adaptiveSystemInstruction,
   classicKickoff, adaptiveKickoff,
 } from './src/live/liveConfig';
-import { PYTHAGORAS_CURRICULUM, getConcept, getNextUnmasteredConcept } from './src/curriculum/pythagoras';
-import { getCurriculum, listCurricula, nextUnmasteredConcept } from './src/curriculum/ingest';
-import { startIngestJob, getJob } from './src/curriculum/pdfIngest';
+import { nextUnmasteredConcept, renameCurriculum } from './src/curriculum/ingest';
+import { getJob, publicJob } from './src/curriculum/extractShared';
+import { startSourceIngestJob } from './src/curriculum/sourceIngest';
+import { confirmAndGenerate } from './src/curriculum/programGenerate';
+import { ensureExampleProgram, getProgramCurriculum, listProgramsForLearner } from './src/curriculum/programStore';
+import { classifyFile } from './src/curriculum/sourceExtract';
 import os from 'os';
 import fs from 'fs';
+import net from 'net';
 import { AdaptiveSessionState, TeachingStrategy, CurriculumConcept } from './src/adaptive/learnerModel';
 import { initFirebaseAdmin, admin } from './src/firebase/admin';
 
@@ -491,12 +495,12 @@ const dynamicFunctionDeclarations = [
 
 
 // ═══════════════════════════════════════════════════════════════
-// Any curriculum — built-in Pythagoras or an uploaded textbook.
+// Any subject — graph comes from that learner's Firestore program (seed file is fallback only).
 function curriculumFor(subjectId: string) {
-  return subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(subjectId);
+  return getProgramCurriculum(subjectId);
 }
 
-// MULTER for PDF uploads
+// MULTER for curriculum sources (PDF, EPUB, images, notes, audio…)
 // ═══════════════════════════════════════════════════════════════
 // Streams to a temp file instead of memory: a scanned textbook is 100+ MB.
 const UPLOAD_DIR = path.join(os.tmpdir(), 'pt-uploads');
@@ -505,19 +509,34 @@ const upload = multer({
   dest: UPLOAD_DIR,
   limits: { fileSize: 500 * 1024 * 1024, files: 10 },
   fileFilter: (_req, file, cb) => {
-    const ok = file.mimetype === 'application/pdf' || /\.pdf$/i.test(file.originalname);
+    const ok = !!classifyFile(file.originalname, file.mimetype);
     if (ok) cb(null, true);
-    else cb(new Error(`"${file.originalname}" is not a PDF`));
+    else cb(new Error(`"${file.originalname}" is not a supported source`));
   },
 });
 
-// GET /api/curricula — list all curricula (normalised for frontend)
-app.get('/api/curricula', (_req, res) => {
-  const builtin = [PYTHAGORAS_CURRICULUM];
-  const uploaded = listCurricula();
-  const all = [...builtin, ...uploaded.filter(c => c.id !== 'pythagoras')];
-  // Return a lightweight version suitable for the subject selector
-  const normalised = all.map(c => ({
+// GET /api/curricula — this household's Firestore programs only (no global builtin list).
+app.get('/api/curricula', async (req, res) => {
+  let extra: ReturnType<typeof getProgramCurriculum>[] = [];
+  const header = String(req.headers.authorization || '');
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (token && admin.apps.length) {
+    try {
+      const decoded = await admin.auth().verifyIdToken(token);
+      const role = await accountRole(decoded.uid);
+      const household = role === 'parent' ? listLearners(decoded.uid, true) : listLearners(decoded.uid, false);
+      await Promise.all(household.map(l => ensureExampleProgram(l.studentId, l.grade)));
+      const programs = (await Promise.all(household.map(l => listProgramsForLearner(l.studentId)))).flat();
+      extra = programs.map(p => p.curriculum).filter(Boolean);
+    } catch { /* empty list if token is bad */ }
+  }
+  const seen = new Set<string>();
+  const unique = extra.filter(c => {
+    if (!c?.id || seen.has(c.id)) return false;
+    seen.add(c.id);
+    return true;
+  });
+  const normalised = unique.map(c => ({
     subjectId: c.id,
     label: c.label,
     grade: c.grade,
@@ -534,34 +553,106 @@ app.get('/api/curricula', (_req, res) => {
   res.json({ curricula: normalised });
 });
 
-// POST /api/curriculum/upload — one or more PDFs → background job.
-// Accepts the new 'pdfs' field (multiple) and the old single 'pdf' field.
+function parseSourceUrls(body: any): string[] {
+  const raw = body?.urls;
+  if (Array.isArray(raw)) return raw.map(String);
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.map(String);
+    } catch { /* newline / comma list */ }
+    return raw.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+// POST /api/curriculum/upload — files + web/YouTube/Google Doc links → background job.
 app.post('/api/curriculum/upload',
-  upload.fields([{ name: 'pdfs', maxCount: 10 }, { name: 'pdf', maxCount: 1 }]),
-  (req: any, res: any) => {
-    const files: any[] = [...(req.files?.pdfs || []), ...(req.files?.pdf || [])];
+  upload.fields([
+    { name: 'files', maxCount: 10 },
+    { name: 'pdfs', maxCount: 10 },
+    { name: 'pdf', maxCount: 1 },
+  ]),
+  async (req: any, res: any) => {
+    const files: any[] = [...(req.files?.files || []), ...(req.files?.pdfs || []), ...(req.files?.pdf || [])];
     const cleanup = () => files.forEach(f => fs.promises.unlink(f.path).catch(() => {}));
+    const user = await requireUser(req, res);
+    if (!user) { cleanup(); return; }
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) { cleanup(); return res.status(500).json({ error: 'GEMINI_API_KEY not set on the server' }); }
-    if (!files.length) return res.status(400).json({ error: 'No PDF received' });
-    const subjectLabel = String(req.body.subjectLabel || '').trim();
-    const grade = String(req.body.grade || '').trim();
-    // Derived from the subject name, so Book 2A and Book 2B land in the same subject.
-    const subjectId = String(req.body.subjectId || subjectLabel).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    if (!subjectLabel || !grade || !subjectId) { cleanup(); return res.status(400).json({ error: 'Subject name and grade are required' }); }
+    const urls = parseSourceUrls(req.body).filter(u => /^https?:\/\//i.test(u)).slice(0, 8);
+    const topic = String(req.body.topic || '').trim().slice(0, 160);
+    if (!files.length && !urls.length && !topic) {
+      cleanup();
+      return res.status(400).json({ error: 'Add a topic, a file, or a link' });
+    }
 
-    const job = startIngestJob({
-      apiKey, subjectId, subjectLabel, grade,
-      files: files.map(f => ({ path: f.path, originalName: f.originalname })),
+    const role = await accountRole(user.uid);
+    const wantedId = String(req.body.studentId || '').trim();
+    const household = role === 'parent' ? listLearners(user.uid, true) : listLearners(user.uid, false);
+    const learner = (wantedId && household.find(l => l.studentId === wantedId)) || household[0];
+    const grade = String(learner?.grade || req.body.grade || '').trim();
+    const learnerName = String(learner?.name || '').trim();
+    if (!grade) { cleanup(); return res.status(400).json({ error: 'We need a learner profile (with grade) before extracting.' }); }
+
+    const subjectLabel = String(req.body.subjectLabel || '').trim();
+    const subjectId = `draft-${Date.now().toString(36)}`;
+
+    const job = startSourceIngestJob({
+      apiKey, subjectId, subjectLabel, grade, learnerName, topic, urls,
+      studentId: learner?.studentId,
+      files: files.map(f => ({ path: f.path, originalName: f.originalname, mimeType: f.mimetype })),
     });
-    res.json({ success: true, jobId: job.id, subjectId });
+    res.json({ success: true, jobId: job.id, subjectId, grade, learnerName });
   });
+
+app.post('/api/curriculum/rename', async (req, res) => {
+  try {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    const subjectId = String(req.body?.subjectId || '').trim();
+    const label = String(req.body?.label || '').trim();
+    if (!subjectId || !label) return (res as any).status(400).json({ error: 'subjectId and label required' });
+    const curriculum = renameCurriculum(subjectId, label);
+    if (!curriculum) return (res as any).status(404).json({ error: 'Subject not found' });
+    res.json({ curriculum: { subjectId: curriculum.id, label: curriculum.label } });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Could not save the name' });
+  }
+});
 
 // GET /api/curriculum/jobs/:id — progress of an ingestion job.
 app.get('/api/curriculum/jobs/:id', (req, res) => {
   const job = getJob(req.params.id);
   if (!job) return (res as any).status(404).json({ error: 'Unknown job (the server may have restarted)' });
-  res.json({ job });
+  res.json({ job: publicJob(job) });
+});
+
+// POST /api/curriculum/confirm — write material, then generate the program.
+app.post('/api/curriculum/confirm', async (req, res) => {
+  try {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    const jobId = String(req.body?.jobId || '').trim();
+    const label = String(req.body?.label || '').trim();
+    const studentId = String(req.body?.studentId || '').trim();
+    const job = getJob(jobId);
+    if (!job) return (res as any).status(404).json({ error: 'Unknown job (the server may have restarted)' });
+    if (job.stage !== 'preview') {
+      return (res as any).status(400).json({ error: 'Wait for the preview before saving.' });
+    }
+    const role = await accountRole(user.uid);
+    const household = role === 'parent' ? listLearners(user.uid, true) : listLearners(user.uid, false);
+    const learner = (studentId && household.find(l => l.studentId === studentId)) || household[0];
+    if (!learner) return (res as any).status(403).json({ error: 'That learner is not in your household.' });
+    const program = await confirmAndGenerate(job, label, learner.studentId);
+    res.json({
+      program: job.program,
+      curriculum: { subjectId: program.curriculum.id, label: program.curriculum.label },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Could not save the program' });
+  }
 });
 
 // Errors on /api routes are always JSON. Without this, an oversized upload
@@ -571,7 +662,7 @@ app.use('/api', (err: any, _req: any, res: any, _next: any) => {
   const tooMany = err?.code === 'LIMIT_FILE_COUNT';
   res.status(tooBig ? 413 : 400).json({
     error: tooBig ? 'That file is over 500 MB.'
-      : tooMany ? 'Upload at most 10 PDFs at a time.'
+      : tooMany ? 'Upload at most 10 files at a time.'
       : String(err?.message || 'Upload failed'),
   });
 });
@@ -583,16 +674,87 @@ function useFirestoreLearners() {
   return process.env.USE_FIRESTORE_LEARNERS === 'true' || Boolean(process.env.K_SERVICE);
 }
 
-app.get('/api/learners', async (_req, res) => {
+async function requireUser(req: express.Request, res: express.Response): Promise<{ uid: string; email?: string } | null> {
+  const header = String(req.headers.authorization || '');
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (!token) {
+    res.status(401).json({ error: 'Sign in required' });
+    return null;
+  }
+  if (!admin.apps.length) {
+    res.status(503).json({ error: 'Auth is not configured on this server' });
+    return null;
+  }
   try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    return { uid: decoded.uid, email: decoded.email };
+  } catch {
+    res.status(401).json({ error: 'Sign in required' });
+    return null;
+  }
+}
+
+function canSeeLearner(learner: { ownerUid?: string; parentUid?: string } | null | undefined, uid: string) {
+  if (!learner) return false;
+  if (learner.ownerUid && learner.ownerUid === uid) return true;
+  if (learner.parentUid && learner.parentUid === uid) return true;
+  if (!learner.ownerUid && !learner.parentUid) return false;
+  return false;
+}
+
+async function accountRole(uid: string): Promise<'parent' | 'learner'> {
+  if (admin.apps.length) {
+    const doc = await admin.firestore().collection('users').doc(uid).get();
+    const role = doc.data()?.role;
+    if (role === 'parent' || role === 'learner') return role;
+  }
+  if (listLearners(uid, true).length > 0) return 'parent';
+  return 'learner';
+}
+
+async function writeUserDoc(uid: string, data: Record<string, unknown>) {
+  if (admin.apps.length) {
+    await admin.firestore().collection('users').doc(uid).set(data, { merge: true });
+  }
+}
+
+async function writeLearnerDoc(learner: Record<string, unknown>) {
+  getOrCreateLearner(
+    String(learner.studentId), String(learner.name), String(learner.grade),
+    learner.ownerUid as string | undefined,
+    learner.parentUid as string | undefined,
+    learner.email as string | undefined,
+  );
+  if (admin.apps.length) {
+    await admin.firestore().collection('learners').doc(String(learner.studentId)).set(learner, { merge: true });
+  }
+}
+
+app.get('/api/me', async (req, res) => {
+  try {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    const role = await accountRole(user.uid);
+    res.json({ uid: user.uid, email: user.email || null, role });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to load account' });
+  }
+});
+
+app.get('/api/learners', async (req, res) => {
+  try {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    const role = await accountRole(user.uid);
     if (useFirestoreLearners() && admin.apps.length) {
-      const snap = await admin.firestore().collection('learners').get();
+      const field = role === 'parent' ? 'parentUid' : 'ownerUid';
+      const snap = await admin.firestore().collection('learners').where(field, '==', user.uid).get();
       const learners = snap.docs
         .map((d) => d.data())
         .sort((a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0));
-      return res.json({ learners });
+      return res.json({ learners, role });
     }
-    res.json({ learners: listLearners() });
+    res.json({ learners: listLearners(user.uid, role === 'parent'), role });
   } catch (err: any) {
     console.error('[API /api/learners]', err);
     res.status(500).json({ error: err?.message || 'Failed to list learners' });
@@ -600,13 +762,17 @@ app.get('/api/learners', async (_req, res) => {
 });
 app.get('/api/learners/:studentId', async (req, res) => {
   try {
+    const user = await requireUser(req, res);
+    if (!user) return;
     if (useFirestoreLearners() && admin.apps.length) {
       const doc = await admin.firestore().collection('learners').doc(req.params.studentId).get();
       if (!doc.exists) return (res as any).status(404).json({ error: 'Not found' });
-      return res.json({ learner: doc.data() });
+      const learner = doc.data() as any;
+      if (!canSeeLearner(learner, user.uid)) return (res as any).status(404).json({ error: 'Not found' });
+      return res.json({ learner });
     }
     const l = getLearner(req.params.studentId);
-    if (!l) return (res as any).status(404).json({ error: 'Not found' });
+    if (!canSeeLearner(l, user.uid)) return (res as any).status(404).json({ error: 'Not found' });
     res.json({ learner: l });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || 'Failed to load learner' });
@@ -614,6 +780,11 @@ app.get('/api/learners/:studentId', async (req, res) => {
 });
 app.post('/api/learners', async (req, res) => {
   try {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    if (await accountRole(user.uid) === 'parent') {
+      return (res as any).status(400).json({ error: 'Parents add a child with name, email and password so the child can sign in.' });
+    }
     const { studentId, name, grade } = req.body;
     if (!studentId || !name || !grade)
       return (res as any).status(400).json({ error: 'studentId, name, grade required' });
@@ -621,12 +792,16 @@ app.post('/api/learners', async (req, res) => {
     if (useFirestoreLearners() && admin.apps.length) {
       const ref = admin.firestore().collection('learners').doc(String(studentId));
       const existing = await ref.get();
+      if (existing.exists && (existing.data() as any)?.ownerUid && (existing.data() as any).ownerUid !== user.uid) {
+        return (res as any).status(403).json({ error: 'That profile belongs to another account' });
+      }
       const learner = existing.exists
-        ? { ...(existing.data() as any), name: String(name), grade: String(grade), updatedAt: Date.now() }
+        ? { ...(existing.data() as any), name: String(name), grade: String(grade), ownerUid: user.uid, updatedAt: Date.now() }
         : {
             studentId: String(studentId),
             name: String(name),
             grade: String(grade),
+            ownerUid: user.uid,
             createdAt: Date.now(),
             updatedAt: Date.now(),
             subjects: {},
@@ -636,9 +811,66 @@ app.post('/api/learners', async (req, res) => {
       return res.json({ learner });
     }
 
-    res.json({ learner: getOrCreateLearner(studentId, name, grade) });
+    res.json({ learner: getOrCreateLearner(studentId, name, grade, user.uid) });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || 'Failed to create learner' });
+  }
+});
+
+app.post('/api/household/children', async (req, res) => {
+  try {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    if (await accountRole(user.uid) !== 'parent') {
+      return (res as any).status(403).json({ error: 'Only a parent can create a child login' });
+    }
+    const { name, grade, email, password } = req.body || {};
+    if (!name || !grade || !email || !password)
+      return (res as any).status(400).json({ error: 'name, grade, email and password are required' });
+    if (String(password).length < 6)
+      return (res as any).status(400).json({ error: 'Child password needs at least 6 characters' });
+
+    let child;
+    try {
+      child = await admin.auth().createUser({
+        email: String(email).trim(),
+        password: String(password),
+        displayName: String(name).trim(),
+        emailVerified: true,
+      });
+    } catch (err: any) {
+      if (err?.code === 'auth/email-already-exists') {
+        return (res as any).status(409).json({ error: 'That email already has an account' });
+      }
+      throw err;
+    }
+
+    await writeUserDoc(child.uid, {
+      email: String(email).trim(),
+      displayName: String(name).trim(),
+      role: 'learner',
+      parentUid: user.uid,
+      createdAt: Date.now(),
+    });
+
+    const studentId = `student_${String(name).toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
+    const learner = {
+      studentId,
+      name: String(name).trim(),
+      grade: String(grade),
+      email: String(email).trim(),
+      ownerUid: child.uid,
+      parentUid: user.uid,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      subjects: {},
+      globalInsights: [],
+    };
+    await writeLearnerDoc(learner);
+    res.json({ learner });
+  } catch (err: any) {
+    console.error('[API /api/household/children]', err);
+    res.status(500).json({ error: err?.message || 'Failed to create child login' });
   }
 });
 
@@ -648,7 +880,7 @@ app.post('/api/session/start', (req, res) => {
   if (!studentId || !subjectId)
     return (res as any).status(400).json({ error: 'studentId and subjectId required' });
   const learner = getOrCreateLearner(studentId, name || 'Student', grade || 'Secondary 2 (Grade 8)');
-  const curriculum = subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(subjectId);
+  const curriculum = curriculumFor(subjectId);
   if (!curriculum) return (res as any).status(404).json({ error: 'Curriculum not found' });
   ensureSubject(studentId, subjectId, curriculum.label, curriculum.grade, curriculum.source);
 
@@ -678,7 +910,7 @@ app.get('/api/session/:sessionId', (req, res) => {
   const session = getSession(req.params.sessionId);
   if (!session) return (res as any).status(404).json({ error: 'Session not found' });
   const learner = getLearner(session.studentId);
-  const curriculum = session.subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(session.subjectId);
+  const curriculum = curriculumFor(session.subjectId);
   const concept = curriculum?.concepts.find(c => c.id === session.currentConceptId);
   const conceptState = getConceptState(session.studentId, session.subjectId, session.currentConceptId);
   res.json({ session, learner, currentConcept: concept, conceptState });
@@ -693,7 +925,7 @@ app.post('/api/session/:sessionId/assess', async (req, res) => {
   const { questionSummary, studentAnswer, correctAnswer, selectedOptionIndex, correctOptionIndex } = req.body;
   const isCorrect = selectedOptionIndex === correctOptionIndex;
 
-  const curriculum = session.subjectId === 'pythagoras' ? PYTHAGORAS_CURRICULUM : getCurriculum(session.subjectId);
+  const curriculum = curriculumFor(session.subjectId);
   const concept = curriculum?.concepts.find(c => c.id === session.currentConceptId);
   if (!concept) return (res as any).status(404).json({ error: 'Concept not found' });
   const conceptState = getConceptState(session.studentId, session.subjectId, concept.id);
@@ -882,7 +1114,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   let observer: LiveObserver | null = null;
   let isClosed = false;
 
-  const dynamicSystemInstruction = `You are "Dr. Marcus Vance", an inspiring, warm, and brilliant Senior Educator and AI Tutor teaching a student in ${grade} on the topic of "${topic}". You speak in a clear, encouraging, friendly mentor voice with genuine passion for learning.
+  const dynamicSystemInstruction = `You are "Lumen", an inspiring, warm, and brilliant Senior Educator and AI Tutor teaching a student in ${grade} on the topic of "${topic}". You speak in a clear, encouraging, friendly mentor voice with genuine passion for learning.
 
 PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
 1. You have an interactive real-time digital blackboard right next to you that updates dynamically.
@@ -1078,7 +1310,7 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
               role: 'user',
               parts: [
                 {
-                  text: `The student has just entered the classroom to learn about "${topic}" at the ${grade} level. Greet them warmly as Dr. Marcus Vance, express excitement for exploring "${topic}", mention that you have prepared the digital blackboard, and ask what aspect they would like to explore first.`,
+                  text: `The student has just entered the classroom to learn about "${topic}" at the ${grade} level. Greet them warmly as Lumen, express excitement for exploring "${topic}", mention that you have prepared the digital blackboard, and ask what aspect they would like to explore first.`,
                 },
               ],
             },
@@ -1146,13 +1378,42 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
   });
 });
 
+function isLocalhostPortTaken(port: number): Promise<boolean> {
+  return new Promise(resolve => {
+    const tester = net.createServer();
+    tester.once('error', () => resolve(true));
+    tester.once('listening', () => tester.close(() => resolve(false)));
+    tester.listen(port, '127.0.0.1');
+  });
+}
+
+function lanIPv4(): string | null {
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const info of list || []) {
+      if (info.family === 'IPv4' && !info.internal) return info.address;
+    }
+  }
+  return null;
+}
+
+async function pickListenPort(preferred: number): Promise<number> {
+  // Cloud Run / explicit PORT always wins.
+  if (process.env.PORT) return preferred;
+  if (!(await isLocalhostPortTaken(preferred))) return preferred;
+  const fallback = preferred === 3000 ? 3100 : preferred + 1;
+  console.warn(`[Server] localhost:${preferred} is already taken (another app on 127.0.0.1). Using ${fallback}.`);
+  return fallback;
+}
+
 async function startServer() {
+  const port = await pickListenPort(PORT);
+
   // Vite middleware in dev or static files in production
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     // Run HMR on its own port so it never shares the Live API upgrade path.
-    const hmrPort = Number(process.env.HMR_PORT) || (PORT + 10000);
+    const hmrPort = Number(process.env.HMR_PORT) || (port + 10000);
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
@@ -1169,8 +1430,10 @@ async function startServer() {
     });
   }
 
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Server] AI Tutor backend running on http://localhost:${PORT}`);
+  server.listen(port, '0.0.0.0', () => {
+    const lan = lanIPv4();
+    console.log(`[Server] Lumen UI → http://localhost:${port}`);
+    if (lan) console.log(`[Server] On this machine’s network → http://${lan}:${port}`);
   });
 }
 

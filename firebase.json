@@ -70,6 +70,11 @@
     "providers": {
       "anonymous": false,
       "emailPassword": true
-    }
+    },
+    "authorizedDomains": [
+      "localhost",
+      "sceneflow-f9529.web.app",
+      "sceneflow-f9529.firebaseapp.com"
+    ]
   }
 }

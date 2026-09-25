@@ -131,7 +131,7 @@ export interface TutorState {
   eyebrowsRaised: boolean;
   name: string;
   title: string;
-  avatarStyle?: 'professor' | 'modern' | 'friendly';
+  avatarStyle?: 'orb';
 }
 
 export interface TranscriptEntry {

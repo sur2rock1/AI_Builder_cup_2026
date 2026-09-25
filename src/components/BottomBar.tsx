@@ -65,7 +65,7 @@ export const BottomBar: React.FC<BottomBarProps> = ({
           />
           <span className="text-xs font-medium text-[#bad5c7]">
             {connectionStatus === 'connected'
-              ? 'Live Voice with Dr. Marcus Vance'
+              ? 'Live voice with Lumen'
               : connectionStatus === 'connecting'
               ? 'Connecting to Voice Tutor...'
               : connectionStatus === 'reconnecting'

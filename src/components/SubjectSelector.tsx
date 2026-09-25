@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  BookOpen, ChevronRight, LogOut, Star, Clock, CheckCircle2,
-  Circle, Upload, Sparkles, ArrowRight, Brain, Lock,
+  BookOpen, ChevronRight, Star, Clock, CheckCircle2,
+  Circle, Upload, Sparkles, ArrowRight, Lock,
 } from 'lucide-react';
 import type { StudentProfile } from './LoginScreen';
+import { authFetch } from '../firebase/auth';
 
 interface SubjectMeta {
   subjectId: string;
@@ -24,8 +25,9 @@ interface SubjectSelectorProps {
   student: StudentProfile;
   onSelectSubjectConcept: (subjectId: string, subjectLabel: string, conceptId: string, conceptLabel: string, grade: string) => void;
   onLogout: () => void;
+  onSignOut?: () => void;
   onUploadCurriculum: () => void;
-  onParentPortal: () => void;
+  onParentPortal?: () => void;
 }
 
 const MASTERY_COLORS: Record<string, string> = {
@@ -54,7 +56,7 @@ function getAvatarColor(name: string) {
 function initials(name: string) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
 
 export const SubjectSelector: React.FC<SubjectSelectorProps> = ({
-  student, onSelectSubjectConcept, onLogout, onUploadCurriculum, onParentPortal,
+  student, onSelectSubjectConcept, onLogout, onSignOut, onUploadCurriculum,
 }) => {
   const [subjects, setSubjects] = useState<SubjectMeta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,9 +64,9 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({
   const [conceptProgress, setConceptProgress] = useState<Record<string, ConceptProgress>>({});
 
   useEffect(() => {
-    // Load all available subjects: built-in Pythagoras + any uploaded
+    // Household programs from Firestore (Pythagoras is only a seeded example).
     Promise.all([
-      fetch('/api/curricula').then(r => r.json()),
+      authFetch('/api/curricula').then(r => r.json()).catch(() => fetch('/api/curricula').then(r => r.json())),
     ]).then(([curriculaJson]) => {
       const list: SubjectMeta[] = curriculaJson.curricula || [];
       setSubjects(list);
@@ -123,15 +125,11 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({
           <div className="flex items-center gap-2">
             <button onClick={onUploadCurriculum}
               className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-300 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg transition-all">
-              <Upload className="w-3.5 h-3.5" /> Upload PDF
+              <Upload className="w-3.5 h-3.5" /> Add materials
             </button>
-            <button onClick={onParentPortal}
-              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-300 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg transition-all">
-              <Brain className="w-3.5 h-3.5" /> Parent View
-            </button>
-            <button onClick={onLogout}
+            <button onClick={onSignOut || onLogout}
               className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-rose-400 bg-white/5 hover:bg-rose-500/10 border border-white/10 px-3 py-1.5 rounded-lg transition-all">
-              <LogOut className="w-3.5 h-3.5" /> Switch
+              <img src="/icons/logout.png" alt="" className="w-3.5 h-3.5 brightness-0 invert" /> Sign out
             </button>
           </div>
         </div>
@@ -149,7 +147,7 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({
                 <div className="bg-white/5 border border-dashed border-white/20 rounded-2xl p-8 text-center">
                   <BookOpen className="w-10 h-10 text-slate-600 mx-auto mb-3" />
                   <p className="text-slate-300 font-medium mb-1">No subjects yet</p>
-                  <p className="text-slate-500 text-sm mb-4">Upload a PDF textbook to get started.</p>
+                  <p className="text-slate-500 text-sm mb-4">Add a textbook, notes, or a lesson link to get started.</p>
                   <button onClick={onUploadCurriculum}
                     className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold px-6 py-2.5 rounded-xl">
                     Upload PDF Textbook
@@ -185,7 +183,7 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({
                     </div>
                     <div>
                       <p className="font-medium text-sm">Add another subject</p>
-                      <p className="text-slate-600 text-xs">Upload a PDF textbook</p>
+                      <p className="text-slate-600 text-xs">PDF, notes, web page, or YouTube</p>
                     </div>
                   </button>
                 </div>

@@ -79,6 +79,9 @@ export interface LearnerProfile {
   studentId: string;
   name: string;
   grade: string;
+  email?: string;
+  ownerUid?: string;   // child's Firebase Auth uid
+  parentUid?: string;  // parent who created this profile
   createdAt: number;
   updatedAt: number;
   subjects: Record<string, SubjectProgress>;

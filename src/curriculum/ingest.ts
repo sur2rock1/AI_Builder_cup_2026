@@ -30,6 +30,43 @@ export function saveCurriculum(c: CurriculumSubject): void {
   writeCurricula(all);
 }
 
+/** After extract, the family picks or edits the suggested name. */
+export function renameCurriculum(subjectId: string, newLabel: string): CurriculumSubject | null {
+  const all = readCurricula();
+  const cur = all[subjectId];
+  if (!cur) return null;
+  const label = newLabel.trim().slice(0, 80) || cur.label;
+  const newId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || subjectId;
+  if (newId === subjectId) {
+    cur.label = label;
+    all[subjectId] = cur;
+    writeCurricula(all);
+    return cur;
+  }
+  const dest = all[newId];
+  if (dest) {
+    const seen = new Set(dest.concepts.map(c => c.id));
+    for (const c of cur.concepts) {
+      if (seen.has(c.id)) continue;
+      dest.concepts.push({ ...c, subjectId: newId });
+    }
+    dest.label = label;
+    dest.prerequisiteMap = Object.fromEntries(dest.concepts.map(c => [c.id, c.prerequisites]));
+    dest.concepts.forEach((c, i) => { c.typicalTeachingOrder = i + 1; });
+    delete all[subjectId];
+    all[newId] = dest;
+    writeCurricula(all);
+    return dest;
+  }
+  cur.id = newId;
+  cur.label = label;
+  cur.concepts.forEach(c => { c.subjectId = newId; });
+  all[newId] = cur;
+  delete all[subjectId];
+  writeCurricula(all);
+  return cur;
+}
+
 /** Next concept whose prerequisites are all mastered — for ANY curriculum, not just Pythagoras. */
 export function nextUnmasteredConcept(c: CurriculumSubject, masteredIds: string[]): CurriculumConcept | undefined {
   const known = new Set(c.concepts.map(x => x.id));
@@ -39,4 +76,4 @@ export function nextUnmasteredConcept(c: CurriculumSubject, masteredIds: string[
       (x.prerequisites || []).filter(p => known.has(p)).every(p => masteredIds.includes(p)));
 }
 
-// PDF ingestion lives in ./pdfIngest.ts (split → Files API → per-chapter extraction → merge).
+// PDF path: ./pdfIngest.ts. Mixed sources (web, YouTube, EPUB, images): ./sourceIngest.ts.

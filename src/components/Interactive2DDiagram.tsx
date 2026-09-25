@@ -949,11 +949,11 @@ export const Interactive2DDiagram: React.FC<Interactive2DDiagramProps> = ({
           </div>
           {onAskTutor && (
             <button
-              onClick={() => onAskTutor(`Dr. Vance, explain "${selectedNode.label}" and how it connects to the next concept.`)}
+              onClick={() => onAskTutor(`Lumen, explain "${selectedNode.label}" and how it connects to the next concept.`)}
               className="shrink-0 px-2.5 py-1.5 rounded-xl bg-[#143c26] hover:bg-[#1a4e32] border border-[#27643f] text-amber-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow"
             >
               <Volume2 className="w-3 h-3 text-amber-400" />
-              <span>Ask Dr. Vance</span>
+              <span>Ask Lumen</span>
             </button>
           )}
         </div>

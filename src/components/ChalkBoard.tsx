@@ -110,7 +110,7 @@ export const ChalkBoard: React.FC<Props> = ({ title, lines, formula, liveNotes }
             );
           })}
           {all.length === 0 && !title && (
-            <p className="text-white/35 text-[24px]">Dr. Marcus will write here as he explains.</p>
+            <p className="text-white/35 text-[24px]">Lumen will write here while explaining.</p>
           )}
         </div>
 

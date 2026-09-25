@@ -31,6 +31,19 @@ gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
   --role="roles/secretmanager.secretAccessor" \
   --quiet >/dev/null || true
 
+SECRETS="GEMINI_API_KEY=GEMINI_API_KEY:latest"
+if gcloud secrets describe FIRECRAWL_API_KEY --project "$PROJECT" >/dev/null 2>&1; then
+  gcloud secrets add-iam-policy-binding FIRECRAWL_API_KEY \
+    --project "$PROJECT" \
+    --member="serviceAccount:${RUNTIME_SA}" \
+    --role="roles/secretmanager.secretAccessor" \
+    --quiet >/dev/null || true
+  SECRETS="${SECRETS},FIRECRAWL_API_KEY=FIRECRAWL_API_KEY:latest"
+else
+  echo "Note: FIRECRAWL_API_KEY secret is missing. Web/YouTube ingest will use a plain fetch."
+  echo "  npx -y firebase-tools@latest functions:secrets:set FIRECRAWL_API_KEY --project $PROJECT"
+fi
+
 echo "==> Building & deploying Cloud Run service (this may take a few minutes)..."
 gcloud run deploy "$SERVICE" \
   --project "$PROJECT" \
@@ -46,7 +59,7 @@ gcloud run deploy "$SERVICE" \
   --cpu=1 \
   --no-cpu-throttling \
   --port=8080 \
-  --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest" \
+  --set-secrets="$SECRETS" \
   --set-env-vars="NODE_ENV=production,GOOGLE_CLOUD_PROJECT=${PROJECT},GOOGLE_CLOUD_LOCATION=${REGION},LIVE_MODEL=gemini-3.8-live,GOOGLE_GENAI_USE_ENTERPRISE=false,FIREBASE_STORAGE_BUCKET=${PROJECT}.firebasestorage.app,USE_FIRESTORE_LEARNERS=true" \
   --quiet
 

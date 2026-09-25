@@ -159,10 +159,10 @@ export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-bold font-serif text-white tracking-wide mb-3">
-            What would you like Dr. Vance to teach you?
+            What would you like Lumen to teach you?
           </h1>
           <p className="text-xs sm:text-sm text-[#9ec4af] max-w-lg mb-6 leading-relaxed">
-            Enter any subject or topic on the fly. Dr. Vance will generate real-time 2D diagrams, 3D interactive models, photographic visuals, and chalk notes.
+            Enter any subject or topic on the fly. Lumen will generate real-time 2D diagrams, 3D interactive models, photographic visuals, and chalk notes.
           </p>
 
           {/* Topic Input Form */}
@@ -377,7 +377,7 @@ export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
             type="text"
             value={askCommand}
             onChange={(e) => setAskCommand(e.target.value)}
-            placeholder="Ask Dr. Vance or command: e.g. 'Show in 3D', 'Photo of...', 'Switch topic to...'"
+            placeholder="Ask Lumen or command: e.g. 'Show in 3D', 'Photo of...', 'Switch topic to...'"
             className="flex-1 px-3 py-1 text-xs rounded-xl bg-[#0a2717] border border-[#1e4e32] text-white placeholder-[#5e8b72] focus:outline-none focus:border-amber-400"
           />
           <button
@@ -521,7 +521,7 @@ export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
                 <div className="mt-6 pt-4 border-t-2 border-dashed border-[#2d6244]">
                   <h4 className="text-xs uppercase tracking-wider font-bold text-amber-300 font-mono mb-3 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
-                    <span>Live Notes Written by Dr. Marcus in Session:</span>
+                    <span>Live notes written by Lumen in this session:</span>
                   </h4>
                   <div className="space-y-2">
                     {customLiveNotes.map((note, idx) => (
@@ -748,11 +748,11 @@ export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
         )}
       </main>
 
-      {/* FOOTER: Thoughtful Suggested Questions to ask Dr. Vance */}
+      {/* FOOTER: Thoughtful suggested questions to ask Lumen */}
       {suggestedQuestions && suggestedQuestions.length > 0 && (
         <footer className="w-full px-4 py-2 bg-[#061a0f]/90 border-t border-[#1b432a] flex items-center gap-2 overflow-x-auto z-20">
           <span className="text-[10px] uppercase font-mono font-bold text-[#6f9d83] shrink-0">
-            Ask Dr. Vance:
+            Ask Lumen:
           </span>
           <div className="flex items-center gap-2 shrink-0">
             {suggestedQuestions.map((q, idx) => (

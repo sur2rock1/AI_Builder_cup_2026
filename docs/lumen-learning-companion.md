@@ -275,6 +275,12 @@ learners/{learnerId}
   name, ageBand, grade, preferredLang, parentLang?
   wantedSubjects[], interests[], voiceName, examDate?
   nextIntentHint
+learners/{learnerId}/materials/{materialId}   // Phase 2: confirmed extract (not /users/…)
+  sourceType, subject, extractedContent, originalSources, ageBand, estimatedMinutes
+learners/{learnerId}/programs/{programId}     // Phase 3: lessons + quizzes + outlines
+  materialId, curriculum, lessons[], quizzes[], multimediaContent[], progressTracking
+  // This is the source of truth for what a child can learn.
+  // Pythagoras in src/curriculum/pythagoras.ts is a cup example seed, not a global catalogue.
 learners/{learnerId}/tasks/{taskId}
 learners/{learnerId}/subjects/{subjectId}/concepts/{conceptId}
   pKnown, ledger[], lastSessionId, lastBrief   // compact, not full captions
@@ -379,15 +385,18 @@ No phase is done until `npm run lint`, `npm test`, and that phase’s checklist 
 | Phase | Ship | Verify (short) |
 |---|---|---|
 | **0 Persona** | Lumen copy; orb | No “Dr. Vance” in learner UI or spoken prompt |
-| **1 Cross-check prompt** | Elicit + one probe in the *classic* spoken rules | Broken method → “how?” + one probe; `test:live` green |
-| **2 Captions in Firestore** | Persist joined turns on `turnComplete` | Turns survive kill/refresh; not sent to GA4 |
-| **3 Session clock + task** | 10/15/20 picker; wrap assigns `tasks/*` | Next session asks “Did you try X?” |
-| **4 Profile + growing chips** | First-meet; chips computed (max 4) | Day-0 ≠ week-5; interests are not chips |
-| **5 AI digest** | AI Logic **text** structured JSON | `aiDigest` after wrap; still one Live socket |
-| **6 Voice + language** | Voice picker; langHint | Kore + non-English lesson still speaks |
-| **7 Any-topic board** | Generic fallback + pack #2 | Science fade works; no Higgsfield in Live |
-| **8 Knobs / App Check** | Remote Config + App Check | Change voice/length without redeploy |
-| **9 Teacher** | Class heat on misconception ids | Later; no leaderboard |
+| **1 Hybrid extract** | Firecrawl parse + search preview | Dual rails; no persist until confirm |
+| **2 Confirm material** | `learners/{id}/materials` | Parent/child can read; clients cannot write |
+| **3 Generate program** | Age-mapped lessons/quizzes | Subject list + Live graph; no Firecrawl in Live |
+| **4 Cross-check prompt** | Elicit + one probe in the *classic* spoken rules | Broken method → “how?” + one probe; `test:live` green |
+| **5 Captions in Firestore** | Persist joined turns on `turnComplete` | Turns survive kill/refresh; not sent to GA4 |
+| **6 Session clock + task** | 10/15/20 picker; wrap assigns `tasks/*` | Next session asks “Did you try X?” |
+| **7 Profile + growing chips** | First-meet; chips computed (max 4) | Day-0 ≠ week-5; interests are not chips |
+| **8 AI digest** | AI Logic **text** structured JSON | `aiDigest` after wrap; still one Live socket |
+| **9 Voice + language** | Voice picker; langHint | Kore + non-English lesson still speaks |
+| **10 Any-topic board** | Generic fallback + pack #2 | Science fade works; no Higgsfield in Live |
+| **11 Knobs / App Check** | Remote Config + App Check | Change voice/length without redeploy |
+| **12 Teacher** | Class heat on misconception ids | Later; no leaderboard |
 
 ---
 
@@ -397,7 +406,7 @@ Used as defaults so Phase 0 can start on `feature/lumen-companion`. Change here 
 
 1. **Name:** **Lumen**.  
 2. **Course brain:** keep extending `server.ts`.  
-3. **Auth:** named profiles for the cup.  
+3. **Auth:** parent signs in first, creates a child login (Admin `createUser` so the parent session stays), child signs in on their own. `learners.ownerUid` = child, `parentUid` = parent.  
 4. **Default length:** **15 min**.  
 
 Gemma is not a decision. Gamma is the slide deck only.
@@ -430,7 +439,7 @@ There are **two** personas. They are assembled in different places.
 
 | Persona | What it is | Where it is set | Injected how |
 |---|---|---|---|
-| **Lumen** (tutor) | Voice, rules, fade order, “never dump the answer” | `src/live/liveConfig.ts` — `classicSystemInstruction` / `adaptiveSystemInstruction`. Today it still says “Dr. Marcus Vance”. | Passed as `systemInstruction` on `ai.live.connect` in `server.ts` |
+| **Lumen** (tutor) | Voice, rules, fade order, “never dump the answer” | `src/live/liveConfig.ts` — `classicSystemInstruction` / `adaptiveSystemInstruction`. Phase 0 renamed the persona from Dr. Marcus Vance. | Passed as `systemInstruction` on `ai.live.connect` in `server.ts` |
 | **This child** | Age band, language, interests, subjects, voice | `learners/{id}` (first-meet, section 3E) | Folded into the same system instruction as a **short block**, not a second Live session |
 | **This child’s history** | pKnown, ledger, open task, last digest | `learners/{id}/subjects/…` + `tasks` + `sessions/{last}.aiDigest` | Same block: 8–15 lines. **Never** the raw 15-min transcript |
 
@@ -512,11 +521,11 @@ They are not four new products. Three already have code. The work is **wire + pe
 
 #### 3. Any uploaded textbook — not one library
 
-**Exists:** `pdfIngest.ts` (split → Files API → extract → merge Book 2A+2B). `set_topic` + `/api/generate-lesson` for a spoken topic with no PDF.
+**Exists:** `pdfIngest.ts` + `sourceIngest.ts` (PDF / EPUB / images / notes / web / YouTube / Google Doc → Gemini graph → merge into the same `subjectId`). `set_topic` + `/api/generate-lesson` for a spoken topic with no file.
 
 **Build:**
 
-1. Keep ingest as the **authoring** path. Not a Live tool.
+1. Keep ingest as the **authoring** path on Cloud Run. Not a Live tool. Not a second function service.
 2. Each extracted concept must carry: label, prereqs, 2–4 misconception ids, `difficultyLevel`, `typicalTeachingOrder`.
 3. Phase 7 — generic board pack so a science upload is not stuck on the Pythagoras `set_figure` triangle.
 4. If there is no graph yet: `generate-lesson` builds a temporary one; next upload **merges** into the same `subjectId`.
@@ -587,4 +596,4 @@ The four capabilities are already sketched in code. The tutor becomes “good”
 3. Digest → growing chips (phase 5).  
 4. Generic fade + pack registry (phase 7).  
 
-Until 1–2 ship, Lumen is still a voice demo with a Pythagoras-shaped memory.
+Until captions persist, Lumen is still a voice demo with a short memory. Subject graphs already live on Firestore programs — Pythagoras is only an example seed.
