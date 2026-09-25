@@ -32,8 +32,10 @@ export class GoogleGenAI {
     this.live = { connect: async ({ config, callbacks }) => {
       const n = G.connects.length + 1;
       G.connects.push({ n, handle: config.sessionResumption?.handle || null, compression: !!config.contextWindowCompression });
+      const prompt = String(config.systemInstruction || '');
       record({ kind: 'connect', n, configKeys: Object.keys(config).sort(), tools: (config.tools?.[0]?.functionDeclarations || []).map(t => t.name),
-               promptStart: String(config.systemInstruction || '').slice(0, 80), vad: config.realtimeInputConfig?.automaticActivityDetection || null });
+               promptStart: prompt.slice(0, 80), hasCrossCheck: /How did you work that out/.test(prompt),
+               vad: config.realtimeInputConfig?.automaticActivityDetection || null });
       let open = true;
       const emit = m => { if (open) callbacks.onmessage(m); };
       const close = (code, reason) => { if (!open) return; open = false; G.closed++; callbacks.onclose({ code, reason }); };

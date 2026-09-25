@@ -36,7 +36,11 @@ interface Result { id: string; what: string; spoke: boolean; firstAudioMs: numbe
   said: string; turnComplete: boolean; close: string; error: string }
 
 async function run(v: typeof variants[number]): Promise<Result> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+  const ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY!,
+    vertexai: false,
+    httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+  });
   const r: Result = { id: v.id, what: v.what, spoke: false, firstAudioMs: null, tools: [], said: '', turnComplete: false, close: '', error: '' };
   const t0 = Date.now();
   let session: any;

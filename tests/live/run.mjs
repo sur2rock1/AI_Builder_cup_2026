@@ -60,6 +60,7 @@ async function runScenario(scenario, drive) {
   check(JSON.stringify(conn?.tools) === JSON.stringify(['update_chalkboard_notes','write_live_note','switch_board_view','generate_photo_visual','set_topic','highlight_concept','pose_quiz']),
         'the original seven tools');
   check(/^You are "Lumen", an inspiring, warm, and brilliant Senior Educator/.test(conn?.promptStart || ''), 'the Lumen system prompt');
+  check(conn?.hasCrossCheck === true, 'classic spoken rules elicit how they got it');
   check(/^The student has just entered the classroom to learn about/.test(kick?.text || ''), 'the original opening turn');
   check(resp?.response?.result === 'ok' && resp.t - sent.t < 50, `tool calls answered "ok" immediately (${resp ? resp.t - sent.t : '?'} ms)`);
   check(R.some(x => x.kind === 'mic'), 'microphone audio is relayed to Gemini');

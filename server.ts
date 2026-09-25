@@ -21,7 +21,7 @@ import {
 import { MASTERY_THRESHOLD } from './src/adaptive/bkt';
 import {
   VoiceMode, liveConfigFor, classicSystemInstruction, adaptiveSystemInstruction,
-  classicKickoff, adaptiveKickoff,
+  classicKickoff, adaptiveKickoff, CLASSIC_CROSS_CHECK,
 } from './src/live/liveConfig';
 import { nextUnmasteredConcept, renameCurriculum } from './src/curriculum/ingest';
 import { getJob, publicJob } from './src/curriculum/extractShared';
@@ -1137,7 +1137,8 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
    - '3d' = the spatial model — when depth or turning the shape helps.
    - 'chalkboard' = step-by-step working, calculations, rules and definitions. Whenever you work something out step by step, write it with update_chalkboard_notes (one step per bullet) — the board switches to the chalkboard by itself.
    - When you give the student a problem to solve, ALWAYS write the problem on the chalkboard first (update_chalkboard_notes, title "Your turn", the question as the first bullet), then ask it. As the student tells you their working, write each of their steps with write_live_note.
-8. NEVER GO QUIET BEFORE A BOARD ACTION. Before update_chalkboard_notes, pose_quiz or generate_photo_visual, first say one short natural phrase out loud — e.g. "Let me write that on the board for you…" or "Let's work through it step by step…" — then call the tool, then carry on explaining.`;
+8. NEVER GO QUIET BEFORE A BOARD ACTION. Before update_chalkboard_notes, pose_quiz or generate_photo_visual, first say one short natural phrase out loud — e.g. "Let me write that on the board for you…" or "Let's work through it step by step…" — then call the tool, then carry on explaining.
+9. ${CLASSIC_CROSS_CHECK}`;
 
   try {
     // Force Gemini Developer API for Live. With GOOGLE_GENAI_USE_ENTERPRISE /
