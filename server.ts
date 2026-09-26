@@ -772,7 +772,7 @@ app.post(
 // ─── Adaptive session endpoints ─────────────────────────────────
 app.post('/api/session/start', requireAuth, async (req, res) => {
   try {
-    const { studentId, name, grade, subjectId, channel } = req.body;
+    const { studentId, name, grade, subjectId, channel, conceptId } = req.body;
     if (!studentId || !subjectId)
       return (res as any).status(400).json({ error: 'studentId and subjectId required' });
     if ((req as any).authUid !== String(studentId))
@@ -783,9 +783,18 @@ app.post('/api/session/start', requireAuth, async (req, res) => {
     if (!curriculum) return (res as any).status(404).json({ error: 'Curriculum not found' });
     await ensureSubject(studentId, subjectId, curriculum.label, curriculum.grade, curriculum.source);
 
+    // Bug found 2026-09-26: this route always auto-picked
+    // nextUnmasteredConcept() regardless of which concept the student
+    // actually clicked in SubjectSelector.tsx — the UI's per-concept picker
+    // had no effect on which concept the tutor started on. requestedConceptId
+    // was already a first-class concept in compileTeachingPlan() (T17), just
+    // never threaded through from this route. Fixed: an explicit conceptId
+    // is honored (falling back to auto-pick if it's not in the curriculum),
+    // and App.tsx's handleSubjectConceptSelect now sends it.
+    const requestedConcept = conceptId ? curriculum.concepts.find(c => c.id === conceptId) : undefined;
     const masteredIds = Object.values(learner.subjects[subjectId]?.conceptStates || {})
       .filter(cs => cs.masteryScore >= 75).map(cs => cs.conceptId);
-    const nextConcept = nextUnmasteredConcept(curriculum, masteredIds) || curriculum.concepts[0];
+    const nextConcept = requestedConcept || nextUnmasteredConcept(curriculum, masteredIds) || curriculum.concepts[0];
     await ensureConceptState(studentId, subjectId, nextConcept.id, nextConcept.label, 'direct_explanation', nextConcept.chapter || 'general');
 
     const sessionId = `session_${Date.now()}_${studentId}`;

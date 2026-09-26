@@ -1060,6 +1060,10 @@ export const App: React.FC = () => {
           name: loggedInStudent.name,
           grade: studentGrade,
           subjectId,
+          // Bug found 2026-09-26: this was never sent, so picking a specific
+          // concept here had no effect — the server always auto-picked the
+          // next unmastered concept by curriculum order instead.
+          conceptId,
         }),
       });
       const json = await res.json();
