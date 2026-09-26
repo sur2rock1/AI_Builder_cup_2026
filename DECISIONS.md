@@ -678,3 +678,46 @@ progress but not the full FR-24 verification gap.
 **Evidence:** `tsc --noEmit` clean; `npm run test:assessor` 13/13; both
 smoke tests pass; direct curl transcripts of all 4 routes above, captured
 during this session.
+
+## D-2026-09-26-2 — Model connectivity confirmed on the user's real machine
+
+**Date:** 2026-09-26
+**Context:** D-2026-09-25-1 and D-2026-09-26-1 both flagged that this
+sandbox's `npm run verify:models` couldn't verify the user's real Gemini
+API key/network (proxy blocks the API host). User ran it on their own
+machine and shared the output.
+
+**Result:**
+- **FAST** role: all 3 candidates resolve (`gemini-3.6-flash`,
+  `gemini-3.1-flash-lite`, `gemini-flash-latest`). This is the role used
+  by `assess_child_reasoning`/`reasoningAssessor.ts` (the core diagnosis
+  pipeline) and the now-migrated `liveObserver.ts`.
+- **STRONG** role: all 3 candidates resolve (`gemini-3.8-flash`,
+  `gemini-3.1-flash-lite`, `gemini-flash-latest`).
+- **LIVE**: not checked by the script (expected — live sessions aren't
+  pinged by `verify:models`).
+- **IMAGE**: both candidates (`gemini-3.1-flash-image`,
+  `gemini-3.1-flash-lite-image`) fail with HTTP 429
+  `RESOURCE_EXHAUSTED`, `limit: 0` for
+  `generate_content_free_tier_requests` — this project's free tier
+  allows **zero** image-generation requests, not a transient rate limit.
+  Needs billing enabled on the Google Cloud project (or a paid-tier key)
+  to ever work.
+
+**What this means for the demo:** the entire diagnosis/persona/plan-
+adaptation pipeline — the actual Technical Merit differentiator — is now
+**confirmed working against the user's real API key**, not just
+architecturally correct. This closes the single biggest outstanding
+demo-readiness risk. The image-generation gap only affects the
+`generate_photo_visual` tool (real-world photo mode on the digital
+blackboard); the `2d`/`3d` schematic diagram modes (`set_figure`,
+`update_diagram`) render client-side and don't call Gemini's image API at
+all — the seeded geometry concepts (triangle congruence, scale drawings,
+area ratio) are all diagram-friendly, so this gap is avoidable for the
+recorded demo simply by not invoking a "show me a real photo" moment, or
+by enabling billing if that beat is wanted.
+
+**Decision:** treat model connectivity as no longer a blocker. Do not
+enable billing before the demo unless a photorealistic-image beat is
+specifically wanted — it adds cost and isn't needed for the core
+misconception-detection/adaptive-teaching story.
