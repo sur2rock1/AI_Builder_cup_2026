@@ -10,6 +10,7 @@
     "preview": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "npx --yes tsc --noEmit",
+    "check:docs": "node scripts/check-docs-sync.mjs",
     "gen:assets": "node scripts/generate-assets.mjs",
     "test:assessor": "node tests/run.mjs",
     "test:live": "node tests/live/run.mjs",

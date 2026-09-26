@@ -1,0 +1,12 @@
+{
+  "_comment": "Maps source path globs to the docs that should be updated in the same commit when they change. Used by scripts/check-docs-sync.mjs. Add new rules here rather than hard-coding them in the script.",
+  "rules": [
+    { "sourceGlobs": ["src/persona/**", "src/live/liveConfig.ts"], "docs": ["docs/TUTOR_PERSONA.md", "docs/ARCHITECTURE.md"] },
+    { "sourceGlobs": ["src/adaptive/learnerModel.ts", "src/adaptive/learnerStore.ts", "src/adaptive/strategyProfile.ts", "src/adaptive/bkt.ts", "src/adaptive/ladder.ts", "src/adaptive/reasoningAssessor.ts"], "docs": ["docs/LEARNER_MODEL.md"] },
+    { "sourceGlobs": ["src/plan/**"], "docs": ["docs/TEACHING_PLAN.md"] },
+    { "sourceGlobs": ["src/adaptive/repo/**"], "docs": ["docs/ARCHITECTURE.md"] },
+    { "sourceGlobs": ["server.ts"], "docs": ["docs/ARCHITECTURE.md"] },
+    { "sourceGlobs": ["src/components/ParentPortal.tsx"], "docs": ["docs/AGENT_GUIDE.md"] },
+    { "sourceGlobs": ["docs/CODE_DOC_MAP.json"], "docs": [] }
+  ]
+}

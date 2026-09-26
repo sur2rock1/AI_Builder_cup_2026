@@ -11,7 +11,7 @@ import {
   EvidenceEvent, ErrorClass, Confidence3, MisconceptionRecord,
 } from './learnerModel';
 import { getRepo } from './repo';
-import { updateMastery, BKTObservation } from './bkt';
+import { updateMastery, BKTObservation, MASTERY_THRESHOLD } from './bkt';
 import { ladderLevelForDepth, updateLadder, computeMasteryStatus } from './ladder';
 import { recordStrategyOutcome } from './strategyProfile';
 
@@ -142,6 +142,62 @@ export async function addGlobalInsight(studentId: string, insight: string): Prom
   learner.globalInsights.push(`[${new Date().toISOString().slice(0,10)}] ${insight}`);
   if (learner.globalInsights.length > 30) learner.globalInsights = learner.globalInsights.slice(-30);
   await repo.saveProfile(learner);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// record_confusion_signal (live tool, src/live/liveConfig.ts) durable
+// persistence. Previously acked with { result: 'ok' } and dropped —
+// this makes the "I'll make a note of that" the tutor says actually
+// true. Reuses two fields that already exist for exactly this purpose
+// rather than inventing new storage: AffectState.confusionSignals
+// (tally by signal type, same shape self_reported_confusion/
+// help_requested already use) and ConceptState.notes (Gemini's
+// running per-concept notes, same capped-append pattern as
+// recordAttempt's teachingNote above).
+// ─────────────────────────────────────────────────────────────────
+export interface RecordConfusionSignalInput {
+  studentId: string;
+  subjectId?: string;
+  conceptId?: string;
+  signal: string;       // one of liveConfig.ts's record_confusion_signal 'signal' enum values
+  aboutWhat?: string;   // what specifically the child is stuck on, if given
+}
+
+export interface RecordConfusionSignalResult {
+  signal: string;
+  totalForSignal: number;
+  notedOnConcept: boolean;
+}
+
+export async function recordConfusionSignal(
+  input: RecordConfusionSignalInput
+): Promise<RecordConfusionSignalResult | null> {
+  const repo = getRepo();
+  const learner = await repo.getProfile(input.studentId);
+  if (!learner) return null;
+
+  learner.affect = learner.affect || { confusionSignals: {}, frustrationEvents: 0 };
+  learner.affect.confusionSignals[input.signal] = (learner.affect.confusionSignals[input.signal] || 0) + 1;
+
+  let notedOnConcept = false;
+  const cs = input.subjectId && input.conceptId
+    ? learner.subjects?.[input.subjectId]?.conceptStates?.[input.conceptId]
+    : undefined;
+  if (cs) {
+    const about = input.aboutWhat ? ` — ${input.aboutWhat}` : '';
+    cs.notes.push(`[${new Date().toISOString().slice(0,10)}] confusion signal (${input.signal})${about}`);
+    if (cs.notes.length > 20) cs.notes = cs.notes.slice(-20);
+    notedOnConcept = true;
+  }
+
+  learner.updatedAt = Date.now();
+  await repo.saveProfile(learner);
+
+  return {
+    signal: input.signal,
+    totalForSignal: learner.affect.confusionSignals[input.signal],
+    notedOnConcept,
+  };
 }
 
 /**
@@ -355,6 +411,39 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
     review: cs.review,
   });
 
+  // Bug fix 2026-09-26 (docs/AGENT_GUIDE.md landmine #3): a single strong BKT
+  // observation (e.g. one 'transferred'-depth answer on a virgin concept) can
+  // push the raw posterior to 90%+ before there's been any chance to confirm
+  // it holds up across multiple, independent items. computeMasteryStatus()
+  // above already encodes every reason this concept isn't confirmed yet
+  // (insufficient distinct evidence, low pKnown, or a standing confirmed
+  // misconception) -- so if the status says 'none' while the raw score
+  // implies "mastered", shrink the STORED score/pKnown to match. This is
+  // deliberate regularization, not a display trick: every consumer of this
+  // field (API responses, the tutor's own learner-context prompt in
+  // server.ts, the plan compiler's prerequisite check in src/plan/compile.ts,
+  // the parent portal) reads cs.masteryScore/cs.pKnown directly with no
+  // per-consumer gating, and the next call to this function uses the STORED
+  // score as its Bayesian prior (see `masteryBefore` above) -- so capping it
+  // here also correctly makes the next observation "re-earn" confidence
+  // instead of compounding an unconfirmed number forever.
+  let shrunkFromUnconfirmedEvidence = false;
+  if (cs.masteryStatus === 'none' && cs.masteryScore >= MASTERY_THRESHOLD) {
+    cs.masteryScore = MASTERY_THRESHOLD - 1;
+    cs.pKnown = Math.min(cs.pKnown, (MASTERY_THRESHOLD - 1) / 100);
+    cs.masteryLevel = scoreToLevel(cs.masteryScore);
+    shrunkFromUnconfirmedEvidence = true;
+  }
+  // Every downstream consumer (event log, the live WS update below, the
+  // returned result) must report the SAME final number as what's persisted
+  // -- never the raw bkt.masteryScore/bkt.pKnown, which may have just been
+  // shrunk away above. One concept, one mastery number.
+  const finalMasteryScore = cs.masteryScore;
+  const finalPKnown = cs.pKnown;
+  const finalDerivation = shrunkFromUnconfirmedEvidence
+    ? `${bkt.derivation} · capped to ${finalMasteryScore}% (evidence not yet sufficient to confirm -- see docs/AGENT_GUIDE.md landmine #3)`
+    : bkt.derivation;
+
   learner.strategyProfile = recordStrategyOutcome(
     learner.strategyProfile, cs.conceptType, input.strategyInUse, gained, now,
   );
@@ -382,8 +471,8 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
     helpRequested: input.helpRequested,
     selfReportedConfusion: input.selfReportedConfusion,
     masteryBefore,
-    masteryAfter: bkt.masteryScore,
-    derivation: bkt.derivation,
+    masteryAfter: finalMasteryScore,
+    derivation: finalDerivation,
   };
   cs.evidenceLog.push(evidence);
   if (cs.evidenceLog.length > 200) cs.evidenceLog = cs.evidenceLog.slice(-200);
@@ -412,9 +501,9 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
   return {
     eventId,
     masteryBefore,
-    masteryAfter: bkt.masteryScore,
-    pKnown: bkt.pKnown,
-    derivation: bkt.derivation,
+    masteryAfter: finalMasteryScore,
+    pKnown: finalPKnown,
+    derivation: finalDerivation,
     newlyConfirmed,
     ledger: cs.misconceptionLedger,
     ladderLevel,

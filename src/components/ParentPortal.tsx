@@ -132,6 +132,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
           const target = list.find(l => l.studentId === initialStudentId);
           if (target) { setSelected(target); if (Object.keys(target.subjects).length === 1) setSelectedSubject(Object.keys(target.subjects)[0]); }
         }
+        setReplayOpenFor(null);
         setLoading(false);
       }).catch(() => setLoading(false));
   }, [initialStudentId]);
@@ -148,20 +149,27 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
   // click to expand a concept, click "View evidence" to replay the actual
   // question/answer/reasoning/classification chain behind its ladder level
   // and misconception ledger, from GET /api/learners/:id/events.
+  // Bug fix: cache/open-state were keyed by bare conceptId, so two students
+  // sharing the same curriculum concept (e.g. "triangle congruence tests")
+  // would silently display each other's cached evidence after switching
+  // students without a page reload. Key by studentId+conceptId instead.
+  const replayKey = (studentId: string, conceptId: string) => `${studentId}::${conceptId}`;
+
   const loadReplay = async (studentId: string, conceptId: string) => {
-    if (replayOpenFor === conceptId) { setReplayOpenFor(null); return; }
-    setReplayOpenFor(conceptId);
-    if (replayEvents[conceptId]) return; // cached
-    setReplayLoading(prev => new Set(prev).add(conceptId));
+    const key = replayKey(studentId, conceptId);
+    if (replayOpenFor === key) { setReplayOpenFor(null); return; }
+    setReplayOpenFor(key);
+    if (replayEvents[key]) return; // cached
+    setReplayLoading(prev => new Set(prev).add(key));
     try {
       const res = await authFetch(`/api/learners/${encodeURIComponent(studentId)}/events?conceptId=${encodeURIComponent(conceptId)}`);
       const json = await res.json();
-      setReplayEvents(prev => ({ ...prev, [conceptId]: json.events || [] }));
+      setReplayEvents(prev => ({ ...prev, [key]: json.events || [] }));
     } catch (err) {
       console.error('[ParentPortal] evidence replay failed', err);
-      setReplayEvents(prev => ({ ...prev, [conceptId]: [] }));
+      setReplayEvents(prev => ({ ...prev, [key]: [] }));
     } finally {
-      setReplayLoading(prev => { const s = new Set(prev); s.delete(conceptId); return s; });
+      setReplayLoading(prev => { const s = new Set(prev); s.delete(key); return s; });
     }
   };
 
@@ -226,6 +234,10 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
                       setSelected(l);
                       const keys = Object.keys(l.subjects);
                       setSelectedSubject(keys.length === 1 ? keys[0] : null);
+                      // Close any open evidence panel when switching students — with
+                      // per-student replayKey()s the stale cache is already scoped
+                      // correctly, but leaving the panel open on switch is confusing UX.
+                      setReplayOpenFor(null);
                     }}
                       className={`text-left rounded-2xl border p-4 transition-all ${selected?.studentId === l.studentId
                         ? 'bg-indigo-600/20 border-indigo-500/50' : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20'}`}>
@@ -402,19 +414,19 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
                                       className="flex items-center gap-1.5 text-xs text-indigo-300 hover:text-indigo-200 font-medium"
                                     >
                                       <History className="w-3.5 h-3.5" />
-                                      {replayOpenFor === concept.conceptId ? 'Hide evidence' : 'View evidence'}
+                                      {replayOpenFor === replayKey(selected.studentId, concept.conceptId) ? 'Hide evidence' : 'View evidence'}
                                     </button>
-                                    {replayOpenFor === concept.conceptId && (
+                                    {replayOpenFor === replayKey(selected.studentId, concept.conceptId) && (
                                       <div className="mt-2 space-y-2 max-h-64 overflow-y-auto pr-1">
-                                        {replayLoading.has(concept.conceptId) && (
+                                        {replayLoading.has(replayKey(selected.studentId, concept.conceptId)) && (
                                           <div className="flex items-center gap-2 text-slate-500 text-xs py-2">
                                             <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading evidence…
                                           </div>
                                         )}
-                                        {!replayLoading.has(concept.conceptId) && (replayEvents[concept.conceptId] || []).length === 0 && (
+                                        {!replayLoading.has(replayKey(selected.studentId, concept.conceptId)) && (replayEvents[replayKey(selected.studentId, concept.conceptId)] || []).length === 0 && (
                                           <p className="text-slate-500 text-xs italic py-1">No recorded exchanges for this concept yet.</p>
                                         )}
-                                        {(replayEvents[concept.conceptId] || []).map((ev) => (
+                                        {(replayEvents[replayKey(selected.studentId, concept.conceptId)] || []).map((ev) => (
                                           <div key={ev.eventId} className="bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs">
                                             <div className="flex items-center justify-between text-slate-500 mb-1">
                                               <span>{new Date(ev.timestamp).toLocaleString()}</span>

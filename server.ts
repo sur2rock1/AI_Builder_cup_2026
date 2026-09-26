@@ -11,7 +11,7 @@ import {
   getOrCreateLearner, getLearner, listLearners, deleteLearner, ensureSubject,
   ensureConceptState, getConceptState, recordAttempt, addGlobalInsight,
   incrementSessionCount, startSession, getSession, updateSession, endSession,
-  recordReasoningEvidence, getEvidenceLog, disputeMisconception,
+  recordReasoningEvidence, getEvidenceLog, disputeMisconception, recordConfusionSignal,
 } from './src/adaptive/learnerStore';
 import { getRepo } from './src/adaptive/repo';
 import { requireAuth, requireOwnership } from './server/middleware/requireAuth';
@@ -30,6 +30,7 @@ import {
   ReasoningAssessment, DeadlineResult,
 } from './src/adaptive/reasoningAssessor';
 import { MASTERY_THRESHOLD } from './src/adaptive/bkt';
+
 import { liveConfigFor, ALL_TOOLS } from './src/live/liveConfig';
 import { buildCurriculumIntelligenceContext } from './src/curriculum/curriculumIntelligence';
 import { getCurriculum, listCurricula, preloadCurricula, nextUnmasteredConcept } from './src/curriculum/ingest';
@@ -38,6 +39,26 @@ import os from 'os';
 import fs from 'fs';
 import { AdaptiveSessionState, TeachingStrategy, CurriculumConcept } from './src/adaptive/learnerModel';
 import { initFirebaseAdmin, admin } from './src/firebase/admin';
+
+// Bug found 2026-09-26: a single high-confidence BKT observation (e.g. one
+// 'transferred'-depth answer on a virgin concept) can push cs.masteryScore
+// to 90%+ from ONE exchange (see docs/AGENT_GUIDE.md landmine #3) -- but
+// computeMasteryStatus() (src/adaptive/ladder.ts) already correctly requires
+// pKnown >= 0.80 AND >= 2 distinct level-3+ items before calling a concept
+// even "provisionally" mastered. The two auto-advance checks below used the
+// raw, ungated masteryScore, so a single lucky/well-classified answer could
+// advance a child past a concept they have not durably demonstrated -- the
+// exact "should not move forward simply because the child produced a
+// correct answer" failure this project's own principles forbid.
+// recordAttempt() (the legacy quiz-click path) never sets cs.masteryStatus,
+// so we can't require it unconditionally without breaking that path; this
+// helper uses the properly-gated status when it exists (the BKT/live-voice
+// path, where the bug lives) and only falls back to the raw threshold for
+// concepts that have never been touched by that path.
+function isConceptMastered(cs: { masteryScore: number; masteryStatus?: string }): boolean {
+  if (cs.masteryStatus) return cs.masteryStatus !== 'none';
+  return cs.masteryScore >= MASTERY_THRESHOLD;
+}
 
 
 dotenv.config();
@@ -793,7 +814,7 @@ app.post('/api/session/start', requireAuth, async (req, res) => {
     // and App.tsx's handleSubjectConceptSelect now sends it.
     const requestedConcept = conceptId ? curriculum.concepts.find(c => c.id === conceptId) : undefined;
     const masteredIds = Object.values(learner.subjects[subjectId]?.conceptStates || {})
-      .filter(cs => cs.masteryScore >= 75).map(cs => cs.conceptId);
+      .filter(cs => isConceptMastered(cs)).map(cs => cs.conceptId);
     const nextConcept = requestedConcept || nextUnmasteredConcept(curriculum, masteredIds) || curriculum.concepts[0];
     await ensureConceptState(studentId, subjectId, nextConcept.id, nextConcept.label, 'direct_explanation', nextConcept.chapter || 'general');
 
@@ -885,11 +906,16 @@ app.post('/api/session/:sessionId/assess', requireAuth, async (req, res) => {
 
   if (['advance','praise_and_continue'].includes(assessment.recommendedAction)) {
     const updated = await getConceptState(session.studentId, session.subjectId, concept.id);
-    if ((updated?.masteryScore || 0) >= 75) {
+    // Note: this route runs after recordAttempt() (the legacy quiz-click path),
+    // which does not set masteryStatus -- isConceptMastered() falls back to the
+    // raw MASTERY_THRESHOLD check here, preserving this path's existing
+    // behavior exactly. The BKT/live-voice path (recordReasoningEvidence(),
+    // /api/session/start above) is the one that gets the real fix.
+    if (updated && isConceptMastered(updated)) {
       const currentLearner = await getLearner(session.studentId);
       const masteredIds = Object.values(
         currentLearner?.subjects?.[session.subjectId]?.conceptStates || {}
-      ).filter(cs => cs.masteryScore >= 75).map(cs => cs.conceptId);
+      ).filter(cs => isConceptMastered(cs)).map(cs => cs.conceptId);
       const next = curriculum ? nextUnmasteredConcept(curriculum, masteredIds) : undefined;
       if (next && next.id !== session.currentConceptId) {
         nextConceptId = next.id; advancedToConcept = next;
@@ -1204,6 +1230,27 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
     }
   }
 
+  async function handleRecordConfusionSignal(call: any) {
+    const args = call.args || {};
+    const signal = String(args.signal || '');
+    if (!studentId || !signal) {
+      // Guest session or malformed call — nothing to persist against, but
+      // never surface this as a failure to the tutor.
+      sendToolResponse(call, { result: 'noted' });
+      return;
+    }
+    const result = await recordConfusionSignal({
+      studentId,
+      subjectId: subjectId || undefined,
+      conceptId: conceptId || undefined,
+      signal,
+      aboutWhat: args.aboutWhat ? String(args.aboutWhat) : undefined,
+    });
+    sendToolResponse(call, result
+      ? { result: 'recorded', signal: result.signal, notedOnConcept: result.notedOnConcept }
+      : { result: 'noted' });
+  }
+
   function sendToolResponse(call: any, response: Record<string, unknown>) {
     try {
       if (liveSession) {
@@ -1373,6 +1420,16 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
                 handleAssessChildReasoning(call).catch((err) => {
                   console.error('[assess_child_reasoning] failed', err);
                   sendToolResponse(call, { instruction: 'Ask the learner to walk you through their method before saying anything about whether it is right.' });
+                });
+                continue;
+              }
+
+              if (call.name === 'record_confusion_signal') {
+                // Persists to the learner profile (see handleRecordConfusionSignal
+                // above); not awaited here so the voice model is never blocked.
+                handleRecordConfusionSignal(call).catch((err) => {
+                  console.error('[record_confusion_signal] failed', err);
+                  sendToolResponse(call, { result: 'noted' });
                 });
                 continue;
               }
