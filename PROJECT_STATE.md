@@ -347,3 +347,31 @@ of which this sandbox provides.
    this actually works), and open the parent portal / reasoning panel to
    confirm they render the seeded history correctly in the browser.
 4. Re-run `npm run seed:demo -- --reset` immediately before recording.
+
+## Update — 2026-09-26 (model connectivity confirmed — biggest risk closed)
+
+User ran `npm run verify:models` on their own machine (this sandbox
+cannot reach Google's API). Result: FAST and STRONG roles both resolve
+fully against the real API key — this is the pipeline that runs
+diagnosis, persona composition, and teaching-plan adaptation, i.e. the
+core Technical Merit story. IMAGE role fails with a free-tier quota of 0
+(not a bug — needs billing to ever work), which only affects the
+`generate_photo_visual` "real-world photo" blackboard mode; the seeded
+geometry concepts all work fine in 2d/3d schematic mode, which needs no
+image API call at all. See D-2026-09-26-2.
+
+**This closes the single biggest outstanding demo-readiness risk.**
+Remaining before recording:
+1. Open the real app in a browser and run one actual voice session end to
+   end (login → pick a seeded concept → trigger the misconception →
+   watch the reasoning panel/plan update live → dispute on the learner
+   card → check the parent portal replay). Nothing left to verify from
+   code — this is the one step that needs a human at a keyboard with a
+   working mic.
+2. Pick one real impact metric from that session's own logs (e.g.
+   diagnosisLatencyMs, or turns-to-confirmed-misconception) rather than
+   an invented number, for the demo's 2:40-3:00 beat.
+3. Re-run `npm run seed:demo -- --reset` immediately before recording.
+4. Write/rehearse the 3-minute script against the structure in the
+   hackathon's own instructions (problem → why existing tools fail →
+   live demo → technical architecture → measured impact).
