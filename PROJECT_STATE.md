@@ -299,3 +299,51 @@ seeded learners to confirm the parent portal / learner card / reasoning
 panel render them correctly — the seed script only proves the data model
 persists correctly, not that the UI reads it correctly end-to-end. That's
 still the top remaining pre-demo verification step.
+
+## Update — 2026-09-26 (real-HTTP verification of T21-T23 + a second real bug fixed)
+
+**What changed:** ran the actual server (not the smoke stub) in this
+sandbox with the dev auth bypass, and hit `GET /api/learners`,
+`POST /api/session/start`, `POST .../dispute`, and
+`GET /api/learners/:id/events` over real HTTP against the 3 seeded demo
+learners. This is the first real (non-smoke-test) evidence that:
+- The FR-11 persistence fix (D-2026-09-25-2) works through the actual
+  route layer, not just via direct file inspection.
+- A hand-seeded overdue spaced review renders correctly through a real
+  `/api/session/start` call as a `reviewItems` entry with reason
+  `R-REVIEW` — the "returning learner" plan beat genuinely works.
+- The dispute route (not just the store function) flips ledger status
+  correctly.
+
+**Found and fixed a second real bug:** `/api/session/start` always
+auto-picked the next unmastered concept and completely ignored which
+concept the student clicked in `SubjectSelector.tsx` — the client wasn't
+even sending a `conceptId`. This would have broken the demo in a subtle,
+bad way: clicking a learner's seeded concept to show off their history
+would silently land on a different, empty concept instead. Fixed in
+`server.ts` and `src/App.tsx` (D-2026-09-26-1) and verified: requesting
+Marcus's seeded scale-drawings concept by ID now correctly returns that
+concept as `plan.targetConcept`, with his review-due beat still
+composing correctly alongside it.
+
+**Demo data was reset again after this verification** (the test session
+itself touched `demo_marcus` and disputed `demo_aisha`'s misconception) —
+`npm run seed:demo -- --reset` restores the clean pre-demo state; run it
+again right before recording if any more testing happens in between.
+
+**Still not verified:** the voice/WebSocket path itself (real Gemini
+diagnosis, the reasoning panel actually rendering in a browser) — that
+needs a working `GEMINI_API_KEY` (still unconfirmed — user needs to run
+`npm run verify:models` themselves) and a real browser session, neither
+of which this sandbox provides.
+
+**Updated priority for the actual demo recording:**
+1. Confirm `npm run verify:models` works on your own machine.
+2. In the real running app: log in as "Aisha (Simulated)", open her
+   learner card, click "That's not right" on the SSA misconception —
+   this is the one live-dispute moment the seed data was built for.
+3. Log in as "Marcus (Simulated)" or "Priya (Simulated)", explicitly
+   select their seeded concept from the subject/concept picker (now that
+   this actually works), and open the parent portal / reasoning panel to
+   confirm they render the seeded history correctly in the browser.
+4. Re-run `npm run seed:demo -- --reset` immediately before recording.

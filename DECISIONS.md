@@ -623,3 +623,58 @@ smoke tests (`plan-and-store.mjs`, `gateway.mjs`) still pass; ran
 `data/learner-profiles.json` that all 3 seeded profiles now persist
 correctly (`{"demo_aisha": {...}, "demo_marcus": {...}, "demo_priya": {...}}`)
 where the pre-fix behavior would have written `[]`.
+
+## D-2026-09-26-1 — Verified T21-T23 routes over real HTTP; fixed a concept-selection bug found in the process
+
+**Date:** 2026-09-26
+**Context:** Continuing the "run one real session" priority from the
+demo-readiness cross-check. A real voice session needs a working Gemini
+key (still unconfirmed from this environment — see D-2026-09-25-1's
+caveat), but `compileTeachingPlan()` is deterministic (D-2026-09-24-2)
+and most of the T21-T23 routes don't touch Gemini at all. So instead of
+waiting on model connectivity, started the actual `server.ts` in this
+sandbox (`NODE_ENV=development ALLOW_DEV_AUTH_BYPASS=true`) and hit the
+real HTTP routes against the seeded demo learners — not the smoke-test
+stub, not calling store functions directly.
+
+**Verified working over real HTTP:**
+- `GET /api/learners` — lists all 3 seeded profiles correctly (this is
+  also the first real end-to-end proof the FR-11 persistence fix,
+  D-2026-09-25-2, actually works through the route layer, not just via
+  direct file inspection).
+- `POST /api/session/start` — compiles a real `TeachingPlanUI`-shaped
+  plan; confirmed `demo_marcus`'s hand-seeded overdue spaced review
+  surfaces correctly as `reviewItems: [{rule: "R-REVIEW", text: "Review
+  due (overdue by 48h)"}]` — the first real (non-smoke-test) confirmation
+  that this demo beat actually renders through the full route.
+- `POST .../misconceptions/:id/dispute` — disputed `demo_aisha`'s
+  `ssa-congruence` entry over the real route (then re-ran
+  `npm run seed:demo -- --reset` to restore her undisputed state for the
+  live demo, since this test itself disputed it).
+- `GET /api/learners/:id/events?conceptId=...` — returned the correct
+  4-event replay for `demo_priya`'s area-ratio concept.
+
+**Bug found and fixed:** `POST /api/session/start` always called
+`nextUnmasteredConcept()` and completely ignored which concept the
+student clicked in `SubjectSelector.tsx` — `handleSubjectConceptSelect`
+in `App.tsx` never even sent a `conceptId` in the request body. Confirmed
+by requesting `demo_marcus`'s untouched first-curriculum-concept by
+default, then explicitly passing his seeded scale-drawings concept ID and
+seeing the response change to the requested concept. This would have
+undermined the whole seeding effort: presenting a demo by clicking a
+specific seeded concept would have silently landed on an unrelated,
+empty one instead. Fixed by threading `conceptId` through both the client
+request and the server route (`compileTeachingPlan()` already supported
+`requestedConceptId` since T17 — this was purely a routing gap).
+
+**What this does NOT verify:** the actual voice/WebSocket path
+(`assess_child_reasoning`, `learner_update_v2`, `plan_update` messages,
+the `TutorReasoningPanel` UI actually rendering in a browser) — that
+still needs a working Gemini key and a real browser session, neither of
+which this sandbox can provide. This pass verifies the REST layer and
+plan-compile logic that sits underneath the voice path, which is real
+progress but not the full FR-24 verification gap.
+
+**Evidence:** `tsc --noEmit` clean; `npm run test:assessor` 13/13; both
+smoke tests pass; direct curl transcripts of all 4 routes above, captured
+during this session.
