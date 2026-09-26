@@ -254,3 +254,48 @@ distinction had not been surfaced clearly enough until this prompted a direct an
 the T21–T23 reasoning-panel/dispute flow and the new WS messages against an actual
 live session (not just smoke tests), 3) T24 diagnosis eval set, 4) T19 latency spike,
 5) T14 Profiler.
+
+## Update — 2026-09-25 (fixed a real profile-save bug; added demo-learner seeding)
+
+**Trigger:** user asked to build the "seeded demo learners" I recommended
+in the demo-readiness cross-check, so the parent portal / learner card /
+reasoning panel could be tested with real data instead of a blank slate.
+
+**Found and fixed a real bug, not just added a script:** this checkout's
+local `data/learner-profiles.json` had silently become `[]`. Every
+`saveProfile()` call was appearing to succeed while actually discarding
+the write — `JSON.stringify` on a JS array drops non-index properties, and
+nothing checked the file's shape before treating it as the profiles
+dictionary. This means the earlier answer to "is the student profile
+being saved?" (asked two turns ago) was, in this checkout, **no** — not
+"unverified," actually broken. Fixed in `src/adaptive/repo/file.ts` with
+a `readProfiles()` guard; see D-2026-09-25-2. Re-verified after the fix:
+`npm run seed:demo` now produces a `learner-profiles.json` that genuinely
+persists 3 profiles.
+
+**Added `scripts/seed-demo-learners.ts` / `npm run seed:demo`:** a
+lightweight T27 stand-in (not the full simulated-learner harness). Drives
+the real `learnerStore.ts` API to produce 3 clearly-labelled "(Simulated)"
+learners with real BKT/ladder-derived history:
+- **Aisha (Simulated)** — a standing, undisputed, confirmed misconception
+  on triangle congruence (SSA), left in place on purpose so the live demo
+  can click "That's not right" on it in front of judges.
+- **Marcus (Simulated)** — a misconception confirmed then resolved after
+  switching from direct explanation to a visual diagram, reaching
+  provisional mastery on scale factor; plus a hand-set overdue spaced
+  review on a second concept (hand-set because T15 isn't built — called
+  out explicitly in the script).
+- **Priya (Simulated)** — a disputed ledger entry (different status from
+  Aisha's, for UI variety) and real recovering mastery after an early
+  string of wrong answers, showing BKT doesn't jump straight to "mastered"
+  from one good answer.
+
+Timestamps are backdated across realistic 1-14-day session windows as a
+pure post-processing pass (no ladder/mastery/misconception value is
+hand-set by that step).
+
+**Still not done:** actually clicking through the running app with these
+seeded learners to confirm the parent portal / learner card / reasoning
+panel render them correctly — the seed script only proves the data model
+persists correctly, not that the UI reads it correctly end-to-end. That's
+still the top remaining pre-demo verification step.

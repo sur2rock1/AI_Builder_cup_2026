@@ -553,3 +553,73 @@ new `tests/smoke/gateway.mjs` that asserts the actual request payload.
 this test doesn't touch `liveObserver.ts`); new `tests/smoke/gateway.mjs` passing
 (`generateJSON sent responseMimeType=application/json`; `generateText (no
 responseMimeType) sent config: null`).
+
+## D-2026-09-25-2 — Fixed a silent profile-save data-loss bug; added a lightweight demo-learner seed script
+
+**Date:** 2026-09-25
+**Context:** Following up on the earlier cross-check where I said "profile
+saving is a real code path but unverified in this environment," I wrote
+`scripts/seed-demo-learners.ts` to create real test/demo data by driving
+the actual `learnerStore.ts` functions (not stubs). The first run appeared
+to succeed (no errors) but `data/learner-profiles.json` came back as `[]`
+afterward — the data had been silently discarded.
+
+**Root cause:** this checkout's `data/learner-profiles.json` had at some
+point become `[]` (a JSON array) instead of `{}`. `FileLearnerRepository`'s
+`readJson` returns whatever is on disk with no shape check.
+`saveProfile()` then does `all[profile.studentId] = profile` — legal
+JavaScript on an array (arrays are objects; this sets a non-index
+property) — and `writeJson()`'s `JSON.stringify(array)` silently drops any
+non-index property when serializing. So every `saveProfile()` call
+returned successfully while writing `[]` back to disk every time,
+permanently discarding the profile. `listLearners()`/`GET /api/learners`
+were therefore always returning an empty list too. This is a real bug
+that would have affected any real user's saved profile in this checkout,
+not just the seed script — it directly explains why "is the profile
+actually saved" could not be confirmed in the earlier cross-check.
+
+**Why the existing smoke test never caught it:** `tests/smoke/plan-and-store.mjs`
+always runs against a fresh temp directory, where the profiles file has
+never been anything other than a well-formed object. The bug only shows
+up against a checkout whose `data/` directory already has this
+specific corruption — which is exactly the state this checkout was in.
+
+**Decision:** Added a `readProfiles()` helper in `src/adaptive/repo/file.ts`
+used by all four profile-touching methods. An empty or missing profiles
+file is still treated as `{}` (safe, matches prior behavior). A
+**non-empty** array is treated as a hard error (thrown, not silently
+discarded) — a non-empty array in that slot means there's real data in an
+unexpected shape, and the fix should surface that for a human to look at
+rather than silently deleting it on the next write. Reset the corrupted
+local `data/learner-profiles.json` to `{}` (this file is gitignored —
+local runtime state, not committed).
+
+**Trade-offs:** This guards the symptom (the JSON file shape) rather than
+asking why it became `[]` in the first place — that root cause is still
+unknown and, given the guard now in place, no longer worth chasing unless
+it recurs. On Cloud Run (`USE_FIRESTORE_LEARNERS`/`K_SERVICE`), this bug
+class doesn't apply — Firestore documents don't have this array/object
+ambiguity — so this only ever affected local file-backed dev.
+
+**Also this pass — `scripts/seed-demo-learners.ts` (`npm run seed:demo`):**
+a lightweight, hand-scripted stand-in for T27 (seeded demo learners),
+*not* the full T25/T27 simulated-learner harness, which remains
+unbuilt. It drives the exact same public functions the live voice
+pipeline calls, so every ladder level, mastery-status transition and
+misconception confirmation for the 3 seeded learners comes from the real
+BKT/ladder/ledger logic — nothing is hand-set except one `ConceptState.review`
+field on one learner (Marcus), because T15 spaced-review scheduling isn't
+built and nothing in the app itself ever sets that field; this is called
+out explicitly in the script's own header comment so it's never mistaken
+for a real capability. All three learners are named "(Simulated)" and
+studentId-prefixed `demo_` so they can never be mistaken for real
+children's data on screen or in the data files — this is demo/test
+fixture data, not evidence of real-user validation (BUILD_PLAN.md T27's
+own acceptance criterion: "labelled 'simulated'").
+
+**Evidence:** `tsc --noEmit` clean; `npm run test:assessor` 13/13; existing
+smoke tests (`plan-and-store.mjs`, `gateway.mjs`) still pass; ran
+`npm run seed:demo -- --reset` and confirmed via direct inspection of
+`data/learner-profiles.json` that all 3 seeded profiles now persist
+correctly (`{"demo_aisha": {...}, "demo_marcus": {...}, "demo_priya": {...}}`)
+where the pre-fix behavior would have written `[]`.
