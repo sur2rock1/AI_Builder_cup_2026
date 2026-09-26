@@ -205,6 +205,39 @@ session end / disconnect / idle 10 min
 Bayesian Knowledge Tracing with evidence-quality-conditioned slip/guess (`src/adaptive/bkt.ts`).
 Parameters are **chosen, not fitted** — this must be stated in the documentation and the pitch.
 
+**Evidence-sufficiency shrinkage (added 2026-09-26, see docs/AGENT_GUIDE.md landmine #3).**
+Because `EVIDENCE_QUALITY.transferred`/`applied` intentionally use very low guess-weights (a
+high-depth correct answer is strong Bayesian evidence), a SINGLE such observation on a virgin
+concept can legitimately produce a raw posterior of 90%+ (verified: difficulty 1, one
+`transferred` observation → pKnown 0.9592). This is mathematically correct Bayesian updating
+given the parameters, but it contradicts this project's own principle that mastery should not
+be claimed from one correct answer, and it disagreed with `computeMasteryStatus()`
+(`src/adaptive/ladder.ts`), which already correctly requires `pKnown >= 0.80 AND >= 2 distinct
+ladder-level-3+ items` before calling a concept even "provisionally" mastered.
+
+Fix: `recordReasoningEvidence()` (`src/adaptive/learnerStore.ts`) now shrinks the STORED
+`cs.masteryScore`/`cs.pKnown` — not just a display-layer filter — to `MASTERY_THRESHOLD - 1`
+whenever `cs.masteryStatus === 'none'` but the raw BKT posterior implied "mastered"
+(`>= MASTERY_THRESHOLD`). This is deliberate regularization, consistent with the same
+"require multiple independent observations before high confidence" principle already used for
+misconception confirmation (§ below) and `computeMasteryStatus`'s distinct-items gate — applied
+uniformly to the numeric score instead of only the categorical label. Because the next call's
+Bayesian prior is the STORED `cs.masteryScore` (see `masteryBefore` in `recordReasoningEvidence`),
+shrinking it here also means a later observation must genuinely "re-earn" confidence rather than
+compounding an unconfirmed number — verified by test: a second and third distinct `transferred`
+observation on separate items correctly climbs the shrunk score back up and flips
+`masteryStatus` to `'provisional'`, so legitimate multi-observation progression is unaffected.
+Every consumer of the event/result objects (`evidenceLog`, the durable `EvidenceEvent`, the
+value returned to the live-voice WS update, and therefore the tutor's own
+`/api/learner-context/*` prompt text and `src/plan/compile.ts`'s prerequisite check) now reads
+this same final, shrunk number — there is exactly one mastery number for a concept, not a raw
+internal one and a separate display one.
+**What this does NOT change:** `EVIDENCE_QUALITY`'s guess/slip weights in `bkt.ts` are untouched
+— they were not recalibrated, because that would be an arbitrary tuning decision with no
+principled basis and zero test coverage on this module. The fix instead reuses an evidence-
+sufficiency rule this codebase had already designed and validated (`computeMasteryStatus`),
+applying it consistently rather than inventing a new one.
+
 ### 6.2 Strategy effectiveness (new, cross-concept)
 For each (conceptType, representation), a Beta(α, β) with prior Beta(1, 1). Expected success
 = α / (α + β). The plan ranks representations by a **Thompson sample** (or by the mean in demo

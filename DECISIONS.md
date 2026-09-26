@@ -721,3 +721,84 @@ by enabling billing if that beat is wanted.
 enable billing before the demo unless a photorealistic-image beat is
 specifically wanted — it adds cost and isn't needed for the core
 misconception-detection/adaptive-teaching story.
+
+## D-2026-09-26-3 — Fixed a real mastery-inflation bug (BKT one-shot jump) at the source, not with a display patch or a recalibrated constant
+
+**Date:** 2026-09-26
+**Context:** during manual testing, demo learner Priya's "Constructing and
+applying properties of perpendicular and angle bisectors" concept
+appeared to jump from 0% to 99% mastery after a single ~2-minute
+exchange, directly contradicting this project's stated principle that
+mastery should not be claimed from one correct answer. The original
+event log for that specific session was unrecoverable (wiped by the
+already-documented profile-save data-loss bug fixed in D-2026-09-25-2,
+then overwritten by the new seed script), so the exact transcript
+couldn't be replayed — but the underlying BKT math was hand-verified and
+reproduced in a standalone repro script against the real `learnerStore.ts`.
+
+**Root cause (verified, not assumed):** `EVIDENCE_QUALITY.transferred`
+(`src/adaptive/bkt.ts`) uses a low guess-weight (0.10) — correct in
+isolation, since a genuinely transfer-depth correct answer IS strong
+evidence — but this means a single such observation on a virgin concept
+computes a real Bayesian posterior of ~96% (difficulty 1: pL=0.25 →
+pS=0.03, pG=0.02 → posterior=0.9417 → pNext=0.9592). `computeMasteryStatus()`
+(`src/adaptive/ladder.ts`) already correctly gates the CATEGORICAL status
+behind `pKnown >= 0.80 AND >= 2 distinct ladder-level-3+ items`, but the
+raw NUMERIC `cs.masteryScore` was stored and displayed directly from the
+BKT posterior with no such gate — and, worse, `server.ts`'s two
+curriculum auto-advance checks compared that same ungated raw score
+against `MASTERY_THRESHOLD (75)`, meaning a single strong answer could
+genuinely advance a child past a concept, not just display a misleading
+number.
+
+**Options considered:**
+1. Recalibrate `EVIDENCE_QUALITY.transferred`/`applied` guess-weights to
+   be less aggressive. Rejected: this is arbitrary tuning with no
+   principled basis (what's the "right" guess-weight? there's no data to
+   fit it to), touches core adaptive-learning math with zero existing
+   test coverage on this exact module, and doesn't fix the deeper issue
+   (BKT with ANY sufficiently confident parameters can jump hard on one
+   observation — that's not unique to this specific constant).
+2. Patch only the display layer (ParentPortal.tsx / LearnerProfilePanel.tsx)
+   to hide/cap the shown percentage. Rejected: cosmetic only — the raw,
+   ungated score also fed `/api/learner-context/*` (the TUTOR's own
+   prompt context) and `src/plan/compile.ts`'s prerequisite-strength
+   check (`pKnown < 0.6`), so the tutor itself could have been misled
+   into believing a child had mastered something from one answer, and
+   the curriculum auto-advance bug would have remained live.
+3. **(Chosen)** Shrink the STORED `cs.masteryScore`/`cs.pKnown` at the
+   source, in `recordReasoningEvidence()`, reusing the SAME
+   evidence-sufficiency rule `computeMasteryStatus` already validates
+   (if `masteryStatus === 'none'` but the raw score implies "mastered",
+   cap it to `MASTERY_THRESHOLD - 1`). Every downstream consumer (event
+   log, `EvidenceEvent`, the live WS update, API responses, UI, the
+   tutor's own prompt context, the plan compiler) reads this one final
+   number — no per-consumer gating needed, and none can be missed by a
+   future feature that forgets to gate.
+
+**Verification:** wrote a standalone script bundling the real
+`learnerStore.ts` against a temp data directory (not a mock). Confirmed:
+(a) one `transferred` observation on a virgin concept now stores 74% /
+`masteryStatus: 'none'` instead of 96%; (b) two further genuine,
+distinct-item `transferred` observations still correctly climb the score
+and flip status to `'provisional'` — legitimate multi-observation
+progression is not broken. `npx tsc --noEmit` clean. `npm run
+test:assessor` (unrelated code path) still passes. `npm run test:live`
+fails identically against the unmodified original code in this sandbox
+(confirmed via `git stash`) — a pre-existing environment limitation (no
+reachable Gemini Live endpoint here), not a regression from this change.
+
+**Trade-off:** the raw BKT posterior computed inside `updateMastery()`
+is mathematically correct given its parameters — we are deliberately
+overriding it with a product-level regularization rule, not fixing a
+"bug" in the Bayesian math itself. This is the right trade-off for a
+tutoring product whose core pitch is "don't claim understanding from one
+correct answer," even though it means the stored `pKnown` sometimes
+understates the model's literal internal confidence until more evidence
+accumulates.
+
+**Decision:** ship the source-level shrinkage fix (option 3). Do not
+recalibrate `EVIDENCE_QUALITY` guess/slip weights without real evidence
+data to justify new values — revisit only if `eval/` (per
+docs/TUTOR_PERSONA.md §18) or production data later shows the current
+weights are miscalibrated in a specific, measurable direction.
