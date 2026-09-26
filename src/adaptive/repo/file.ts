@@ -39,25 +39,57 @@ function writeJson(file: string, data: unknown) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
 }
 
+// Bug found 2026-09-25 while seeding demo learners: learner-profiles.json
+// had somehow ended up as `[]` (an array, not `{}`). readJson<Record<...>>
+// returned it as-is with no shape check; saveProfile then did
+// `all[studentId] = profile` — legal on an array (arrays are objects in
+// JS, this just sets a non-index property) — and writeJson's
+// JSON.stringify(array) silently drops any non-index property. Net
+// effect: every saveProfile() call APPEARED to succeed (no thrown error,
+// no rejected promise) while writing `[]` back to disk every time —
+// permanently discarding every learner profile created locally, and
+// making listLearners()/GET /api/learners always return an empty list.
+// The existing smoke test never caught this because it always starts
+// from a fresh tmp dir where the file has never been anything but a
+// proper object. This helper makes an empty/missing profiles file safe
+// (treated as `{}`) but refuses to silently swallow a genuinely
+// non-empty array, since that would indicate real (if wrongly-shaped)
+// data that must not be thrown away without someone looking at it.
+function readProfiles(): Record<string, LearnerProfile> {
+  const raw = readJson<unknown>(profilesFile(), {});
+  if (Array.isArray(raw)) {
+    if (raw.length > 0) {
+      throw new Error(
+        `learner-profiles.json is a non-empty array (${raw.length} items) — expected an object ` +
+        'keyed by studentId. Refusing to treat it as empty and silently discard it on the next ' +
+        'write; back up and inspect the file by hand before continuing.',
+      );
+    }
+    return {};
+  }
+  if (typeof raw !== 'object' || raw === null) return {};
+  return raw as Record<string, LearnerProfile>;
+}
+
 export class FileLearnerRepository implements LearnerRepository {
   async getProfile(studentId: string): Promise<LearnerProfile | null> {
-    const all = readJson<Record<string, LearnerProfile>>(profilesFile(), {});
+    const all = readProfiles();
     return all[studentId] || null;
   }
 
   async saveProfile(profile: LearnerProfile): Promise<void> {
-    const all = readJson<Record<string, LearnerProfile>>(profilesFile(), {});
+    const all = readProfiles();
     all[profile.studentId] = profile;
     writeJson(profilesFile(), all);
   }
 
   async listProfiles(): Promise<LearnerProfile[]> {
-    const all = readJson<Record<string, LearnerProfile>>(profilesFile(), {});
+    const all = readProfiles();
     return Object.values(all);
   }
 
   async deleteProfile(studentId: string): Promise<void> {
-    const all = readJson<Record<string, LearnerProfile>>(profilesFile(), {});
+    const all = readProfiles();
     delete all[studentId];
     writeJson(profilesFile(), all);
     for (const f of [eventsFile(studentId), plansFile(studentId), sessionsFile(studentId)]) {
