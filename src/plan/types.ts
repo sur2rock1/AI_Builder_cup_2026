@@ -51,8 +51,8 @@ export interface PlanDeltaState {
 export interface PlanDeltaResult {
   instruction: string;      // one-line guidance for the tutor
   nextRepresentation?: TeachingStrategy;
-  parkConcept?: boolean;
-  escalate?: boolean;
+  /** Tutor must switch from questioning to explaining (never park/escalate). */
+  teachDirectly?: boolean;
   encourageReset?: boolean;
   state: PlanDeltaState;
 }

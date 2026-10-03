@@ -10,7 +10,8 @@ import {
 } from '../adaptive/learnerModel';
 import { rankRepresentations, MIN_USES_BEFORE_AVOID, AVOID_THRESHOLD } from '../adaptive/strategyProfile';
 import { representationsForMode } from '../persona/representations';
-import { subjectModeForSubject } from '../persona/subjectModes';
+import { subjectModeForCurriculum } from '../persona/subjectModes';
+import { conceptTypeFor } from '../curriculum/catalog';
 import { ageBandFromGrade } from '../persona/ageBands';
 import { AGE_BAND_CONFIG, LIMITS } from '../persona/config';
 import { PERSONA_VERSION } from '../persona/config';
@@ -53,7 +54,7 @@ export function compileTeachingPlan(
   const subject = learner.subjects[ctx.subjectId];
   const ageBand = learner.ageBand || ageBandFromGrade(learner.grade);
   const ageCfg = AGE_BAND_CONFIG[ageBand];
-  const subjectMode = subjectModeForSubject(ctx.subjectId, curriculum.label);
+  const subjectMode = subjectModeForCurriculum(curriculum);
 
   // R-REVIEW — due spaced reviews, max 3, most-overdue first.
   const reviewItems: TeachingPlan['reviewItems'] = Object.values(subject?.conceptStates || {})
@@ -82,11 +83,21 @@ export function compileTeachingPlan(
   if (!targetConceptDef) targetConceptDef = curriculum.concepts[0];
 
   // Check the target's direct prerequisites are strong enough (pKnown >= 0.6);
-  // if not, the WEAKEST prerequisite becomes the target instead (R-PREREQ-FIRST).
+  // if one is SHOWN to be weak, it becomes the target instead (R-PREREQ-FIRST).
+  // Changed 2026-09-26 (D-2026-09-26-8): a prerequisite with NO evidence yet
+  // used to count as weak (pKnown ?? 0), which was harmless while every
+  // uploaded course had an empty prerequisite graph but, once real graphs
+  // exist, would send every new learner who clicks a concept to its first
+  // prerequisite instead. No evidence is not evidence of weakness: an
+  // unevidenced prerequisite is PROBED first (R-PROBE, below — the cold-start
+  // behaviour docs/TEACHING_PLAN.md §3 specifies), and only takes over the
+  // lesson once the evidence says it is weak.
   const prereqIds = targetConceptDef.prerequisites || [];
+  const hasEvidence = (cs: ConceptState | undefined) =>
+    !!cs && ((cs.evidenceLog?.length || 0) > 0 || (cs.attemptCount || 0) > 0);
   const weakPrereq = prereqIds
     .map((id) => ({ id, cs: conceptState(learner, ctx.subjectId, id) }))
-    .find(({ cs }) => (cs?.pKnown ?? 0) < 0.6);
+    .find(({ cs }) => hasEvidence(cs) && (cs?.pKnown ?? 0) < 0.6);
   if (weakPrereq) {
     const prereqDef = curriculum.concepts.find((c) => c.id === weakPrereq.id);
     if (prereqDef) {
@@ -96,18 +107,34 @@ export function compileTeachingPlan(
   }
   const targetConceptState = conceptState(learner, ctx.subjectId, targetConceptDef.id);
 
-  // R-PROBE — prerequisites to probe, max LIMITS.maxPrereqProbes, skipping
-  // ones with recent strong evidence.
-  const prerequisitesToProbe: TeachingPlan['prerequisitesToProbe'] = (targetConceptDef.prerequisites || [])
+  // R-PROBE — prerequisites to probe, max LIMITS.maxPrereqProbes: in-course
+  // prerequisites without durable mastery first, then prerequisites from an
+  // earlier grade / another subject (prerequisiteDetails with no conceptId),
+  // which the course can only probe, never teach.
+  // Fixed 2026-09-26: the check question used to be taken from the
+  // PREREQUISITE concept's own first prerequisite (c.prerequisiteDetails[0]) —
+  // i.e. a question about the wrong idea. It now comes from the TARGET's link
+  // to that prerequisite, else the prerequisite's own L1 ladder item.
+  const targetDetails = targetConceptDef.prerequisiteDetails || [];
+  const internalProbes: TeachingPlan['prerequisitesToProbe'] = (targetConceptDef.prerequisites || [])
     .map((id) => curriculum.concepts.find((c) => c.id === id))
     .filter((c): c is CurriculumConcept => !!c)
     .filter((c) => !isDurable(conceptState(learner, ctx.subjectId, c.id)))
-    .slice(0, LIMITS.maxPrereqProbes)
     .map((c) => ({
       conceptId: c.id, label: c.label,
-      checkQuestion: c.prerequisiteDetails?.[0]?.checkQuestion,
+      checkQuestion: targetDetails.find((d) => d.conceptId === c.id)?.checkQuestion
+        || c.ladderItems?.find((l) => l.level === 1)?.prompt,
       reason: reason('R-PROBE', `Direct prerequisite of "${targetConceptDef!.label}" without durable mastery.`),
     }));
+  const externalProbes: TeachingPlan['prerequisitesToProbe'] = targetDetails
+    .filter((d) => !d.conceptId && d.checkQuestion)
+    .map((d) => ({
+      conceptId: `external:${d.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`,
+      label: d.label,
+      checkQuestion: d.checkQuestion,
+      reason: reason('R-PROBE', `Needed for "${targetConceptDef!.label}" but taught in an earlier grade or another subject — probe only.`),
+    }));
+  const prerequisitesToProbe = [...internalProbes, ...externalProbes].slice(0, LIMITS.maxPrereqProbes);
 
   // R-WATCH — misconceptions to watch: this concept's ledger + confirmed
   // misconceptions on sibling concepts of the same conceptType.
@@ -120,7 +147,7 @@ export function compileTeachingPlan(
       });
     }
   }
-  const conceptType = targetConceptState?.conceptType || targetConceptDef.chapter || 'general';
+  const conceptType = conceptTypeFor(targetConceptDef, targetConceptState);
   for (const otherCs of Object.values(subject?.conceptStates || {})) {
     if (otherCs.conceptId === targetConceptDef.id) continue;
     if ((otherCs.conceptType || '') !== conceptType) continue;

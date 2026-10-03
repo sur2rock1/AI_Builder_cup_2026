@@ -104,8 +104,8 @@ export const Interactive3DVisual: React.FC<Interactive3DVisualProps> = ({
     const sceneType = getSceneType();
 
     // Position camera based on scene type for best viewing angle
-    if (sceneType === 'geometry') {
-      // Straight-on view for the flat triangle
+    if (sceneType === 'geometry' && !(sceneData?.elements?.length)) {
+      // Straight-on view for the flat fallback triangle only
       camera.position.set(0, 0.1, 13);
       camera.lookAt(0, 0.1, 0);
     }
@@ -289,14 +289,18 @@ export const Interactive3DVisual: React.FC<Interactive3DVisualProps> = ({
         pin.userData = { name: m.name, desc: `Key historical site for ${topic}` };
         rootGroup.add(pin);
       });
-    } else if (sceneType === 'geometry') {
-      // ─── 3D Right-Angle Triangle ─────────────────────────────────────────
-      // Vertices: right angle at origin (bottom-left), base goes right, height goes up
+    } else if (sceneType === 'geometry' && !(sceneData?.elements?.length)) {
+      // ─── Fallback only: 3D Right-Angle Triangle ───────────────────────────
+      // Used only when no AI-generated `elements` are available (e.g. an
+      // ad-hoc topic with no pregen data yet). When elements ARE present,
+      // the data-driven branch below runs instead — see D-2026-09-27-4:
+      // this hardcoded triangle used to run for EVERY math topic regardless
+      // of what the AI actually generated, which is why every chapter's 3D
+      // tab looked identical.
       const A = new THREE.Vector3(-3.2, -2.2, 0); // right angle (90°)
       const B = new THREE.Vector3( 3.2, -2.2, 0); // bottom-right
       const C = new THREE.Vector3(-3.2,  2.4, 0); // top-left
 
-      // Filled translucent triangle face (DoubleSide so it renders from camera)
       const faceGeo = new THREE.BufferGeometry();
       faceGeo.setAttribute('position', new THREE.Float32BufferAttribute([
         A.x, A.y, A.z,
@@ -310,25 +314,12 @@ export const Interactive3DVisual: React.FC<Interactive3DVisualProps> = ({
       });
       rootGroup.add(new THREE.Mesh(faceGeo, faceMat));
 
-      // Bold edge outline (3 sides)
       const edgeMat = new THREE.LineBasicMaterial({ color: 0x34d399, linewidth: 2 });
-      const edgeLoop = [A, B, C, A];
-      rootGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(edgeLoop), edgeMat));
+      rootGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([A, B, C, A]), edgeMat));
 
-      // Hypotenuse highlighted in amber
       const hypMat = new THREE.LineBasicMaterial({ color: 0xfbbf24, linewidth: 3 });
       rootGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([B, C]), hypMat));
 
-      // Right-angle square marker at A
-      const sq = 0.55;
-      const raMat = new THREE.LineBasicMaterial({ color: 0xfbbf24 });
-      rootGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(A.x,      A.y + sq, 0),
-        new THREE.Vector3(A.x + sq, A.y + sq, 0),
-        new THREE.Vector3(A.x + sq, A.y,      0),
-      ]), raMat));
-
-      // Vertex glow dots
       const verts = [
         { pos: A, color: 0xfbbf24, label: '90° — Right Angle' },
         { pos: B, color: 0x38bdf8, label: 'Angle B' },
@@ -344,27 +335,90 @@ export const Interactive3DVisual: React.FC<Interactive3DVisualProps> = ({
         rootGroup.add(dot);
       });
 
-      // Dimension mid-point markers: a (base), b (height), c (hypotenuse)
-      const dimDots = [
-        { mid: new THREE.Vector3((A.x+B.x)/2, A.y - 0.5, 0), color: 0x86efac, label: 'a — Base' },
-        { mid: new THREE.Vector3(A.x - 0.5, (A.y+C.y)/2, 0), color: 0x86efac, label: 'b — Height' },
-        { mid: new THREE.Vector3((B.x+C.x)/2 + 0.3, (B.y+C.y)/2, 0), color: 0xfbbf24, label: 'c — Hypotenuse' },
-      ];
-      dimDots.forEach(d => {
-        const dm = new THREE.Mesh(
-          new THREE.SphereGeometry(0.14, 8, 8),
-          new THREE.MeshStandardMaterial({ color: d.color, emissive: d.color, emissiveIntensity: 0.5 })
-        );
-        dm.position.copy(d.mid);
-        dm.userData = { name: d.label, desc: d.label };
-        rootGroup.add(dm);
-      });
-
-      // Subtle orbit ring for depth perception
       rootGroup.add(new THREE.Mesh(
         new THREE.TorusGeometry(4.8, 0.04, 12, 64),
         new THREE.MeshBasicMaterial({ color: 0x1f4e33, transparent: true, opacity: 0.5 })
       ));
+
+    } else if (sceneData?.elements?.length) {
+      // ─── Data-driven scene: one glowing node per AI-generated element ─────
+      // Fixed 2026-09-27 (D-2026-09-27-4): every scene used to be one of a
+      // handful of hardcoded templates picked ONLY by sceneType, so every
+      // math concept (always classified 'geometry') rendered the exact same
+      // triangle no matter what the lesson was about. This renders the
+      // actual per-topic content instead: each element the AI described
+      // becomes a labeled sphere in its own real color, connected in a ring
+      // so the chain/relationship reads clearly, with its name always
+      // visible on the floating label (not hidden behind an unfinished
+      // click-to-inspect interaction).
+      const elements = sceneData!.elements!;
+      const n = elements.length;
+      const radius = n <= 2 ? 2.6 : 3.4 + Math.min(n, 6) * 0.25;
+      const positions: THREE.Vector3[] = elements.map((el, i) => {
+        // Respect an explicit position if the AI provided one; otherwise
+        // spread elements evenly around a ring so they never collide.
+        if (el.position) return new THREE.Vector3(el.position[0], el.position[1], el.position[2]);
+        const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+        return new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.55, Math.sin(angle * 0.7) * 1.2);
+      });
+
+      // Faint ring so the arrangement reads as one connected system
+      rootGroup.add(new THREE.Mesh(
+        new THREE.TorusGeometry(radius, 0.03, 8, 64),
+        new THREE.MeshBasicMaterial({ color: 0x1f4e33, transparent: true, opacity: 0.45 })
+      ));
+
+      elements.forEach((el, i) => {
+        const color = new THREE.Color(el.color || '#34d399');
+        const sphere = new THREE.Mesh(
+          new THREE.SphereGeometry(0.42, 24, 24),
+          new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.55, roughness: 0.3 })
+        );
+        sphere.position.copy(positions[i]);
+        sphere.userData = { name: el.name, desc: el.description };
+        rootGroup.add(sphere);
+
+        // Connector to the next element in the chain (so a sequence like
+        // "Line 1 -> Line 2 -> Intersection" visually reads as a sequence)
+        if (i < n - 1) {
+          const lineMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 });
+          rootGroup.add(new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([positions[i], positions[i + 1]]),
+            lineMat,
+          ));
+        }
+      });
+
+      // Small floating text sprites so every element's name is visible without
+      // needing a click (the click-to-inspect raycast isn't wired up yet).
+      //
+      // Fixed 2026-09-28: when the AI legitimately places two elements at the
+      // same or near-identical coordinates (e.g. a labeled point that also IS
+      // where a named line passes through — "Point B(2,1,0)" and "Vertical
+      // Line x=2" both at (2,1,0)), their labels used to sit at the exact
+      // same offset and print on top of each other, illegible. Elements that
+      // share a position now get their labels stacked upward one at a time
+      // instead of stamped on top of each other — the spheres themselves stay
+      // at their true, geometrically-accurate coordinates.
+      const seenAtPosition = new Map<string, number>();
+      elements.forEach((el, i) => {
+        const key = `${positions[i].x.toFixed(1)},${positions[i].y.toFixed(1)},${positions[i].z.toFixed(1)}`;
+        const stackIndex = seenAtPosition.get(key) || 0;
+        seenAtPosition.set(key, stackIndex + 1);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; canvas.height = 64;
+        const ctx = canvas.getContext('2d')!;
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(el.name.length > 26 ? el.name.slice(0, 24) + '…' : el.name, 128, 40);
+        const texture = new THREE.CanvasTexture(canvas);
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+        sprite.scale.set(2.6, 0.65, 1);
+        sprite.position.copy(positions[i].clone().add(new THREE.Vector3(0, 0.65 + stackIndex * 0.55, 0)));
+        rootGroup.add(sprite);
+      });
 
     } else {
       // Neural Network / Concept Matrix

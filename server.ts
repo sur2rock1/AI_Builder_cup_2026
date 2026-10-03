@@ -12,19 +12,23 @@ import {
   ensureConceptState, getConceptState, recordAttempt, addGlobalInsight,
   incrementSessionCount, startSession, getSession, updateSession, endSession,
   recordReasoningEvidence, getEvidenceLog, disputeMisconception, recordConfusionSignal,
+  resolveEscalation,
 } from './src/adaptive/learnerStore';
 import { getRepo } from './src/adaptive/repo';
+import { runProfiler } from './src/adaptive/profiler';
 import { requireAuth, requireOwnership } from './server/middleware/requireAuth';
+import { requireAdmin, checkAdmin } from './server/middleware/requireAdmin';
+import { registerTutorRoutes, clearTutorTurnState } from './server/routes/tutor';
 import { compileTeachingPlan } from './src/plan/compile';
 import type { TeachingPlan } from './src/plan/types';
 import { composeSystemInstruction, composeKickoff, DEFAULT_PERSONA_NAME } from './src/persona/compose';
 import { ageBandFromGrade } from './src/persona/ageBands';
-import { subjectModeForSubject } from './src/persona/subjectModes';
+import { subjectModeForCurriculum } from './src/persona/subjectModes';
 import { renderPlanForPrompt } from './src/plan/render';
 import { verifyModels, isDemoMode } from './src/ai/gateway';
-import { compilePlanDelta, initialDeltaState } from './src/plan/delta';
+import { compilePlanDelta, initialDeltaState, deriveOutcome } from './src/plan/delta';
 import type { PlanDeltaState } from './src/plan/types';
-import { assessUnderstanding, selectNextStrategy } from './src/adaptive/assessmentEngine';
+import { assessUnderstanding, selectNextStrategy, QuizReasoning } from './src/adaptive/assessmentEngine';
 import {
   assessReasoningWithDeadline, misconceptionText, misconceptionCatalog,
   ReasoningAssessment, DeadlineResult,
@@ -33,11 +37,28 @@ import { MASTERY_THRESHOLD } from './src/adaptive/bkt';
 
 import { liveConfigFor, ALL_TOOLS } from './src/live/liveConfig';
 import { buildCurriculumIntelligenceContext } from './src/curriculum/curriculumIntelligence';
-import { getCurriculum, listCurricula, preloadCurricula, nextUnmasteredConcept } from './src/curriculum/ingest';
-import { startIngestJob, getJob } from './src/curriculum/pdfIngest';
+import { getCurriculum, listCurriculaAsync, preloadCurricula, nextUnmasteredConcept, deleteCurriculum } from './src/curriculum/ingest';
+import { startIngestJob, getJob, isCourseBusy } from './src/curriculum/pdfIngest';
+import { getPregenAsync, savePregenAsync, PregenRecord } from './src/curriculum/pregenStore';
+import {
+  KNOWN_BOARDS, GRADE_LEVELS, gradeLabel, gradeLevelFromLabel, normaliseBoard, normaliseSubject,
+  courseId as makeCourseId, courseMatchesLearner, conceptTypeFor, misconceptionKey,
+} from './src/curriculum/catalog';
+// Board pictures (docs/BOARD_VISUALS.md): generation, and keeping the voice and the board in step.
+import { conceptContext, adHocContext, VisualConceptContext, VisualRequest } from './src/visual/prompt';
+import { generateBoardVisual } from './src/visual/generate';
+import { gatewayModel } from './src/quality/model';
+import { lintPictureVsQuiz } from './src/quality/leakLint';
+import { errorsOf } from './src/quality/types';
+import { generateLessonText } from './src/curriculum/lessonGen';
+import { generateVerifiedPhoto, geminiImageGenerator } from './src/curriculum/photoGen';
+import { reviewPhoto } from './src/quality/critic';
+import { publicLesson, verifiedPhoto, cleanReasoning } from './src/curriculum/serve';
+import { findVisualForFocus, boardContextBlock, toolSummary, matchScore } from './src/visual/tutorBrief';
+import { VISUAL_KEYS } from './src/visual/types';
 import os from 'os';
 import fs from 'fs';
-import { AdaptiveSessionState, TeachingStrategy, CurriculumConcept } from './src/adaptive/learnerModel';
+import { AdaptiveSessionState, TeachingStrategy, CurriculumConcept, CurriculumSubject } from './src/adaptive/learnerModel';
 import { initFirebaseAdmin, admin } from './src/firebase/admin';
 
 // Bug found 2026-09-26: a single high-confidence BKT observation (e.g. one
@@ -86,7 +107,12 @@ process.on('uncaughtException', (err: any) => {
 
 
 // ── Pre-generated asset cache ──────────────────────────────────────────────
-const PREGEN_DIR = path.join(process.cwd(), 'data', 'pregenerated');
+// Storage itself (Firestore + Cloud Storage, with a local-file fallback for
+// dev/tests) lives in src/curriculum/pregenStore.ts — see that file for why:
+// Cloud Run's disk is ephemeral, so anything written only to data/pregenerated/
+// on that instance is gone on the next deploy or cold start, and the exact
+// same concept gets regenerated (and re-billed) again. This module just
+// builds the lookup keys and calls into the store.
 
 /** Convert a topic name to the same slug used by pregenerate-assets.ts */
 function slugifyTopic(str: string): string {
@@ -97,18 +123,70 @@ function slugifyTopic(str: string): string {
     .slice(0, 80);
 }
 
-/** Load pregenerated cache file for a topic, or return null if not found */
-function loadPregen(topic: string): any | null {
+/** Load a pregenerated lesson: by curriculum concept id first (one record
+ * per concept — two courses can share a concept LABEL, e.g. "Photosynthesis"
+ * in Grade 7 and Grade 9, so the label is not a safe cache key), then by
+ * topic slug for ad-hoc topics typed into the topic picker. */
+async function loadPregen(topic: string, conceptId?: string): Promise<PregenRecord | null> {
+  const candidates = [
+    ...(conceptId && /^[a-z0-9-]+$/.test(conceptId) ? [conceptId] : []),
+    slugifyTopic(topic),
+  ];
+  return getPregenAsync(candidates);
+}
+
+/** The key a lesson for this concept/topic is stored under. */
+function pregenKey(topic: string, conceptId?: string): string {
+  return conceptId && /^[a-z0-9-]+$/.test(conceptId) ? String(conceptId) : slugifyTopic(topic);
+}
+
+/** The curriculum concept (and its course) behind a concept id, if any. */
+async function findConcept(conceptId?: string): Promise<{ concept: CurriculumConcept; course: CurriculumSubject } | null> {
+  if (!conceptId) return null;
   try {
-    const file = path.join(PREGEN_DIR, `${slugifyTopic(topic)}.json`);
-    if (fs.existsSync(file)) {
-      return JSON.parse(fs.readFileSync(file, 'utf8'));
+    for (const course of await listCurriculaAsync()) {
+      const concept = course.concepts.find((c) => c.id === conceptId);
+      if (concept) return { concept, course };
     }
-  } catch (e: any) {
-    console.warn(`[cache] Failed to read pregenerated file for "${topic}":`, e.message);
+  } catch (err: any) {
+    console.warn('[findConcept] curriculum lookup failed (non-fatal):', err?.message);
   }
   return null;
 }
+
+/** What the picture generator knows about a lesson: the concept's own authored
+ * material (key facts, verified worked examples, misconceptions, ladder,
+ * representation ideas) for a course concept; just the topic otherwise. */
+async function visualContextFor(topic: string, grade: string, conceptId?: string): Promise<VisualConceptContext> {
+  const found = await findConcept(conceptId);
+  return found ? conceptContext(found.concept, found.course, grade) : adHocContext(topic, grade);
+}
+
+/** An empty legacy diagram: keeps older UI code that reads lessonData.diagram
+ * safe without showing the static generator's generic template. */
+const EMPTY_DIAGRAM = { diagramType: 'flow' as const, title: '', description: '', nodes: [], connections: [] };
+
+/** Attach a record's board pictures to lesson data for the browser. Only pictures that
+ * passed the quality gates are in `record.visuals` (failures live in `visualsQuarantine`). */
+function withVisuals(lesson: any, record: PregenRecord | null): any {
+  const visuals = record?.visuals;
+  if (!visuals?.[VISUAL_KEYS.main]) return lesson;
+  return { ...lesson, visual: visuals[VISUAL_KEYS.main], visual3d: visuals[VISUAL_KEYS.space] ?? null };
+}
+
+// Console output is also written to logs/server-<start>.log so it can be read without the terminal.
+try {
+  fs.mkdirSync('logs', { recursive: true });
+  const logFile = `logs/server-${new Date().toISOString().replace(/[:.]/g, '-')}.log`;
+  const out = fs.createWriteStream(logFile, { flags: 'a' });
+  for (const level of ['log', 'info', 'warn', 'error'] as const) {
+    const orig = console[level].bind(console);
+    console[level] = (...a: any[]) => {
+      orig(...a);
+      try { out.write(`${new Date().toISOString()} [${level}] ${a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ')}\n`); } catch { /* logging must never break the server */ }
+    };
+  }
+} catch { /* read-only disk: keep console-only */ }
 
 const app = express();
 const server = http.createServer(app);
@@ -118,9 +196,18 @@ app.set('trust proxy', true);
 
 // How long the voice model may be kept waiting for a diagnosis. The Live tool
 // call blocks speech, so this is felt directly as silence by the child.
-const ASSESS_BUDGET_MS = Number(process.env.ASSESS_BUDGET_MS) || 2500;
+// Measured in a real session (2026-09-30): the diagnosis takes 3.1-4.3 s on gemini-3.6-flash, so the old
+// 2.5 s budget timed out on EVERY answer and the generic 'transfer move' replaced the real diagnosis.
+const ASSESS_BUDGET_MS = Number(process.env.ASSESS_BUDGET_MS) || 6500;
 
 app.use(express.json());
+
+// Browser-side events (board pictures, front-end errors) land in the same log as the server's.
+app.post('/api/client-log', (req, res) => {
+  const { tag, msg } = req.body || {};
+  console.log(`[client] ${String(tag || '').slice(0, 40)} ${String(msg || '').slice(0, 600)}`);
+  res.json({ ok: true });
+});
 
 // API health endpoint
 app.get('/api/health', (req, res) => {
@@ -131,378 +218,224 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Real-time Lesson Generation Endpoint: Uses Gemini 3.8 Flash to generate fresh lesson data for ANY topic & grade
+// Lesson for a topic/concept: served from the pregen store when it exists;
+// otherwise the lesson text and the main board picture are generated in
+// parallel, the picture fact-checked, and both saved so they are never
+// generated (or billed) again.
 app.post('/api/generate-lesson', async (req, res) => {
-  const { topic, grade } = req.body;
+  const { topic, grade, conceptId } = req.body;
   const targetTopic = topic || 'Photosynthesis';
   const targetGrade = grade || 'Middle School (Grade 6-8)';
 
   // ── Cache-first: serve pre-generated lesson if available ─────────────────
-  const cached = loadPregen(targetTopic);
+  const cached = await loadPregen(targetTopic, conceptId);
   if (cached?.lessonData) {
-    // Merge with static fallback so every field is present.
-    // The pregen AI generates: diagram, chalkNotes, quiz, overview, tagline.
-    // The static fallback supplies: explorer (with calculateOutcome fn), scene3d,
-    // photoVisual, suggestedQuestions, and any other UI-required fields.
+    // Merge with the static generator so every UI field exists (e.g. the explorer's
+    // calculateOutcome) — but its generic template diagram / 3D scene / photo never stand in for
+    // content the lesson does not have (D7), and tutor-only fields never leave the server.
     const staticBase = createDynamicLesson(targetTopic, targetGrade);
-    const mergedData = { ...staticBase, ...cached.lessonData };
-    console.log(`[API /api/generate-lesson] Cache HIT for "${targetTopic}" — serving merged pregenerated+static data`);
-    return res.json({ success: true, data: mergedData, photoUrl: cached.photoUrl ?? null, source: 'pregenerated-cache' });
+    const { scene3d: _s, photoVisual: _p, ...base } = staticBase as any;
+    const merged: any = { ...base, ...publicLesson(cached.lessonData), diagram: EMPTY_DIAGRAM };
+    const data = withVisuals(merged, cached);
+    const photo = verifiedPhoto(cached);
+    console.log(`[API /api/generate-lesson] Cache HIT for "${targetTopic}"${data.visual ? ' (with board pictures)' : ' (no board pictures yet — npm run pregen -- --visuals-only)'}${photo.photoUrl ? ' + verified photo' : ''}`);
+    return res.json({ success: true, data, photoUrl: photo.photoUrl, photoCaption: photo.photoCaption, source: 'pregenerated-cache' });
   }
-  console.log(`[API /api/generate-lesson] Cache MISS for "${targetTopic}" — calling Gemini`);
+  console.log(`[API /api/generate-lesson] Cache MISS for "${targetTopic}" — generating`);
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(200).json({
-      fallback: true,
-      message: 'Using local generator fallback (GEMINI_API_KEY not set)',
-    });
+    return res.status(200).json({ fallback: true, message: 'Using local generator fallback (GEMINI_API_KEY not set)' });
   }
 
   try {
-    const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: { 'User-Agent': 'aistudio-build' },
-      },
-    });
+    const found = await findConcept(conceptId);
+    const ctx = found ? conceptContext(found.concept, found.course, targetGrade) : adHocContext(targetTopic, targetGrade);
+    const model = gatewayModel(apiKey, 0, 40_000);
+    const cacheKey = pregenKey(targetTopic, conceptId);
 
-    const prompt = `You are a master pedagogical curriculum designer. Generate a comprehensive, highly engaging, age-appropriate interactive lesson for a student in "${targetGrade}" on the topic "${targetTopic}".
-Return a JSON object strictly following this JSON schema:
-{
-  "topic": "${targetTopic}",
-  "grade": "${targetGrade}",
-  "subject": "e.g. Biology, Physics, History, Literature, Computer Science, Earth Science, Mathematics",
-  "tagline": "A punchy, inspiring 1-sentence subtitle for the lesson",
-  "overview": "A rich, clear 2-sentence conceptual summary suitable for ${targetGrade}",
-  "diagram": {
-    "diagramType": "flow (or 'cycle' if the topic is a recurring loop like Calvin cycle, Krebs cycle, Water cycle, etc.)",
-    "title": "Title of the concept diagram or cycle",
-    "description": "Short explanation of the diagram",
-    "nodes": [
-      {
-        "id": "node-1",
-        "label": "Specific name of step/component (e.g. 'Photon Absorption', 'Water Photolysis' - NEVER 'Node 1')",
-        "sublabel": "Subtitle or key formula/location",
-        "category": "Classification (e.g. 'Light Reaction', 'Catalysis', 'Product')",
-        "color": "emerald",
-        "details": "1-2 sentences explaining this node clearly"
+    // Lesson text and teaching picture are independent: two gated generators, one wait.
+    // (A child is waiting, so 2 attempts each; the pregen run uses 3 with a larger budget.)
+    const [text, picture] = await Promise.all([
+      generateLessonText(ctx, { model, prerequisiteDetails: found?.concept.prerequisiteDetails, maxAttempts: 1, critic: false, seed: cacheKey, timeoutMs: 40_000 })
+        .catch((err: any) => ({ lesson: null, quality: [], attempts: 0, criticRan: false, error: String(err?.message || err) } as Awaited<ReturnType<typeof generateLessonText>>)),
+      generateBoardVisual(ctx, { purpose: 'teach' }, { model, timeoutMs: 40_000, label: 'main.live', maxAttempts: 1, critic: false })
+        .catch((err: any) => ({ visual: null, issues: [], quality: [], attempts: 0, keyFactsCovered: [], criticRan: false, error: String(err?.message || err) } as Awaited<ReturnType<typeof generateBoardVisual>>)),
+    ]);
+
+    if (text.lesson) {
+      let mainPicture = picture.visual;
+      // The picture was drawn in parallel, so only now is the quiz known: a picture that states its answer is dropped.
+      if (mainPicture && errorsOf(lintPictureVsQuiz(mainPicture, text.lesson.quiz, VISUAL_KEYS.main)).length) {
+        console.warn('[API /api/generate-lesson] board picture states the quiz answer — not shown or saved');
+        mainPicture = null;
       }
-    ],
-    "connections": [
-      { "from": "Name of Source Node", "to": "Name of Target Node", "label": "transformation or causal link" }
-    ]
-  },
-  "chalkNotes": {
-    "title": "Chalkboard Title",
-    "subtitle": "Chalkboard subtitle",
-    "coreRuleOrFormula": "The core governing law, mathematical formula, or central axiom",
-    "bulletPoints": [
-      "Key lecture point 1",
-      "Key lecture point 2",
-      "Key lecture point 3",
-      "Key lecture point 4"
-    ],
-    "keyTakeaways": [
-      "Crucial exam/conceptual takeaway 1",
-      "Crucial exam/conceptual takeaway 2"
-    ]
-  },
-  "explorer": {
-    "title": "Interactive Simulator / Experiment Title",
-    "description": "What the student is testing or exploring",
-    "variables": [
-      {
-        "id": "var1",
-        "name": "Variable 1 Name",
-        "min": 1,
-        "max": 100,
-        "step": 1,
-        "defaultValue": 50,
-        "unit": "unit",
-        "description": "What this variable controls"
-      },
-      {
-        "id": "var2",
-        "name": "Variable 2 Name",
-        "min": 1,
-        "max": 100,
-        "step": 1,
-        "defaultValue": 50,
-        "unit": "unit",
-        "description": "What this variable controls"
-      }
-    ],
-    "outcomeLabel": "Resulting Metric Name",
-    "outcomeFormulaString": "Formula or relation representing the outcome"
-  },
-  "quiz": {
-    "question": "A thought-provoking conceptual multiple-choice question testing true understanding (not rote memorization)",
-    "options": [
-      "Option A",
-      "Option B",
-      "Option C",
-      "Option D"
-    ],
-    "correctIndex": 1,
-    "explanation": "Clear pedagogical explanation why that option is correct and why others are wrong",
-    "hint": "A helpful guidance hint without giving away the answer"
-  },
-  "suggestedQuestions": [
-    "Thoughtful question 1 a student might ask",
-    "Thoughtful question 2",
-    "Thoughtful question 3"
-  ],
-  "scene3d": {
-    "sceneType": "orbit | molecule | geometry | network | dna | globe | particles",
-    "title": "Short title for 3D model",
-    "description": "1 sentence describing the 3D spatial simulation",
-    "elements": [
-      { "name": "Element name", "description": "Element description", "color": "#34d399" }
-    ]
-  },
-  "photoVisual": {
-    "caption": "Photographic / realistic observation caption",
-    "promptUsed": "Detailed photographic visual prompt description",
-    "annotations": [
-      { "label": "Key element", "description": "What to observe here", "x": 40, "y": 50 }
-    ]
-  }
-}
-
-Ensure the content is scientifically/historically accurate, perfectly adapted to ${targetGrade}, and has 4 to 6 diagram nodes. Each diagram node MUST have a real, descriptive scientific or historical name (e.g., 'Photon Absorption', 'Water Photolysis', 'ATP Synthesis', 'Calvin Cycle', 'Glucose Synthesis') - NEVER generic names like 'Node 1', 'Node 2', 'Step 1', or 'Concept A'. For the node colors, choose from 'emerald', 'amber', 'sky', 'violet', 'rose', 'teal'. Choose the scene3d sceneType carefully based on whether it is astronomy/physics ('orbit'), chemistry/biology ('molecule' or 'dna'), history/geography ('globe'), mathematics ('geometry'), or engineering/computing ('network').`;
-
-    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
-    let text = '';
-    let lastError: any = null;
-
-    for (const modelName of candidateModels) {
       try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-          },
-        });
-        text = response.text || '';
-        if (text) break;
-      } catch (modelErr: any) {
-        lastError = modelErr;
-        console.warn(`[API /api/generate-lesson] Model ${modelName} returned status ${modelErr?.status || modelErr?.code || 'error'}, trying next candidate...`);
-      }
-    }
-
-    if (text) {
-      const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
-      const parsed = JSON.parse(cleanText);
-      // Save to pregenerated cache for future requests
-      try {
-        if (!fs.existsSync(PREGEN_DIR)) fs.mkdirSync(PREGEN_DIR, { recursive: true });
-        const cacheFile = path.join(PREGEN_DIR, `${slugifyTopic(targetTopic)}.json`);
-        if (!fs.existsSync(cacheFile)) {
-          const cacheEntry = {
-            topic: targetTopic, grade: targetGrade,
-            slug: slugifyTopic(targetTopic),
+        const existing = await getPregenAsync([cacheKey]);
+        if (!existing?.lessonData) {
+          await savePregenAsync(cacheKey, {
+            topic: targetTopic, grade: targetGrade, conceptId: conceptId || undefined, slug: cacheKey,
             generatedAt: new Date().toISOString(),
-            lessonData: parsed,
-            diagrams: { '__main__': parsed.diagram },
-            photoUrl: null,
-          };
-          fs.writeFileSync(cacheFile, JSON.stringify(cacheEntry, null, 2), 'utf8');
-          console.log(`[API /api/generate-lesson] Saved new lesson to cache: ${slugifyTopic(targetTopic)}.json`);
+            lessonData: text.lesson,
+            visuals: { ...(existing?.visuals || {}), ...(mainPicture ? { [VISUAL_KEYS.main]: mainPicture } : {}) },
+            visualsDeclined: existing?.visualsDeclined,
+            visualsQuarantine: { ...(existing?.visualsQuarantine || {}), ...(picture.withheld && picture.quarantined ? { [VISUAL_KEYS.main]: { visual: picture.quarantined, issues: picture.quality } } : {}) },
+            photoUrl: existing?.photoUrl ?? null, photoMeta: existing?.photoMeta,
+            quality: { version: 'quality-v1', checkedAt: new Date().toISOString(), errors: 0, warnings: text.quality.length + picture.quality.length, criticRan: text.criticRan && picture.criticRan, coverageGaps: [], untaughtLadderItems: [], withheld: picture.withheld ? [VISUAL_KEYS.main] : [], notes: ['generated live on a cache miss (2 attempts) — run npm run pregen for the full pass'] },
+          });
+          console.log(`[API /api/generate-lesson] Saved new lesson${mainPicture ? ' and board picture' : ''} to pregen store: ${cacheKey}`);
         }
       } catch (cacheErr: any) {
         console.warn('[API /api/generate-lesson] Cache save failed (non-fatal):', cacheErr.message);
       }
-      return res.json({ success: true, data: parsed, source: 'gemini' });
+      const { scene3d: _s, photoVisual: _p, ...base } = createDynamicLesson(targetTopic, targetGrade) as any;
+      const lesson = { ...base, ...publicLesson(text.lesson), diagram: EMPTY_DIAGRAM, visual: mainPicture ?? null, visual3d: null };
+      return res.json({ success: true, data: lesson, source: 'gemini' });
     }
 
-    console.warn('[API /api/generate-lesson] Models temporarily unavailable. Serving intelligent curriculum generator data.');
-    const fallbackData = createDynamicLesson(targetTopic, targetGrade);
-    return res.json({ success: true, data: fallbackData, source: 'intelligent-curriculum-engine' });
+    // Fail closed: a lesson that failed the gates is NOT shown as if it were sound. The curriculum-engine
+    // lesson is a plain template; the response says so.
+    console.warn(`[API /api/generate-lesson] no lesson passed the quality gates for "${targetTopic}" (${text.withheld ? 'withheld: ' + text.quality.map((q) => q.message).join('; ').slice(0, 300) : text.error || 'unknown'}) — serving the curriculum-engine template`);
+    return res.json({ success: true, data: createDynamicLesson(targetTopic, targetGrade), source: 'intelligent-curriculum-engine' });
   } catch (err: any) {
     console.error('[API /api/generate-lesson] Error in lesson generation pipeline:', err?.message || err);
-    const fallbackData = createDynamicLesson(targetTopic, targetGrade);
-    return res.status(200).json({
-      success: true,
-      data: fallbackData,
-      source: 'intelligent-curriculum-engine',
-    });
+    return res.status(200).json({ success: true, data: createDynamicLesson(targetTopic, targetGrade), source: 'intelligent-curriculum-engine' });
   }
 });
 
-// Real-time Diagram Update Endpoint — generates ONLY a fresh 2D diagram for the current teaching focus.
-// Called by the update_diagram tool during a live voice session to update nodes without reloading the full lesson.
-app.post('/api/update-diagram', async (req, res) => {
-  const { topic, grade, focus } = req.body;
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(400).json({ error: 'No API key' });
-
-  // ── Cache-first: serve pre-generated diagram variant if available ─────────
-  const cachedPregen = loadPregen(topic);
-  if (cachedPregen?.diagrams) {
-    const focusSlug = slugifyTopic(focus || topic);
-    const cachedDiagram =
-      cachedPregen.diagrams[focusSlug] ||
-      cachedPregen.diagrams['__main__'] ||
-      cachedPregen.lessonData?.diagram;
-    if (cachedDiagram) {
-      console.log(`[API /api/update-diagram] Cache HIT for "${topic}" focus="${focus || topic}" — serving pregenerated diagram`);
-      return res.json({ success: true, diagram: cachedDiagram, source: 'pregenerated-cache' });
-    }
+/** Which picture a focus asks for: a known misconception gets its contrast case,
+ * "apply" gets the application picture, anything else a focused teaching picture. */
+function visualRequestFor(ctx: VisualConceptContext, focus: string): { req: VisualRequest; key: string } {
+  const f = focus.trim();
+  if (/^apply\b/i.test(f)) {
+    const item = ctx.ladderItems.find((l) => l.level === 3) || ctx.ladderItems.find((l) => l.level === 4);
+    if (item) return { req: { purpose: 'apply', item }, key: VISUAL_KEYS.apply };
   }
-  console.log(`[API /api/update-diagram] Cache MISS for "${topic}" — calling Gemini`);
-
-  const prompt = `You are an expert pedagogical diagram designer. Generate a concise 2D concept diagram specifically focused on: "${focus || topic}" for a student in "${grade || 'Secondary 2'}".
-
-Return ONLY valid JSON matching this exact schema (no markdown fences):
-{
-  "diagramType": "flow",
-  "title": "Concise title for this diagram view",
-  "description": "One sentence explaining what this diagram shows",
-  "nodes": [
-    {
-      "id": "node-1",
-      "label": "Real descriptive name (e.g. 'Hypotenuse', 'Right Angle Vertex') — NEVER 'Node 1'",
-      "sublabel": "Key formula, location, or subtitle",
-      "category": "Classification label",
-      "color": "emerald",
-      "details": "1-2 clear sentences explaining this concept node"
-    }
-  ],
-  "connections": [
-    { "from": "Source Node Label", "to": "Target Node Label", "label": "relationship" }
-  ]
+  const bare = f.replace(/^contrast\s*:?\s*/i, '');
+  const m = ctx.misconceptions
+    .map((mis) => ({ mis, score: Math.max(matchScore(bare, mis.belief), mis.id ? matchScore(bare, mis.id.replace(/-/g, ' ')) : 0) }))
+    .filter((x) => x.score >= 0.6)
+    .sort((a, b) => b.score - a.score)[0]?.mis;
+  if (m) {
+    const id = m.id || misconceptionKey(m.belief);
+    return { req: { purpose: 'contrast', misconception: { ...m, id } }, key: VISUAL_KEYS.contrast(id) };
+  }
+  return { req: { purpose: 'teach', focus: f }, key: VISUAL_KEYS.focus(slugifyTopic(f)) };
 }
 
-Rules:
-- 3 to 5 nodes maximum (optimised for screen space)
-- Node colors from: emerald, amber, sky, violet, rose, teal
-- Every node must have a real descriptive label — NEVER generic names
-- Focus specifically on: "${focus || topic}"`;
+// The tutor asked to show something specific (update_diagram tool, or the
+// board's own request). Prepared pictures are used first — the contrast case
+// for a misconception, the application picture, anything drawn before for this
+// focus — and only on a miss is a new picture drawn, fact-checked and saved.
+// There is no generic fallback: if nothing can be drawn, the board keeps the
+// picture it already has rather than show a template.
+app.post('/api/update-diagram', async (req, res) => {
+  const { topic, grade, focus, conceptId } = req.body;
+  const targetTopic = String(topic || '');
+  const targetGrade = String(grade || 'Grade 8');
+  const focusText = String(focus || targetTopic);
+
+  const record = await loadPregen(targetTopic, conceptId);
+  const hit = findVisualForFocus(record?.visuals, focusText, slugifyTopic);
+  if (hit) {
+    console.log(`[API /api/update-diagram] "${focusText}" → prepared picture "${hit.key}" (${hit.visual.title})`);
+    return res.json({ success: true, visual: hit.visual, key: hit.key, source: 'pregenerated-cache' });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.json({ success: false, error: 'GEMINI_API_KEY not set — keeping the current picture' });
 
   try {
-    const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
-    let text = '';
-    for (const modelName of ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest']) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: prompt,
-          config: { responseMimeType: 'application/json' },
-        });
-        text = response.text || '';
-        if (text) {
-          console.log(`[API /api/update-diagram] Generated with ${modelName} for topic: "${focus || topic}"`);
-          break;
-        }
-      } catch (modelErr: any) {
-        console.warn(`[API /api/update-diagram] ${modelName} failed: ${modelErr?.message || modelErr?.status || 'unknown'}`);
-        continue;
-      }
+    const ctx = await visualContextFor(targetTopic, targetGrade, conceptId);
+    let { req: visualReq, key } = visualRequestFor(ctx, focusText);
+    // An older lesson with no picture at all, asked for the topic itself: draw its main
+    // teaching picture and keep it as such, so every later load has it.
+    if (!record?.visuals?.[VISUAL_KEYS.main] && slugifyTopic(focusText) === slugifyTopic(targetTopic)) {
+      visualReq = { purpose: 'teach' };
+      key = VISUAL_KEYS.main;
     }
-    if (text) {
-      const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
-      const diagram = JSON.parse(cleanText);
-      return res.json({ success: true, diagram, source: 'gemini' });
+    console.log(`[API /api/update-diagram] no prepared picture for "${focusText}" — drawing a ${visualReq.purpose} picture`);
+    const r = await generateBoardVisual(ctx, visualReq, { apiKey, timeoutMs: 20_000, label: `${visualReq.purpose}.live`, maxAttempts: 1, critic: false, key, quiz: record?.lessonData?.quiz });
+    if (!r.visual) return res.json({ success: false, error: r.error || 'no picture could be drawn — keeping the current one' });
+
+    // Persist so this focus is never drawn (or billed) twice for this concept.
+    try {
+      const cacheKey = pregenKey(targetTopic, conceptId);
+      const existing = await getPregenAsync([cacheKey]);
+      await savePregenAsync(cacheKey, {
+        ...(existing ?? {
+          topic: targetTopic, grade: targetGrade, conceptId: conceptId || undefined, slug: cacheKey,
+          generatedAt: new Date().toISOString(), lessonData: null, photoUrl: null,
+        }),
+        visuals: { ...(existing?.visuals || {}), [key]: r.visual },
+      });
+      console.log(`[API /api/update-diagram] saved picture "${key}" to pregen store: ${cacheKey}`);
+    } catch (cacheErr: any) {
+      console.warn('[API /api/update-diagram] Cache save failed (non-fatal):', cacheErr.message);
     }
-    // All AI models unavailable — serve topic-specific static fallback diagram
-    console.warn(`[API /api/update-diagram] All models unavailable. Serving static fallback diagram for: "${topic}"`);
-    const fallbackLesson = createDynamicLesson(topic, grade || 'Secondary 2');
-    return res.json({ success: true, diagram: fallbackLesson.diagram, source: 'static-fallback' });
+    return res.json({ success: true, visual: r.visual, key, source: 'gemini' });
   } catch (err: any) {
     console.error('[API /api/update-diagram] Error:', err?.message);
-    // Even on unexpected error, return a usable diagram rather than 500
-    try {
-      const fallbackLesson = createDynamicLesson(topic, grade || 'Secondary 2');
-      return res.json({ success: true, diagram: fallbackLesson.diagram, source: 'static-fallback' });
-    } catch {
-      return res.status(500).json({ error: 'Diagram generation failed' });
-    }
+    return res.json({ success: false, error: 'picture generation failed — keeping the current picture' });
   }
 });
 
-// Real-time AI Image Generation Endpoint for Photos & Realistic Visuals
+// Lesson photo. Two cases (docs/BOARD_VISUALS.md §Photos, decision D6):
+//   default (no prompt) — the concept's lesson-specific photo: served from the pregen store only when a vision
+//     review verified it; otherwise planned from the concept's key facts, generated, reviewed, and cached only if verified;
+//   custom prompt (the child or tutor asked to see something) — generated and reviewed against that request, never cached.
+// An image nobody has looked at is never returned, and there is no stock-photo fallback: on failure the answer is
+// { success:false } and the UI says so. Every image is labelled AI-generated with the reviewer's neutral caption.
 app.post('/api/generate-image', async (req, res) => {
-  const { prompt: userPrompt, topic } = req.body || {};
-  const imagePrompt =
-    userPrompt ||
-    `A high-resolution, photorealistic, scientific educational photo depicting ${topic || 'science subject'}, sharp focus, authentic natural lighting, realistic textures, macro/telephoto lens, no text overlays, cinematic clarity`;
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.json({
-      success: true,
-      imageUrl: `https://picsum.photos/seed/${encodeURIComponent(String(topic || 'education').toLowerCase())}/1280/720`,
-      caption: `Visual Representation of ${topic || 'Topic'}`,
-      promptUsed: imagePrompt,
-    });
+  const { prompt: userPrompt, topic, conceptId, grade } = req.body || {};
+  const cacheKey = !userPrompt
+    ? (conceptId && /^[a-z0-9-]+$/.test(conceptId) ? String(conceptId) : slugifyTopic(topic || 'science'))
+    : null;
+  if (cacheKey) {
+    const cached = await getPregenAsync([cacheKey]);
+    const photo = verifiedPhoto(cached);
+    if (photo.photoUrl) {
+      console.log(`[API /api/generate-image] Cache HIT for "${topic}" — serving verified photo`);
+      return res.json({ success: true, imageUrl: photo.photoUrl, caption: photo.photoCaption, aiGenerated: true, source: 'pregenerated-cache' });
+    }
   }
 
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.json({ success: false, error: 'Picture generation is not configured on this server.' });
+
   try {
-    const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: { 'User-Agent': 'aistudio-build' },
-      },
-    });
+    const targetTopic = String(topic || 'Science');
+    const found = await findConcept(conceptId);
+    const ctx = found ? conceptContext(found.concept, found.course, grade) : adHocContext(targetTopic, String(grade || 'Grade 8'));
+    const model = gatewayModel(apiKey, 0, 60_000);
+    const imageGen = geminiImageGenerator(apiKey);
 
-    // Try nano banana image generation with candidate models
-    const imageCandidateModels = ['gemini-3.1-flash-image', 'gemini-3.1-flash-lite-image'];
-    let foundBase64: string | null = null;
-
-    for (const imgModel of imageCandidateModels) {
-      try {
-        const imgResponse = await ai.models.generateContent({
-          model: imgModel,
-          contents: {
-            parts: [{ text: imagePrompt }],
-          },
-          config: {
-            imageConfig: {
-              aspectRatio: '16:9',
-            },
-          },
-        });
-
-        const parts = imgResponse.candidates?.[0]?.content?.parts || [];
-        for (const part of parts) {
-          if (part.inlineData?.data) {
-            foundBase64 = part.inlineData.data;
-            break;
-          }
-        }
-        if (foundBase64) break;
-      } catch (imgErr: any) {
-        console.warn(`[API /api/generate-image] Model ${imgModel} returned error, trying next candidate...`, imgErr?.message);
+    if (userPrompt) {
+      const wanted = String(userPrompt).slice(0, 300);
+      const scene = `${wanted}. A clear, realistic, uncluttered educational image. Do not put any words, letters, numbers or labels anywhere in the image.`;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const img = await imageGen(scene);
+        if (!img) continue;
+        const review = await reviewPhoto(model, ctx, wanted, img);
+        if (!review.ran) break; // never show an image nobody has looked at
+        if (review.ok) return res.json({ success: true, imageUrl: `data:${img.mimeType};base64,${img.data}`, caption: review.caption, aiGenerated: true, promptUsed: wanted });
       }
+      return res.json({ success: false, error: 'I could not make a picture of that I trust to be accurate. Try describing it another way.' });
     }
 
-    if (foundBase64) {
-      return res.json({
-        success: true,
-        imageUrl: `data:image/png;base64,${foundBase64}`,
-        caption: `AI Generated Real-Time Photographic Study: ${topic || 'Subject'}`,
-        promptUsed: imagePrompt,
+    const out = await generateVerifiedPhoto(ctx, { model, imageGen });
+    const existing = await getPregenAsync([cacheKey!]);
+    try {
+      await savePregenAsync(cacheKey!, {
+        ...(existing ?? { topic: targetTopic, conceptId: conceptId || undefined, slug: cacheKey!, generatedAt: new Date().toISOString(), lessonData: null }),
+        photoUrl: out.photoUrl, photoMeta: out.meta ?? existing?.photoMeta,
       });
-    }
-
-    // If no inlineData returned, provide high-quality fallback
-    return res.json({
-      success: true,
-      imageUrl: `https://picsum.photos/seed/${encodeURIComponent(String(topic || 'education').toLowerCase())}/1280/720`,
-      caption: `Visual Study: ${topic || 'Topic'}`,
-      promptUsed: imagePrompt,
-    });
+    } catch (cacheErr: any) { console.warn('[API /api/generate-image] Cache save failed (non-fatal):', cacheErr.message); }
+    if (!out.photoUrl) return res.json({ success: false, error: 'No verified picture is available for this topic yet.' });
+    return res.json({ success: true, imageUrl: out.photoUrl, caption: out.meta?.caption, aiGenerated: true, promptUsed: out.meta?.intent });
   } catch (err: any) {
-    console.error('[API /api/generate-image] Image generation failed, using fallback:', err?.message);
-    return res.json({
-      success: true,
-      imageUrl: `https://picsum.photos/seed/${encodeURIComponent(String(topic || 'education').toLowerCase())}/1280/720`,
-      caption: `Visual Study: ${topic || 'Topic'}`,
-      promptUsed: imagePrompt,
-    });
+    console.error('[API /api/generate-image] failed:', err?.message);
+    return res.json({ success: false, error: 'Picture generation failed — please try again.' });
   }
 });
 
@@ -632,52 +565,138 @@ const upload = multer({
   },
 });
 
-// GET /api/curricula — list all curricula (normalised for frontend)
-app.get('/api/curricula', (_req, res) => {
-  const all = listCurricula();
-  // Return a lightweight version suitable for the subject selector
-  const normalised = all.map(c => ({
+// ─── Curriculum library (docs/CURRICULUM.md §5–§6) ─────────────
+// A course = board + grade + subject. Students see only the courses for
+// their own board + grade; uploading and deleting is admin-only.
+
+/** Lightweight course shape for the subject selector / onboarding. */
+function courseSummary(c: any) {
+  return {
     subjectId: c.id,
     label: c.label,
+    subject: c.subject || c.label,
+    board: c.board || null,
+    gradeLevel: c.gradeLevel ?? gradeLevelFromLabel(c.grade) ?? null,
     grade: c.grade,
+    subjectMode: subjectModeForCurriculum(c),
     source: c.source,
     conceptCount: c.concepts.length,
-    concepts: c.concepts.map(con => ({
+    concepts: c.concepts.map((con: any) => ({
       id: con.id,
       label: con.label,
       typicalTeachingOrder: con.typicalTeachingOrder,
       prerequisites: con.prerequisites || [],
       chapter: con.chapter || null,
+      chapterId: con.chapterId || null,
+      chapterNumber: con.chapterNumber ?? null,
     })),
-  }));
-  res.json({ curricula: normalised });
+  };
+}
+
+// GET /api/curricula?board=IGCSE&grade=8 — courses, optionally filtered to a
+// learner's board + grade. No filter = every course (admin/parent views).
+app.get('/api/curricula', async (req, res) => {
+  const all = await listCurriculaAsync();
+  const board = typeof req.query.board === 'string' ? req.query.board : undefined;
+  const grade = typeof req.query.grade === 'string' ? req.query.grade : undefined;
+  const filtered = (board || grade)
+    ? all.filter(c => courseMatchesLearner(c, { board, gradeLevel: gradeLevelFromLabel(grade), grade }))
+    : all;
+  res.json({ curricula: filtered.map(courseSummary) });
 });
 
-// POST /api/curriculum/upload — one or more PDFs → background job.
-// Accepts the new 'pdfs' field (multiple) and the old single 'pdf' field.
+// GET /api/catalog — what signup and the admin form can offer: known boards
+// plus any board in the library, grades 1–12, and which board+grade pairs
+// actually have content.
+app.get('/api/catalog', async (_req, res) => {
+  const all = await listCurriculaAsync();
+  const available = all
+    .filter(c => c.board && (c.gradeLevel ?? gradeLevelFromLabel(c.grade)))
+    .map(c => ({ board: c.board!, gradeLevel: (c.gradeLevel ?? gradeLevelFromLabel(c.grade))!, subject: c.subject || c.label, subjectId: c.id }));
+  const boards = [...new Set([...available.map(a => a.board), ...KNOWN_BOARDS])];
+  res.json({ boards, grades: GRADE_LEVELS.map(g => ({ level: g, label: gradeLabel(g) })), available });
+});
+
+// GET /api/admin/check — lets the admin screen validate a token before use.
+app.get('/api/admin/check', async (req, res) => {
+  const r = await checkAdmin(req);
+  if (r.ok) return res.json({ ok: true, via: r.via });
+  res.status(r.status || 401).json({ ok: false, error: r.error });
+});
+
+// GET /api/admin/courses — full course list with verification reports.
+app.get('/api/admin/courses', requireAdmin, async (_req, res) => {
+  const all = await listCurriculaAsync();
+  res.json({
+    courses: all.map(c => ({
+      ...courseSummary(c),
+      sources: c.sources || [],
+      conceptTypes: c.conceptTypes || {},
+      verification: c.verification || null,
+      scopeSources: [...new Set((c.scopeMaps || []).map(s => s.source || 'unknown'))],
+      prerequisiteEdges: c.concepts.reduce((n, x) => n + (x.prerequisites?.length || 0), 0),
+      updatedAt: c.updatedAt || null,
+      busy: isCourseBusy(c.id),
+    })),
+  });
+});
+
+// DELETE /api/admin/courses/:id — remove a course from the library.
+app.delete('/api/admin/courses/:id', requireAdmin, async (req, res) => {
+  if (isCourseBusy(req.params.id)) return (res as any).status(409).json({ error: 'That course is being ingested right now.' });
+  const ok = await deleteCurriculum(req.params.id);
+  if (!ok) return (res as any).status(404).json({ error: 'Course not found' });
+  res.json({ ok: true });
+});
+
+// POST /api/curriculum/upload — ADMIN ONLY. Textbook PDF(s) + optional
+// official syllabus PDF(s) + chapterLimit (number | "all", default 3) for one board + grade + subject → background
+// ingest job (split → extract → structure → AI review → publish).
+// requireAdmin runs BEFORE multer so an unauthorised upload is never written to disk.
 app.post('/api/curriculum/upload',
-  upload.fields([{ name: 'pdfs', maxCount: 10 }, { name: 'pdf', maxCount: 1 }]),
+  requireAdmin,
+  upload.fields([{ name: 'textbooks', maxCount: 10 }, { name: 'syllabus', maxCount: 3 }, { name: 'pdfs', maxCount: 10 }]),
   (req: any, res: any) => {
-    const files: any[] = [...(req.files?.pdfs || []), ...(req.files?.pdf || [])];
-    const cleanup = () => files.forEach(f => fs.promises.unlink(f.path).catch(() => {}));
+    const textbooks: any[] = [...(req.files?.textbooks || []), ...(req.files?.pdfs || [])];
+    const syllabi: any[] = [...(req.files?.syllabus || [])];
+    const all = [...textbooks, ...syllabi];
+    const cleanup = () => all.forEach(f => fs.promises.unlink(f.path).catch(() => {}));
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) { cleanup(); return res.status(500).json({ error: 'GEMINI_API_KEY not set on the server' }); }
-    if (!files.length) return res.status(400).json({ error: 'No PDF received' });
-    const subjectLabel = String(req.body.subjectLabel || '').trim();
-    const grade = String(req.body.grade || '').trim();
-    // Derived from the subject name, so Book 2A and Book 2B land in the same subject.
-    const subjectId = String(req.body.subjectId || subjectLabel).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    if (!subjectLabel || !grade || !subjectId) { cleanup(); return res.status(400).json({ error: 'Subject name and grade are required' }); }
-
+    if (!textbooks.length) { cleanup(); return res.status(400).json({ error: 'Add at least one textbook PDF.' }); }
+    const board = normaliseBoard(String(req.body.board || ''));
+    const subject = normaliseSubject(String(req.body.subject || ''));
+    const gradeLevel = gradeLevelFromLabel(String(req.body.grade || ''));
+    if (!board || !subject || !gradeLevel) {
+      cleanup();
+      return res.status(400).json({ error: 'Board, grade (1–12) and subject are all required.' });
+    }
+    // Chapter limit (D-2026-09-26-9): "all" = the whole book; a number = only
+    // the first N chapters are read and published. Missing field → the
+    // DEFAULT_CHAPTER_LIMIT env var, else 3 — the demo-safe default, so a
+    // direct API call can never read and pre-generate a whole book by accident.
+    const rawLimit = String(req.body.chapterLimit ?? process.env.DEFAULT_CHAPTER_LIMIT ?? '3').trim().toLowerCase();
+    const chapterLimit = rawLimit === 'all' || rawLimit === '0' ? undefined : Number.parseInt(rawLimit, 10);
+    if (chapterLimit !== undefined && (!Number.isFinite(chapterLimit) || chapterLimit < 1 || chapterLimit > 200)) {
+      cleanup();
+      return res.status(400).json({ error: 'Chapters to load must be a number from 1 to 200, or "all".' });
+    }
+    const courseId = makeCourseId(board, gradeLevel, subject);
+    if (isCourseBusy(courseId)) {
+      cleanup();
+      return res.status(409).json({ error: `${board} · ${gradeLabel(gradeLevel)} · ${subject} is already being ingested — wait for that job to finish.` });
+    }
     const job = startIngestJob({
-      apiKey, subjectId, subjectLabel, grade,
-      files: files.map(f => ({ path: f.path, originalName: f.originalname })),
+      apiKey, board, gradeLevel, subject,
+      textbooks: textbooks.map(f => ({ path: f.path, originalName: f.originalname })),
+      syllabi: syllabi.map(f => ({ path: f.path, originalName: f.originalname })),
+      chapterLimit,
     });
-    res.json({ success: true, jobId: job.id, subjectId });
+    res.json({ success: true, jobId: job.id, subjectId: courseId, chapterLimit: chapterLimit ?? 'all' });
   });
 
-// GET /api/curriculum/jobs/:id — progress of an ingestion job.
-app.get('/api/curriculum/jobs/:id', (req, res) => {
+// GET /api/curriculum/jobs/:id — progress of an ingestion job (admin).
+app.get('/api/curriculum/jobs/:id', requireAdmin, (req, res) => {
   const job = getJob(req.params.id);
   if (!job) return (res as any).status(404).json({ error: 'Unknown job (the server may have restarted)' });
   res.json({ job });
@@ -720,12 +739,21 @@ app.get('/api/learners/:studentId', requireAuth, requireOwnership, async (req, r
 });
 app.post('/api/learners', requireAuth, async (req, res) => {
   try {
-    const { studentId, name, grade } = req.body;
+    const { studentId, name, grade, board } = req.body;
     if (!studentId || !name || !grade)
       return (res as any).status(400).json({ error: 'studentId, name, grade required' });
     if ((req as any).authUid !== String(studentId))
       return (res as any).status(403).json({ error: 'Not authorized for this learner profile' });
-    res.json({ learner: await getOrCreateLearner(studentId, name, grade) });
+    // docs/CURRICULUM.md §6: board + grade chosen at signup decide which
+    // courses this learner sees. The grade is stored both as a number (for
+    // matching and the age band) and as a display label.
+    const gradeLevel = gradeLevelFromLabel(req.body.gradeLevel ?? grade);
+    res.json({
+      learner: await getOrCreateLearner(studentId, name, gradeLevel ? gradeLabel(gradeLevel) : String(grade), {
+        board: board ? normaliseBoard(String(board)) : undefined,
+        gradeLevel,
+      }),
+    });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || 'Failed to create learner' });
   }
@@ -790,6 +818,24 @@ app.post(
   },
 );
 
+// T22 (FR-20) — parent/teacher marks a PARK_AND_ESCALATE event as reviewed
+// from the Parent Portal, so it stops showing as needing attention.
+app.post(
+  '/api/learners/:studentId/escalations/:escalationId/resolve',
+  requireAuth, requireOwnership,
+  async (req, res) => {
+    try {
+      const { studentId, escalationId } = req.params;
+      const { note } = req.body || {};
+      const rec = await resolveEscalation(studentId, escalationId, note);
+      if (!rec) return (res as any).status(404).json({ error: 'Escalation not found' });
+      res.json({ escalation: rec });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || 'Failed to resolve escalation' });
+    }
+  },
+);
+
 // ─── Adaptive session endpoints ─────────────────────────────────
 app.post('/api/session/start', requireAuth, async (req, res) => {
   try {
@@ -799,9 +845,9 @@ app.post('/api/session/start', requireAuth, async (req, res) => {
     if ((req as any).authUid !== String(studentId))
       return (res as any).status(403).json({ error: 'Not authorized for this learner profile' });
 
-    const learner = await getOrCreateLearner(studentId, name || 'Student', grade || 'Secondary 2 (Grade 8)');
     const curriculum = getCurriculum(subjectId);
     if (!curriculum) return (res as any).status(404).json({ error: 'Curriculum not found' });
+    const learner = await getOrCreateLearner(studentId, name || 'Student', grade || curriculum.grade);
     await ensureSubject(studentId, subjectId, curriculum.label, curriculum.grade, curriculum.source);
 
     // Bug found 2026-09-26: this route always auto-picked
@@ -816,7 +862,7 @@ app.post('/api/session/start', requireAuth, async (req, res) => {
     const masteredIds = Object.values(learner.subjects[subjectId]?.conceptStates || {})
       .filter(cs => isConceptMastered(cs)).map(cs => cs.conceptId);
     const nextConcept = requestedConcept || nextUnmasteredConcept(curriculum, masteredIds) || curriculum.concepts[0];
-    await ensureConceptState(studentId, subjectId, nextConcept.id, nextConcept.label, 'direct_explanation', nextConcept.chapter || 'general');
+    await ensureConceptState(studentId, subjectId, nextConcept.id, nextConcept.label, 'direct_explanation', conceptTypeFor(nextConcept));
 
     const sessionId = `session_${Date.now()}_${studentId}`;
 
@@ -876,18 +922,28 @@ app.post('/api/session/:sessionId/assess', requireAuth, async (req, res) => {
   if ((req as any).authUid !== session.studentId)
     return (res as any).status(403).json({ error: 'Not authorized for this session' });
 
-  const { questionSummary, studentAnswer, correctAnswer, selectedOptionIndex, correctOptionIndex } = req.body;
-  const isCorrect = selectedOptionIndex === correctOptionIndex;
+  const { questionSummary, studentAnswer, correctAnswer, selectedOptionIndex } = req.body;
+  const reasoning = cleanReasoning(req.body?.reasoning);
 
   const curriculum = getCurriculum(session.subjectId);
   const concept = curriculum?.concepts.find(c => c.id === session.currentConceptId);
   if (!concept) return (res as any).status(404).json({ error: 'Concept not found' });
+
+  // The stored quiz is the source of truth for the key and the tutor-only notes (they are not sent to the browser).
+  // The pick is matched by option TEXT, so a client that re-ordered options still resolves correctly.
+  const stored = (await loadPregen(concept.label, concept.id))?.lessonData?.quiz;
+  const pickedIdx = stored && Array.isArray(stored.options) ? stored.options.findIndex((o: string) => o === studentAnswer) : -1;
+  const storedMatches = !!stored && stored.question === questionSummary && pickedIdx >= 0;
+  const correctOptionIndex = storedMatches ? stored.correctIndex : req.body.correctOptionIndex;
+  const isCorrect = storedMatches ? pickedIdx === stored.correctIndex : selectedOptionIndex === correctOptionIndex;
   const conceptState = await getConceptState(session.studentId, session.subjectId, concept.id);
   if (!conceptState) return (res as any).status(404).json({ error: 'Concept state not found' });
 
   const assessment = await assessUnderstanding({
     concept, questionAsked: questionSummary, studentAnswer,
-    correctAnswer, isCorrect, selectedOptionIndex, conceptState, apiKey,
+    correctAnswer, isCorrect, selectedOptionIndex, conceptState, apiKey, reasoning,
+    lookFor: storedMatches ? stored.lookFor : undefined,
+    chosenOptionNote: storedMatches ? stored.optionNotes?.[pickedIdx] : undefined,
   });
 
   const attempt = {
@@ -898,6 +954,8 @@ app.post('/api/session/:sessionId/assess', requireAuth, async (req, res) => {
     strategyUsed: session.currentStrategy as TeachingStrategy,
     teachingNote: assessment.teachingNote,
   };
+  // Keep what the child said about how they chose, so a later review sees the evidence, not just the score.
+  if (reasoning) (attempt as any).reasoning = reasoning;
   await recordAttempt(session.studentId, session.subjectId, concept.id, attempt, assessment);
 
   const nextStrategy = selectNextStrategy(conceptState, assessment);
@@ -919,7 +977,7 @@ app.post('/api/session/:sessionId/assess', requireAuth, async (req, res) => {
       const next = curriculum ? nextUnmasteredConcept(curriculum, masteredIds) : undefined;
       if (next && next.id !== session.currentConceptId) {
         nextConceptId = next.id; advancedToConcept = next;
-        await ensureConceptState(session.studentId, session.subjectId, next.id, next.label);
+        await ensureConceptState(session.studentId, session.subjectId, next.id, next.label, 'direct_explanation', conceptTypeFor(next));
       }
     }
   }
@@ -948,8 +1006,16 @@ app.post('/api/session/:sessionId/end', requireAuth, async (req, res) => {
   const durationMins = Math.round((Date.now() - session.sessionStarted) / 60000);
   await incrementSessionCount(session.studentId, session.subjectId, durationMins);
   endSession(session.sessionId);
+  clearTutorTurnState(session.sessionId); // T08 — drop this session's text-channel history too
   res.json({ ok: true, durationMinutes: durationMins });
 });
+
+// T08 (docs/BUILD_PLAN.md, docs/TRACEABILITY.md FR-25) — text-channel tutor
+// turn. Backend-only: no UI calls this. See server/routes/tutor.ts for why
+// it exists (EV-01/EV-02/EV-03 need a text doorway to drive many turns
+// without a microphone) and how it reuses the voice path's persona, plan
+// and diagnosis pipeline.
+registerTutorRoutes(app);
 
 // GET learner context for voice tutor system prompt
 app.get('/api/learner-context/:studentId/:subjectId', requireAuth, requireOwnership, async (req, res) => {
@@ -1056,6 +1122,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   // via POST /api/session/start, rather than trusting client-supplied values
   // for who the learner is. topic/grade/subjectId/conceptId remain as a
   // `?guest=1` fallback for a quick no-login demo path.
+  const wsConnectedAt = Date.now();
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const sessionIdParam = url.searchParams.get('sessionId') || '';
   const isGuest = url.searchParams.get('guest') === '1';
@@ -1124,6 +1191,30 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   // deadline-bounded diagnosis into the actual live path for the first time —
   // previously it was imported but never called from here (docs/PROJECT_STATE.md).
   let deltaState: PlanDeltaState = initialDeltaState();
+  // Bug found 2026-09-26 (T19): compilePlanDelta()'s result (delta.instruction --
+  // includes PARK_AND_ESCALATE's "park it, tell the learner..." guidance,
+  // encourageReset's pacing guidance, and representation-switch instructions)
+  // was ONLY ever sent to the browser as a 'plan_update' message for the
+  // Tutor's-reasoning panel -- it never reached the live model at all, so the
+  // tutor genuinely never knew a retry cap was hit or that it should park a
+  // concept. Fixed by piggybacking it on the NEXT tool response of ANY kind
+  // (sendToolResponse is the single shared funnel every tool call already
+  // goes through, see below) -- zero new live-session mechanism, zero risk of
+  // interrupting speech, since it rides an outgoing response that was already
+  // about to be sent. See docs/AGENT_GUIDE.md landmine #4 and DECISIONS.md
+  // D-2026-09-26-4.
+  let pendingPlanGuidance: string | null = null;
+  // Queued-at timestamp for the pending guidance above, so we can log real
+  // added-latency numbers (T19 acceptance criterion: p50/p95 added voice
+  // latency) the next time this runs against live Gemini Live -- this
+  // sandbox has no reachable Gemini Live endpoint (confirmed via
+  // `npm run test:live` -> ECONNREFUSED even on unmodified code), so these
+  // numbers cannot be fabricated here. Run a live session on a machine with
+  // real Gemini Live access and grep server logs for "[T19 latency]" to
+  // collect a sample, then compute p50/p95 and append the result to
+  // DECISIONS.md D-2026-09-26-4 per docs/BUILD_PLAN.md T19's acceptance
+  // criterion.
+  let pendingPlanGuidanceQueuedAt: number | null = null;
 
   async function handleAssessChildReasoning(call: any) {
     const args = call.args || {};
@@ -1151,10 +1242,28 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
       expectedAnswer: args.expectedAnswer ? String(args.expectedAnswer) : undefined,
       currentStrategy: (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy,
       apiKey,
-    });
+      // Course context so the diagnosis is phrased for this subject and age
+      // (docs/CURRICULUM.md §7) rather than assuming Grade 8 maths.
+      subjectLabel: curriculumHere?.label,
+      gradeLevel: curriculumHere?.gradeLevel ?? gradeLevelFromLabel(curriculumHere?.grade),
+      subjectMode: subjectModeForCurriculum(curriculumHere),
+    }, ASSESS_BUDGET_MS);
     const assessment = deadlineResult.assessment;
 
-    sendToolResponse(call, { instruction: assessment.tutorGuidance });
+    // Respond exactly once. The response is deferred until the plan delta has
+    // been computed so the tutor gets diagnosis + plan guidance TOGETHER on
+    // this very turn. Previously the assessor's "probe, don't say it's wrong"
+    // guidance went out immediately and the plan delta was queued for the NEXT
+    // tool call, i.e. one turn late (D-2026-09-30-9).
+    let responded = false;
+    const respond = (instruction: string) => {
+      if (responded) return;
+      responded = true;
+      sendToolResponse(call, { instruction });
+    };
+    if (deadlineResult.timedOut) {
+      console.warn(`[assess] diagnosis exceeded its ${deadlineResult.elapsedMs}ms budget for "${String(args.childAnswer || '').slice(0, 40)}" -- using the generic transfer move, which records as low-confidence 'recognised' evidence`);
+    }
 
     const candidateMisconceptions = assessment.candidateMisconceptionIds
       .map((id) => ({ id, text: misconceptionText(conceptDef, id) || id }));
@@ -1163,7 +1272,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
 
     const evidenceResult = await recordReasoningEvidence({
       studentId, subjectId, conceptId,
-      conceptType: conceptStateHere?.conceptType || conceptDef.chapter || 'general',
+      conceptType: conceptTypeFor(conceptDef, conceptStateHere),
       difficultyLevel: conceptDef.difficultyLevel || 2,
       promptType,
       questionAsked: String(args.questionAsked || ''),
@@ -1179,6 +1288,9 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
       planVersion: resolvedPlan?.planVersion,
       diagnosticianModel: 'gemini (reasoningAssessor)',
       source: 'voice',
+    }).catch((err) => {
+      console.error('[assess] recordReasoningEvidence failed; answering the tutor anyway', err);
+      return null;
     });
 
     const moveUsed = assessment.shouldProbe ? 'DISCRIMINATING_PROBE' : 'ELICIT_REASONING';
@@ -1208,16 +1320,28 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
     }
 
     if (resolvedPlan) {
-      const outcome = candidateMisconceptions.length > 0
-        ? (evidenceResult && evidenceResult.newlyConfirmed.length > 0 ? 'misconception_confirmed' : 'misconception_suspected')
-        : (assessment.classification === 'wrong_answer' || assessment.classification === 'needs_clarification' ? 'failed_check' : 'sound');
+      // Single source of truth shared with server/routes/tutor.ts's text
+      // handler — see deriveOutcome() in src/plan/delta.ts
+      // (docs/DECISIONS.md D-2026-09-28-4 for the bug this used to have,
+      // D-2026-09-28-5 for why the logic now lives in one place).
+      const outcome = deriveOutcome({
+        classification: assessment.classification,
+        candidateMisconceptionsCount: candidateMisconceptions.length,
+        newlyConfirmedCount: evidenceResult ? evidenceResult.newlyConfirmed.length : 0,
+      });
       const delta = compilePlanDelta(resolvedPlan, deltaState, {
         conceptId,
-        outcome: outcome as any,
+        outcome,
         representationUsed: (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy,
         questionKey: String(args.questionAsked || conceptId),
+        hasReasoning: String(args.childReasoning || '').trim().length > 3,
       });
       deltaState = delta.state;
+      // Plan guidance is authoritative on a miss (see delta.ts). It goes FIRST,
+      // in the same response as the diagnosis.
+      respond(delta.instruction
+        ? `${delta.instruction} (Assessor note, lower priority: ${assessment.tutorGuidance})`
+        : assessment.tutorGuidance);
       if (clientWs.readyState === WebSocket.OPEN) {
         clientWs.send(JSON.stringify({
           type: 'plan_update',
@@ -1228,6 +1352,8 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
         }));
       }
     }
+    // No plan resolved (or nothing above answered): still answer the tool call.
+    respond(assessment.tutorGuidance);
   }
 
   async function handleRecordConfusionSignal(call: any) {
@@ -1253,12 +1379,69 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
 
   function sendToolResponse(call: any, response: Record<string, unknown>) {
     try {
+      let finalResponse = response;
+      if (pendingPlanGuidance) {
+        // Merge onto whatever this call was already going to say, rather than
+        // overwriting it -- e.g. assess_child_reasoning's own per-turn
+        // { instruction } and this plan-level guidance can both matter.
+        const existing = typeof finalResponse.instruction === 'string' ? finalResponse.instruction : '';
+        finalResponse = {
+          ...finalResponse,
+          instruction: existing ? `${existing} ${pendingPlanGuidance}` : pendingPlanGuidance,
+        };
+        const addedLatencyMs = pendingPlanGuidanceQueuedAt !== null ? Date.now() - pendingPlanGuidanceQueuedAt : null;
+        console.log(`[T19 guidance-injection] delivered queued plan guidance on tool "${call.name}"'s response (queued-to-delivered latency: ${addedLatencyMs}ms): "${pendingPlanGuidance}"`);
+        console.log(`[T19 latency] ${addedLatencyMs}`);
+        pendingPlanGuidance = null;
+        pendingPlanGuidanceQueuedAt = null;
+      }
       if (liveSession) {
-        liveSession.sendToolResponse({ functionResponses: [{ id: call.id, name: call.name, response }] });
+        liveSession.sendToolResponse({ functionResponses: [{ id: call.id, name: call.name, response: finalResponse }] });
       }
     } catch (respErr) {
       console.error('[Gemini Live] Error sending tool response:', respErr);
     }
+  }
+
+  // update_diagram: the browser fetches and draws the picture (/api/update-diagram);
+  // the tutor needs to know its STEP NAMES to build it up with reveal_part. Board
+  // tools used to be acked with a bare {result:'ok'}, so the tutor never knew what
+  // it was pointing at. Only prepared pictures are looked up here (a quick store
+  // read, bounded) — never generated, so the voice is not held up and nothing is
+  // billed twice (the browser's request does any drawing).
+  async function handleUpdateDiagramTool(call: any) {
+    const focus = String(call.args?.focus || topic);
+    const lookup = loadPregen(topic, conceptId || undefined)
+      .then((rec) => findVisualForFocus(rec?.visuals, focus, slugifyTopic))
+      .catch(() => null);
+    const hit = await Promise.race([lookup, new Promise<null>((r) => setTimeout(() => r(null), 1200))]);
+    if (hit) {
+      const summary = toolSummary(hit.visual);
+      sendToolResponse(call, { result: 'ok', board: { title: summary.title, steps: summary.steps }, instruction: summary.instruction });
+    } else {
+      sendToolResponse(call, {
+        result: 'ok',
+        instruction: 'A NEW picture for this is being drawn and may take up to ~20 seconds; the board keeps its current picture until it arrives. '
+          + 'Do not call reveal_part for parts of it yet. Keep explaining in words, and stay on the lesson concept — do not request pictures of other topics.',
+      });
+    }
+  }
+
+  // The prepared board pictures for this concept, told to the tutor up front so it
+  // builds the picture step by step as it speaks (docs/BOARD_VISUALS.md §5).
+  let boardContextText: string | undefined;
+  try {
+    const boardRecord = await loadPregen(topic, conceptId || undefined);
+    if (boardRecord?.visuals) {
+      const found = await findConcept(conceptId || undefined);
+      boardContextText = boardContextBlock({
+        visuals: boardRecord.visuals,
+        misconceptions: found?.concept.misconceptionDetails ?? [],
+      }) || undefined;
+      if (boardContextText) console.log(`[WebSocket] Board pictures loaded for "${topic}": ${Object.keys(boardRecord.visuals).join(', ')}`);
+    }
+  } catch (boardErr: any) {
+    console.warn('[WebSocket] Board pictures unavailable (non-fatal):', boardErr?.message);
   }
 
     // T07: single composed persona (docs/TUTOR_PERSONA.md), replacing the
@@ -1267,7 +1450,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   // now deprecated). PERSONA=legacy restores the old text verbatim for A/B
   // comparison during the build.
   const ageBand = ageBandFromGrade(grade);
-  const subjectModeForPrompt = subjectId ? subjectModeForSubject(subjectId, getCurriculum(subjectId)?.label) : 'well_structured';
+  const subjectModeForPrompt = subjectId ? subjectModeForCurriculum(getCurriculum(subjectId)) : 'well_structured';
   const planBlockText = resolvedPlan ? renderPlanForPrompt(resolvedPlan, resolvedLearnerName) : undefined;
 
   const dynamicSystemInstruction = process.env.PERSONA === 'legacy'
@@ -1305,6 +1488,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
         learnerName: resolvedLearnerName,
         planBlock: planBlockText,
         curriculumContext: curriculumCtx?.systemPromptBlock,
+        boardContext: boardContextText,
         topic,
       });
 
@@ -1434,6 +1618,16 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
                 continue;
               }
 
+              if (call.name === 'update_diagram') {
+                // Answers with the picture's step names when it is a prepared one
+                // (bounded store read, see handleUpdateDiagramTool above).
+                handleUpdateDiagramTool(call).catch((err) => {
+                  console.error('[update_diagram] failed', err);
+                  sendToolResponse(call, { result: 'ok' });
+                });
+                continue;
+              }
+
               // Board/UI tools: immediately ack so the tutor keeps speaking.
               sendToolResponse(call, { result: 'ok' });
             }
@@ -1556,6 +1750,21 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
         console.error('[Gemini Live] Error closing session:', closeErr);
       }
     }
+    // T14 -- session-end Profiler (docs/LEARNER_MODEL.md §5.2). Fire-and-
+    // forget: the client is already gone, there is nothing to respond to,
+    // and this must never block or delay the WS teardown above. A real
+    // learner (has studentId+subjectId, i.e. not a guest session) with a
+    // real API key is required; guests and misconfigured servers skip
+    // silently rather than erroring into an empty console.
+    if (studentId && subjectId && apiKey) {
+      const sessionStartedAt = activeSession?.sessionStarted || wsConnectedAt;
+      runProfiler({
+        studentId, subjectId,
+        sessionId: sessionIdParam || `adhoc_${studentId}_${wsConnectedAt}`,
+        sessionStartedAt,
+        apiKey,
+      }).catch((err) => console.error('[Profiler] runProfiler threw:', err));
+    }
   });
 });
 
@@ -1587,4 +1796,9 @@ async function startServer() {
   });
 }
 
-startServer();
+// .catch() added 2026-09-28 — startServer() used to be a fire-and-forget
+// `startServer();` with no rejection handler. Found no evidence this ever
+// actually rejected in practice, but a startup-time throw (e.g. from the
+// Vite import in dev mode) would previously have surfaced only as a
+// generic, hard-to-trace "unhandled rejection" — this attributes it.
+startServer().catch((e) => console.error('[Server] startServer() failed:', e));

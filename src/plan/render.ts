@@ -12,7 +12,7 @@ export function renderPlanForPrompt(plan: TeachingPlan, learnerName?: string): s
   lines.push(`Target: ${plan.targetConcept.label}. Goal: reach ladder level ${plan.startLadderGoal}/5. (${plan.targetConcept.reason.text})`);
 
   if (plan.prerequisitesToProbe.length) {
-    lines.push(`Probe these first, max ${plan.limits.maxPrereqProbes}: ${plan.prerequisitesToProbe.map((p) => `"${p.label}"`).join(', ')}.`);
+    lines.push(`Probe these first, max ${plan.limits.maxPrereqProbes}: ${plan.prerequisitesToProbe.map((p) => `"${p.label}"${p.checkQuestion ? ` (e.g. ask: "${p.checkQuestion}")` : ''}`).join('; ')}.`);
   }
 
   const repOrder = plan.representationOrder.slice(0, 4).map((r) => r.strategy.replace(/_/g, ' ')).join(' -> ');

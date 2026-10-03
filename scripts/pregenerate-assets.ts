@@ -2,28 +2,85 @@
  * Pre-generation script for curriculum topic assets.
  *
  * Usage:
+ *   npm run pregen:ch1          → Chapter 1 of every loaded course, --force (the review's regeneration run)
  *   npm run pregen:first        → generates assets for the first topic only (test)
  *   npm run pregen              → generates assets for ALL curriculum topics
+ *   npx tsx scripts/pregenerate-assets.ts --curricula-file <path>
+ *                               → only the course(s) in that JSON snapshot. This is
+ *                                 how the ingest pipeline calls it after publishing
+ *                                 (src/curriculum/pdfIngest.ts), so it works when
+ *                                 Firestore — not data/curricula.json — is the store.
  *
- * What it generates per topic:
- *   - Full lesson data (lessonData) — diagram, chalk notes, quiz, explorer
- *   - 2D diagram variants for key sub-focus points (e.g. "equidistance property")
- *   - Real-world photo prompt + base64 image for the topic
+ *   npm run pregen -- --skip-photo
+ *                               → everything except the photo (cheap iteration on text + pictures)
  *
- * Output: data/pregenerated/{topicSlug}.json
+ *   npm run pregen -- --visuals-only
+ *                               → only (re)draw the BOARD PICTURES for concepts that already
+ *                                 have a lesson. Cheap: no lesson text, no photo. Existing
+ *                                 pictures are kept unless --force is also given. This is how
+ *                                 lessons generated before board pictures are upgraded.
  *
- * Cache contract: every key in the file is immutable once written.
- * Re-running the script skips any topic whose file already exists unless
- * you pass --force.
+ *   npm run pregen -- --concept <id-or-slug>
+ *                               → scope to ONE concept, matched against its curriculum concept
+ *                                 id or its derived slug (exact match first, then substring —
+ *                                 so a short unique fragment like "cell-division-by-mitosis"
+ *                                 works without typing the full id). --first-only picks
+ *                                 "whatever concept sorts first across every loaded course",
+ *                                 which is rarely the concept you actually mean when you have
+ *                                 more than one course loaded — --concept is exact.
+ *                                 Combine with --visuals-only and/or --force as usual.
+ *
+ * Every artefact goes through the quality gates (docs/BOARD_VISUALS.md §Quality gates): deterministic
+ * lints + an independent critic + a repair loop. An error that survives repair WITHHOLDS the artefact
+ * (quarantined in the record, never served). Run `npm run review:pregen` afterwards for the scorecard.
+ *
+ * What it generates per concept:
+ *   - Lesson text (lessonData) — tagline, overview, chalk notes, a quiz that is a PARALLEL problem to the
+ *     application picture (form B), child-voice suggested questions, tutor-only diagnostics
+ *   - Coverage check — ladder items no key fact teaches are REPORTED, never invented
+ *
+ *   - Board pictures (docs/BOARD_VISUALS.md) — composed by the model from a small drawing
+ *     vocabulary and fact-checked before saving:
+ *       main            the teaching picture the tutor builds step by step
+ *       contrast:<id>   one per known misconception (the tutor's contrast case)
+ *       apply           the application item's situation — never its answer
+ *       3d              only if the model judges depth genuinely helps this idea
+ *   - A lesson-specific photo, verified by a vision review and labelled AI-generated; none if unverified
+ *     (no stock-photo fallback)
+ *
+ * Output: the pregen store (Firestore + Storage, or data/pregenerated/{conceptId}.json
+ * locally) — keyed by curriculum concept id (two courses can share a concept label, e.g.
+ * "Photosynthesis" in Grade 7 and Grade 9, so the label is not a safe key). server.ts
+ * loadPregen() looks up by concept id first, then by topic slug for ad-hoc topics.
+ *
+ * Cache contract: a record is never regenerated (never re-billed) unless --force is given;
+ * --visuals-only adds missing pictures to an existing record without touching the rest.
  */
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
+import { initFirebaseAdmin } from '../src/firebase/admin';
+import { getPregenAsync, savePregenAsync, PregenRecord } from '../src/curriculum/pregenStore';
+import { conceptContext } from '../src/visual/prompt';
+import { generateLessonVisuals, LessonVisualsReport } from '../src/visual/generate';
+import { buildConceptSpec } from '../src/curriculum/contentSpec';
+import { specToJobs } from '../src/visual/specJobs';
+import { gatewayModel } from '../src/quality/model';
+import { reviewConceptOnce, ConceptReview } from '../src/quality/review';
+import { applyConceptReview } from '../src/curriculum/reviewApply';
+import { gatewayStats, setCallBudget, assertCallBudget, CallBudgetExceeded } from '../src/ai/gateway';
+import { generateLessonText } from '../src/curriculum/lessonGen';
+import { generateVerifiedPhoto, geminiImageGenerator } from '../src/curriculum/photoGen';
+import { lintRecord, summarizeRecord } from '../src/quality/recordLint';
 
 dotenv.config({ path: '.env' });
+
+// This runs as a spawned child process (src/curriculum/pdfIngest.ts triggerPregenerationBackground()),
+// not inside server.ts, so it needs its own Firebase Admin init — otherwise pregenStore falls back to the
+// local data/pregenerated/ file even in production (the "regenerate on every cold start" problem).
+initFirebaseAdmin();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT       = path.resolve(__dirname, '..');
@@ -31,385 +88,211 @@ const DATA_DIR   = path.join(ROOT, 'data');
 const PREGEN_DIR = path.join(DATA_DIR, 'pregenerated');
 const CURRICULA  = path.join(DATA_DIR, 'curricula.json');
 
+const argVal = (flag: string) => { const i = process.argv.indexOf(flag); return i >= 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : null; };
 const FIRST_ONLY = process.argv.includes('--first-only');
+const CURRICULA_SOURCE = argVal('--curricula-file') ? path.resolve(argVal('--curricula-file')!) : CURRICULA;
+const CONCEPT_FILTER = argVal('--concept');
+const CHAPTER_FILTER = argVal('--chapter');
 const FORCE      = process.argv.includes('--force');
-
-const MODEL_PRIMARY  = 'gemini-3.8-flash';
-const MODEL_FALLBACK = ['gemini-3.1-flash-lite', 'gemini-flash-latest'];
-
-// ─── helpers ────────────────────────────────────────────────────────────────
+const VISUALS_ONLY = process.argv.includes('--visuals-only');
+const SKIP_PHOTO = process.argv.includes('--skip-photo');
+// --resume: with --force, a concept that a previous run already finished through the quality gates
+// (quality.criticRan) is left alone, so an interrupted or repeated run does not pay for it again.
+const RESUME = process.argv.includes('--resume');
+const MAX_CALLS = Number(argVal('--max-calls') || 0);   // 0 = no cap; counts text/critic calls, not images
+const CONCURRENCY = Math.max(1, Number(argVal('--concurrency') || 3));  // pictures of one concept are independent
+const MAX_IMAGES = Number(argVal('--max-images') || 0);
+// Single-shot by default (decision D-2026-09-30-6): each artefact is generated ONCE from a complete contract,
+// checked by free deterministic lints, and the whole concept gets ONE independent review. --repair N allows N
+// paid repair rounds per artefact (default 0); --no-review skips the review call.
+const REPAIR = Math.max(0, Number(argVal('--repair') || 0));
+const NO_REVIEW = process.argv.includes('--no-review');
+const DRY_RUN = process.argv.includes('--dry-run');   // print the exact paid calls per concept and stop — spends nothing
+let imageCalls = 0;
 
 function slugify(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 80);
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
 }
 
-function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
-
-function isRetryable(e: any): boolean {
-  const msg = String(e?.message ?? e?.status ?? e?.code ?? '');
-  return /503|502|429|overload|too many|resource.exhausted|rate.limit|quota|temporarily|high demand|unavailable/i.test(msg);
-}
-
-async function generateJson(ai: GoogleGenAI, prompt: string, label: string): Promise<any> {
-  const models = [MODEL_PRIMARY, ...MODEL_FALLBACK];
-  let lastErr: any;
-  for (const model of models) {
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        const r = await ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: { responseMimeType: 'application/json' },
-        });
-        const text = (r.text || '').replace(/```json\s*|\s*```/g, '').trim();
-        if (!text) throw new Error('empty response');
-        const parsed = JSON.parse(text);
-        console.log(`  ✓ ${label} (${model})`);
-        return parsed;
-      } catch (e: any) {
-        lastErr = e;
-        if (/not found|not supported|404/i.test(String(e?.message))) break; // skip model
-        if (isRetryable(e) && attempt < 4) {
-          const wait = Math.min(60_000, 5_000 * 2 ** attempt);
-          console.warn(`  ↻ ${label}: ${model} busy, retry in ${wait / 1000}s (attempt ${attempt + 1}/5)`);
-          await sleep(wait);
-          continue;
-        }
-        break;
-      }
-    }
+function logVisualReport(report: LessonVisualsReport[]) {
+  for (const r of report) {
+    const what = r.skipped ? `skipped — ${r.skipped}`
+      : r.withheld ? `WITHHELD after ${r.attempts} call(s) — ${(r.quality || []).filter((q) => q.severity === 'error').map((q) => q.message).join('; ').slice(0, 200)}`
+        : r.ok ? `ok (${r.attempts} call${r.attempts === 1 ? '' : 's'}${r.fixes ? `, ${r.fixes} auto-fix${r.fixes === 1 ? '' : 'es'}` : ''})` : `FAILED — ${r.error}`;
+    console.log(`    ${r.ok ? '🖼' : '⚠'}  ${r.key}: ${what}`);
   }
-  throw lastErr || new Error(`${label}: no model returned data`);
-}
-
-async function getUnsplashPhoto(topic: string): Promise<string | null> {
-  // Extract meaningful keywords from topic for Unsplash search
-  const stopWords = new Set(['and', 'the', 'of', 'for', 'with', 'from', 'that', 'this', 'are', 'into', 'its']);
-  const keywords = topic
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length > 3 && !stopWords.has(w))
-    .slice(0, 4)
-    .join(',');
-
-  const url = `https://source.unsplash.com/800x600/?${encodeURIComponent(keywords + ',education,student')}`;
-  try {
-    // Follow redirect to capture the stable CDN URL
-    const resp = await fetch(url, { method: 'GET', redirect: 'follow' });
-    if (resp.ok && resp.url && resp.url !== url && resp.url.includes('unsplash.com')) {
-      // Strip query params to get clean stable URL
-      const cleanUrl = resp.url.split('?')[0];
-      console.log(`  ✓ photo (unsplash fallback: ${cleanUrl.slice(0, 60)}...)`);
-      return cleanUrl;
-    }
-  } catch (_) { /* network not available */ }
-  return null;
-}
-
-async function generateImage(ai: GoogleGenAI, imagePrompt: string, topic: string): Promise<string | null> {
-  const models = ['gemini-3.0-flash-preview-image-generation', 'imagen-3.0-generate-002'];
-  for (const model of models) {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const r: any = await ai.models.generateContent({
-          model,
-          contents: imagePrompt,
-          config: { responseModalities: ['TEXT', 'IMAGE'] } as any,
-        });
-        const parts = r?.candidates?.[0]?.content?.parts ?? [];
-        for (const p of parts) {
-          if (p.inlineData?.mimeType?.startsWith('image/')) {
-            console.log(`  ✓ photo (${model})`);
-            return `data:${p.inlineData.mimeType};base64,${p.inlineData.data}`;
-          }
-        }
-      } catch (e: any) {
-        if (isRetryable(e) && attempt < 2) {
-          await sleep(5_000 * 2 ** attempt);
-          continue;
-        }
-        break;
-      }
-    }
-  }
-  // Gemini image models unavailable — try Unsplash
-  const unsplash = await getUnsplashPhoto(topic);
-  if (unsplash) return unsplash;
-  console.warn('  ⚠ photo: all image sources unavailable — will use SVG fallback at runtime');
-  return null;
-}
-
-// ─── per-topic asset prompts ──────────────────────────────────────────────────
-
-function lessonPrompt(
-  topic: string,
-  grade: string,
-  keyFacts: string[],
-  misconceptions: string[],
-  workedExamples: string[],
-  misconceptionDetails: Array<{ belief: string; triggerPattern?: string; probeQuestion: string; correctionHint: string }>,
-  prerequisiteDetails: Array<{ label: string; reason: string; checkQuestion: string }>,
-): string {
-  return `You are a master pedagogical curriculum designer. Generate a comprehensive, highly engaging, age-appropriate interactive lesson for a student in "${grade}" on the topic "${topic}".
-
-Key facts from the curriculum:
-${keyFacts.map((f, i) => `${i + 1}. ${f}`).join('\n')}
-
-Common misconceptions to address:
-${misconceptions.map((m, i) => `${i + 1}. ${m}`).join('\n')}
-
-Worked examples from the textbook (ground your quiz and worked example in these):
-${workedExamples.length > 0 ? workedExamples.map((e, i) => `${i + 1}. ${e}`).join('\n') : '(none — invent a suitable worked example)'}
-
-Detailed misconception probes (use these to craft quiz explanation and suggestedQuestions):
-${misconceptionDetails.length > 0 ? misconceptionDetails.map((m, i) => `${i + 1}. BELIEF: ${m.belief}${m.triggerPattern ? ' | TRIGGER: ' + m.triggerPattern : ''} | PROBE: ${m.probeQuestion} | CORRECTION: ${m.correctionHint}`).join('\n') : '(none — derive from commonMisconceptions above)'}
-
-Prerequisite knowledge to check (add diagnostic suggestedQuestions for these):
-${prerequisiteDetails.length > 0 ? prerequisiteDetails.map((p, i) => `${i + 1}. ${p.label} — ${p.reason} (diagnostic: "${p.checkQuestion}")`).join('\n') : '(none provided)'}
-
-Return a JSON object strictly following this schema:
-{
-  "topic": "${topic}",
-  "grade": "${grade}",
-  "subject": "Mathematics / Geometry",
-  "tagline": "A punchy, inspiring 1-sentence subtitle",
-  "overview": "A rich, clear 2-sentence conceptual summary for ${grade}",
-  "diagram": {
-    "diagramType": "flow",
-    "title": "Title of the concept diagram",
-    "description": "Short explanation of the diagram",
-    "nodes": [
-      { "id": "node-1", "label": "Specific descriptive name", "sublabel": "Key formula or location", "category": "Classification", "color": "emerald", "details": "1-2 sentences explaining this node" }
-    ],
-    "connections": [
-      { "from": "Source Node Label", "to": "Target Node Label", "label": "causal link" }
-    ]
-  },
-  "chalkNotes": {
-    "title": "Chalkboard Title",
-    "subtitle": "Chalkboard subtitle",
-    "coreRuleOrFormula": "The core governing law or formula",
-    "bulletPoints": ["Key point 1", "Key point 2", "Key point 3", "Key point 4"],
-    "keyTakeaways": ["Crucial takeaway 1", "Crucial takeaway 2"]
-  },
-  "quiz": {
-    "question": "A clear question testing the core concept",
-    "options": ["Correct answer", "Plausible wrong answer 1", "Plausible wrong answer 2", "Plausible wrong answer 3"],
-    "correctIndex": 0,
-    "explanation": "Why the correct answer is right and the others are wrong"
-  },
-  "suggestedQuestions": [
-    "A thoughtful question the student might ask (not already answered above)",
-    "Another practical question",
-    "A deeper conceptual question"
-  ],
-  "scene3d": {
-    "sceneType": "geometry",
-    "title": "Short 3D scene title",
-    "description": "One sentence describing the 3D spatial simulation",
-    "elements": [
-      { "name": "Element name", "description": "Element description", "color": "#34d399" }
-    ]
-  },
-  "photoVisual": {
-    "caption": "What the photo shows",
-    "promptUsed": "Detailed photographic prompt used to generate the real-world image",
-    "annotations": [
-      { "label": "Key element", "description": "What to observe here", "x": 40, "y": 50 }
-    ]
-  }
-}
-
-Rules:
-- 4-6 nodes in the diagram, each with a REAL descriptive label (never "Node 1")
-- Node colors from: emerald, amber, sky, violet, rose, teal
-- The quiz question must test deep understanding, not just recall
-- scene3d sceneType must be one of: orbit, molecule, geometry, network, dna, globe, particles
-- photoVisual.promptUsed must be a rich, photorealistic image description suitable for image generation`;
-}
-
-function diagramFocusPrompt(topic: string, grade: string, focus: string): string {
-  return `You are an expert pedagogical diagram designer. Generate a concise 2D concept diagram specifically focused on: "${focus}" within the topic "${topic}" for a student in "${grade}".
-
-Return ONLY valid JSON (no markdown fences):
-{
-  "diagramType": "flow",
-  "title": "Concise title for this diagram view",
-  "description": "One sentence explaining what this diagram shows",
-  "nodes": [
-    { "id": "node-1", "label": "Real descriptive name", "sublabel": "Key formula or subtitle", "category": "Classification", "color": "emerald", "details": "1-2 clear sentences" }
-  ],
-  "connections": [
-    { "from": "Source Node Label", "to": "Target Node Label", "label": "relationship" }
-  ]
-}
-
-Rules:
-- 3-5 nodes maximum (optimised for screen space)
-- Node colors from: emerald, amber, sky, violet, rose, teal
-- Every node must have a real descriptive label — NEVER generic names
-- Focus specifically on: "${focus}"`;
-}
-
-function photoPrompt(topic: string): string {
-  return `A high-resolution, photorealistic educational photograph depicting "${topic}" in a real-world context that makes the concept immediately clear to a school student. The image should show a practical, tangible example that a 13-14 year old would find relatable and interesting. Sharp focus, authentic natural lighting, no text overlays, cinematic clarity.`;
-}
-
-// ─── key focus points to pre-generate per topic category ──────────────────
-
-function keyFocusPoints(topic: string): string[] {
-  const lower = topic.toLowerCase();
-  if (lower.includes('perpendicular') || lower.includes('bisect')) {
-    return [
-      'perpendicular bisector construction with compass and straightedge',
-      'equidistance property: every point on the bisector is equidistant from both endpoints',
-      'angle bisector dividing an angle into two equal halves',
-      'locus of points equidistant from two fixed points',
-    ];
-  }
-  if (lower.includes('congruence') || lower.includes('sss') || lower.includes('sas')) {
-    return [
-      'SSS congruence: three sides equal',
-      'SAS congruence: two sides and included angle',
-      'AAS congruence: two angles and a non-included side',
-      'RHS congruence: right angle, hypotenuse, and a side',
-    ];
-  }
-  if (lower.includes('similarity') || lower.includes('scale')) {
-    return [
-      'AA similarity test for triangles',
-      'scale factor relationship between similar figures',
-      'ratio of areas of similar figures',
-      'ratio of volumes of similar solids',
-    ];
-  }
-  if (lower.includes('circle') || lower.includes('chord') || lower.includes('tangent')) {
-    return [
-      'perpendicular from centre bisects a chord',
-      'tangent is perpendicular to radius at point of contact',
-      'angle at centre is twice angle at circumference',
-      'angles in the same segment are equal',
-    ];
-  }
-  // Generic: derive 3 focus points from topic name
-  return [topic, `key properties of ${topic}`, `real-world applications of ${topic}`];
 }
 
 // ─── main ────────────────────────────────────────────────────────────────────
 
 async function main() {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.error('❌  GEMINI_API_KEY not set — cannot pre-generate assets.');
-    process.exit(1);
-  }
-
-  if (!fs.existsSync(CURRICULA)) {
-    console.error(`❌  Curriculum file not found: ${CURRICULA}`);
-    process.exit(1);
-  }
-
+  if (!apiKey) { console.error('❌  GEMINI_API_KEY not set — cannot pre-generate assets.'); process.exit(1); }
+  if (!fs.existsSync(CURRICULA_SOURCE)) { console.error(`❌  Curriculum file not found: ${CURRICULA_SOURCE}`); process.exit(1); }
   fs.mkdirSync(PREGEN_DIR, { recursive: true });
 
-  const curricula: any[] = JSON.parse(fs.readFileSync(CURRICULA, 'utf8'));
-  const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+  const raw = JSON.parse(fs.readFileSync(CURRICULA_SOURCE, 'utf8'));
+  const curricula: any[] = Array.isArray(raw) ? raw : Object.values(raw);
+  const model = gatewayModel(apiKey, 2, 120_000);
+  const rawImageGen = geminiImageGenerator(apiKey);
+  const imageGen: typeof rawImageGen = async (p: string) => {
+    if (MAX_IMAGES && imageCalls >= MAX_IMAGES) throw new Error(`image budget of ${MAX_IMAGES} reached`);
+    imageCalls++;
+    return rawImageGen(p);
+  };
+  if (MAX_CALLS) setCallBudget(MAX_CALLS);
 
-  // Flatten all concepts across all curricula, sort by typicalTeachingOrder
-  const allConcepts: Array<{ concept: any; grade: string; subjectId: string }> = [];
+  const allConcepts: Array<{ concept: any; course: any; grade: string }> = [];
   for (const curr of curricula) {
-    const sorted = [...(curr.concepts || [])].sort(
-      (a, b) => (a.typicalTeachingOrder ?? 99) - (b.typicalTeachingOrder ?? 99)
-    );
-    for (const concept of sorted) {
-      allConcepts.push({ concept, grade: curr.grade || 'Secondary 2 (Grade 8)', subjectId: curr.id });
-    }
+    const sorted = [...(curr.concepts || [])].sort((a, b) => (a.typicalTeachingOrder ?? 99) - (b.typicalTeachingOrder ?? 99));
+    for (const concept of sorted) allConcepts.push({ concept, course: curr, grade: curr.grade || 'Grade 8' });
   }
+  let targets = FIRST_ONLY ? allConcepts.slice(0, 1) : allConcepts;
+  if (CHAPTER_FILTER) targets = targets.filter((t) => new RegExp(CHAPTER_FILTER, 'i').test(String(t.concept.chapter || '')));
+  const mode = VISUALS_ONLY ? 'board pictures only' : `lessons, board pictures${SKIP_PHOTO ? '' : ' and photos'}`;
+  console.log(`\n🎓 Pre-generating ${mode} for ${targets.length} topic(s)${FORCE ? ' — FORCE: existing items are regenerated' : ''}...\n`);
+  const tally = { done: 0, skipped: 0, failed: 0, withheld: 0 };
+  const dry = { text: 0, images: 0, concepts: 0 };
 
-  const targets = FIRST_ONLY ? allConcepts.slice(0, 1) : allConcepts;
-  console.log(`\n🎓 Pre-generating assets for ${targets.length} topic(s)${FIRST_ONLY ? ' (first only — test mode)' : ''}...\n`);
-
-  for (const { concept, grade } of targets) {
+  for (const { concept, course, grade } of targets) {
     const topic  = concept.label as string;
-    const slug   = slugify(topic);
-    const outFile = path.join(PREGEN_DIR, `${slug}.json`);
+    const slug   = /^[a-z0-9-]+$/.test(String(concept.id || '')) ? String(concept.id) : slugify(topic);
+    if (CONCEPT_FILTER && !(slug === CONCEPT_FILTER || String(concept.id) === CONCEPT_FILTER || slug.includes(CONCEPT_FILTER))) continue;
+    try { assertCallBudget(); } catch { console.error('  ■ call budget reached — stopping the run (saved concepts are kept; rerun with --resume)'); break; }
+    const existing = await getPregenAsync([slug]);
+    const ctx = conceptContext(concept, course, grade);
+    const visualOpts = { model, transientRetries: 2, pauseMs: 1_500, timeoutMs: 120_000 };
 
-    if (!FORCE && fs.existsSync(outFile)) {
-      console.log(`⏭  Skipping "${topic}" — already pre-generated (use --force to regenerate)`);
+    // ── Board pictures only: upgrade an existing lesson in place ─────────────
+    if (VISUALS_ONLY) {
+      if (!existing) { console.log(`⏭  "${topic}" has no lesson yet — run without --visuals-only to generate everything.`); tally.skipped++; continue; }
+      console.log(`\n🖼  Board pictures: "${topic}"`);
+      try {
+        const out = await generateLessonVisuals(ctx, {
+          ...visualOpts, quiz: existing.lessonData?.quiz,
+          existing: FORCE ? undefined : existing.visuals, declined: FORCE ? undefined : existing.visualsDeclined,
+        });
+        logVisualReport(out.report);
+        if (!out.report.some((r) => r.attempts > 0)) { console.log('    (nothing new to draw)'); tally.skipped++; continue; }
+        const record: PregenRecord = { ...existing, visuals: out.visuals, visualsDeclined: out.declined, visualsQuarantine: out.quarantine };
+        record.quality = summarizeRecord(lintRecord(record, ctx), {
+          criticRan: out.criticRan, coverageGaps: out.coverageGaps, untaughtLadderItems: existing.quality?.untaughtLadderItems,
+          withheld: Object.keys(out.quarantine),
+        });
+        await savePregenAsync(slug, record);
+        tally.done++; tally.withheld += Object.keys(out.quarantine).length;
+      } catch (e: any) {
+      console.error(`  ❌ Failed: ${e.message}`); tally.failed++;
+      if (e instanceof CallBudgetExceeded) { console.error('  ■ call budget reached — stopping the run (already-saved concepts are kept; rerun with --resume)'); break; }
+    }
       continue;
     }
 
+    if (!FORCE && existing?.lessonData) {
+      const hint = existing.visuals?.main ? '' : ' — it has no board pictures yet: npm run pregen -- --visuals-only';
+      console.log(`⏭  Skipping "${topic}" — already pre-generated (use --force to regenerate)${hint}`);
+      tally.skipped++;
+      continue;
+    }
+
+    if (FORCE && RESUME && existing?.quality?.criticRan && !existing.quality.withheld?.includes('lesson')) {
+      console.log(`⏭  Resuming past "${topic}" — already generated through the quality gates (${existing.quality.errors} error(s); rerun it alone with --concept ${slug} without --resume)`);
+      tally.skipped++;
+      continue;
+    }
+    if (DRY_RUN) {
+      const spec = buildConceptSpec(concept, course, grade);
+      const jobs = specToJobs(spec, ctx);
+      const text = (1 + REPAIR) + jobs.length * (1 + REPAIR) + (NO_REVIEW ? 0 : 1);
+      const images = SKIP_PHOTO || !spec.photo.yes ? 0 : 1;
+      dry.text += text; dry.images += images; dry.concepts++;
+      console.log(`• ${topic}\n    lesson ×1, pictures ×${jobs.length} [${jobs.map((j) => j.key).join(', ')}], review ×${NO_REVIEW ? 0 : 1}; photo: ${spec.photo.yes ? 'yes' : 'no'} (${images} image + ${images} vision check)  → ${text} text calls + ${images} image + ${images} vision (worst case with --repair ${REPAIR})`);
+      continue;
+    }
     console.log(`\n📚 Topic: "${topic}" (${grade})`);
     const startMs = Date.now();
-
+    const statsBefore = gatewayStats(); const imagesBefore = imageCalls;
     try {
-      // ── 1. Full lesson data ──────────────────────────────────────────────
-      console.log('  Generating lesson data...');
-      const lessonData = await generateJson(
-        ai,
-        lessonPrompt(
-          topic, grade,
-          concept.keyFacts || [],
-          concept.commonMisconceptions || [],
-          concept.workedExamples || [],
-          concept.misconceptionDetails || [],
-          concept.prerequisiteDetails || [],
-        ),
-        'lessonData'
-      );
+      // 1. Lesson text: draft → lint → independent critic → repair
+      console.log('  Writing lesson text...');
+      const lesson = await generateLessonText(ctx, { model, prerequisiteDetails: concept.prerequisiteDetails, seed: slug, transientRetries: 4, maxAttempts: 1 + REPAIR, critic: false });
+      if (lesson.withheld) tally.withheld++;
 
-      // ── 2. Diagram variants for key focus points ─────────────────────────
-      console.log('  Generating diagram variants...');
-      const focusPoints = keyFocusPoints(topic);
-      const diagrams: Record<string, any> = {};
+      // 2. Board pictures (fact-checked; the quiz is passed so no picture states its answer)
+      console.log('  Drawing board pictures...');
+      const vis = await generateLessonVisuals(ctx, { ...visualOpts, maxAttempts: 1 + REPAIR, critic: false, jobs: specToJobs(buildConceptSpec(concept, course, grade), ctx), concurrency: CONCURRENCY, quiz: lesson.lesson?.quiz ?? lesson.quarantined?.quiz });
+      logVisualReport(vis.report);
+      tally.withheld += Object.keys(vis.quarantine).length;
 
-      // Main diagram is already in lessonData — store it as the default focus too
-      diagrams['__main__'] = lessonData.diagram;
-
-      for (const focus of focusPoints) {
-        const focusSlug = slugify(focus);
-        try {
-          diagrams[focusSlug] = await generateJson(
-            ai,
-            diagramFocusPrompt(topic, grade, focus),
-            `diagram:${focus.slice(0, 40)}`
-          );
-          // Small pause between calls to avoid rate limiting
-          await sleep(1_500);
-        } catch (e: any) {
-          console.warn(`  ⚠ diagram variant "${focus}" failed: ${e.message} — skipping`);
-        }
+      // 3. ONE independent review of the whole concept (quiz solved blind, notes, every picture, ladder coverage).
+      //    Findings withhold artefacts; nothing is regenerated on them.
+      let review: ConceptReview = { ran: false, quiz: [], lesson: [], pictures: {}, untaught: [] };
+      if (!NO_REVIEW) {
+        console.log('  Reviewing the concept (one call)...');
+        review = await reviewConceptOnce(model, ctx, lesson.lesson, vis.visuals);
+        if (!review.ran) console.log(`  ⚠ review did not run (${review.error}) — the concept is recorded as NOT independently reviewed`);
       }
+      const applied = applyConceptReview(lesson.lesson, vis.visuals, review);
+      if (applied.dropped.length || Object.keys(applied.quarantine).length || applied.lessonQuarantine) {
+        console.log(`  ⚠ review withheld: ${[...applied.dropped, ...Object.keys(applied.quarantine), ...(applied.lessonQuarantine ? ['quiz'] : [])].join(', ')}`);
+      }
+      const cov = { ran: review.ran, untaught: review.untaught };
+      if (cov.untaught.length) console.log(`  ⚠ ${cov.untaught.length} ladder item(s) test something the key facts never teach — see quality.untaughtLadderItems`);
 
-      // ── 3. Real-world photo ───────────────────────────────────────────────
-      console.log('  Generating real-world photo...');
-      const photoUrl = await generateImage(ai, photoPrompt(topic), topic);
+      // 4. Photo: lesson-specific, vision-verified, or none
+      let photoUrl: string | null = null;
+      let photoMeta: PregenRecord['photoMeta'];
+      if (!SKIP_PHOTO && buildConceptSpec(concept, course, grade).photo.yes) {
+        console.log('  Generating a lesson-specific photo...');
+        const ph = await generateVerifiedPhoto(ctx, { model, imageGen, maxAttempts: 1, deterministicPlan: true });
+        photoUrl = ph.photoUrl;
+        photoMeta = ph.meta ?? undefined;
+        console.log(ph.photoUrl ? `  ✓ photo verified: "${ph.meta?.caption}"` : `  ⚠ no photo shipped (${ph.error || 'unverified'}) — the tab stays hidden`);
+      } else if (SKIP_PHOTO && existing?.photoUrl && existing.photoMeta?.verified) { photoUrl = existing.photoUrl; photoMeta = existing.photoMeta; }
+      // (spec says no photo → none is carried over: the stored record must match the plan)
 
-      // ── 4. Write output ───────────────────────────────────────────────────
-      const output = {
-        topic,
-        grade,
-        slug,
-        generatedAt: new Date().toISOString(),
+      // Never make a record worse: if the new attempt was withheld but the stored one has that artefact, keep the stored one.
+      let lessonData = applied.lesson ?? null;
+      const kept: string[] = [];
+      if (!lessonData && existing?.lessonData) { lessonData = existing.lessonData; kept.push('lesson'); }
+      const visuals = { ...applied.visuals };
+      const quarantine = { ...vis.quarantine, ...applied.quarantine };
+      for (const k of Object.keys(quarantine)) {
+        if (!visuals[k] && existing?.visuals?.[k]) { visuals[k] = existing.visuals[k]; delete quarantine[k]; kept.push(k); }
+      }
+      if (!photoUrl && (SKIP_PHOTO || buildConceptSpec(concept, course, grade).photo.yes) && existing?.photoUrl && existing.photoMeta?.verified) { photoUrl = existing.photoUrl; photoMeta = existing.photoMeta; kept.push('photo'); }
+      if (kept.length) console.log(`  ↩ kept the previously stored ${kept.join(', ')} (the new attempt was withheld)`);
+
+      const record: PregenRecord = {
+        topic, grade, conceptId: concept.id, slug, generatedAt: new Date().toISOString(),
         lessonData,
-        diagrams,   // keyed by focus-slug; "__main__" is the default
-        photoUrl,   // base64 data URI or null
+        ...(lesson.withheld && lesson.quarantined && !kept.includes('lesson') ? { lessonQuarantine: { lesson: lesson.quarantined, issues: lesson.quality } } : applied.lessonQuarantine ? { lessonQuarantine: applied.lessonQuarantine } : {}),
+        visuals, visualsDeclined: vis.declined, visualsQuarantine: quarantine,
+        photoUrl, photoMeta,
       };
-
-      fs.writeFileSync(outFile, JSON.stringify(output, null, 2), 'utf8');
-      const elapsed = ((Date.now() - startMs) / 1000).toFixed(1);
-      console.log(`  ✅ Saved to ${path.relative(ROOT, outFile)} (${elapsed}s)\n`);
-
-    } catch (e: any) {
-      console.error(`  ❌ Failed: ${e.message}`);
-    }
+      record.quality = summarizeRecord(lintRecord(record, ctx), {
+        criticRan: review.ran,
+        coverageGaps: vis.coverageGaps,
+        untaughtLadderItems: cov.untaught.map((u) => ({ level: u.level, prompt: u.prompt })),
+        withheld: [...(lesson.withheld && !kept.includes('lesson') ? ['lesson'] : []), ...Object.keys(quarantine)],
+        notes: [
+          ...(cov.ran ? [] : ['ladder coverage review did not run']),
+          ...applied.openLessonErrors.map((e) => `review: ${e.where}: ${e.message.slice(0, 120)}`),
+          ...cov.untaught.map((u) => `L${u.level} "${u.prompt.slice(0, 60)}" needs: ${u.missing}`),
+        ],
+      });
+      await savePregenAsync(slug, record);
+      console.log(`  ${lesson.withheld ? '⚠' : '✅'} Saved "${slug}" (${((Date.now() - startMs) / 1000).toFixed(1)}s) — ${record.quality.errors} error(s), ${record.quality.warnings} warning(s), withheld: ${record.quality.withheld.join(', ') || 'none'}\n`);
+      const st = gatewayStats();
+      console.log(`  💸 this concept: ${st.calls - statsBefore.calls} text/critic calls (${st.failed - statsBefore.failed} failed), ${imageCalls - imagesBefore} image call(s) — run total ${st.calls} calls, ${imageCalls} images`);
+      tally.done++;
+    } catch (e: any) { console.error(`  ❌ Failed: ${e.message}`); tally.failed++; }
   }
 
-  console.log('\n✨ Pre-generation complete.');
+  if (DRY_RUN) { console.log(`\nDRY RUN — nothing was called. ${dry.concepts} concept(s): at most ${dry.text} text calls + ${dry.images} image + ${dry.images} vision checks. Compare with the 303 calls the first run spent on 7 concepts.`); return; }
+  { const st = gatewayStats(); console.log(`\n💸 Run total: ${st.calls} text/critic calls (${st.failed} failed, ${st.fallback} on a fallback model), ${imageCalls} image calls, ${(st.ms / 60000).toFixed(1)} model-minutes\n   by call: ${Object.entries(st.byCall).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}×${v}`).join('  ')}`); }
+  console.log(`\n✨ Pre-generation complete — ${tally.done} generated, ${tally.skipped} skipped, ${tally.failed} failed, ${tally.withheld} artefact(s) withheld by the quality gates.`);
+  if (tally.done) console.log('   Scorecard: npm run review:pregen     Pictures: npm run preview:visuals -- --concept <conceptId>');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

@@ -33,22 +33,38 @@ export interface StudentProfile {
   studentId: string;
   name: string;
   grade: string;
+  /** Board + numeric grade chosen at signup; decide which courses are shown (docs/CURRICULUM.md §6). */
+  board?: string;
+  gradeLevel?: number;
   createdAt: number;
   updatedAt: number;
   subjects: Record<string, SubjectSummary>;
   globalInsights: string[];
+  onboarding?: {
+    interests: string[];
+    subjectFeelings: Record<string, 'love' | 'ok' | 'worried' | 'skip'>;
+    accessibility: { audioFirst?: boolean; largeText?: boolean; captions?: boolean };
+    languagePrefs?: { primary: string; alsoUnderstands?: string[] };
+    completedAt?: number;
+  };
+  ageBand?: '5-7' | '8-12' | '13-17' | 'adult';
 }
 
 interface LoginScreenProps {
   onLogin: (profile: StudentProfile) => void;
   onParentPortal: () => void;
+  /** Opens the admin content library (textbook/syllabus uploads). */
+  onAdmin?: () => void;
 }
 
-const GRADE_OPTIONS = [
-  'Primary 4 (Grade 4)', 'Primary 5 (Grade 5)', 'Primary 6 (Grade 6)',
-  'Secondary 1 (Grade 7)', 'Secondary 2 (Grade 8)', 'Secondary 3 (Grade 9)',
-  'Secondary 4 (Grade 10)', 'JC1 / Grade 11', 'JC2 / Grade 12',
-];
+interface Catalog {
+  boards: string[];
+  grades: Array<{ level: number; label: string }>;
+  available: Array<{ board: string; gradeLevel: number; subject: string; subjectId: string }>;
+}
+
+const FALLBACK_BOARDS = ['IGCSE', 'CBSE', 'ICSE', 'IB MYP', 'IB DP', 'Singapore MOE'];
+const FALLBACK_GRADES = Array.from({ length: 12 }, (_, i) => ({ level: i + 1, label: `Grade ${i + 1}` }));
 
 const AVATAR_COLORS = [
   'from-violet-500 to-purple-600',
@@ -80,12 +96,14 @@ function masteryPercent(profile: StudentProfile): number {
   return Math.round(avg);
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPortal }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPortal, onAdmin }) => {
   const [profiles, setProfiles] = useState<StudentProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newGrade, setNewGrade] = useState('Secondary 2 (Grade 8)');
+  const [newBoard, setNewBoard] = useState('');
+  const [newGradeLevel, setNewGradeLevel] = useState<number>(8);
+  const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
 
@@ -94,7 +112,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
       .then(r => r.json())
       .then(j => { setProfiles(j.learners || []); setLoading(false); })
       .catch(() => setLoading(false));
+    fetch('/api/catalog')
+      .then(r => r.json())
+      .then((c: Catalog) => {
+        setCatalog(c);
+        // Default to a board + grade that actually has content, if any does.
+        const first = c.available?.[0];
+        if (first) { setNewBoard(first.board); setNewGradeLevel(first.gradeLevel); }
+        else if (c.boards?.length) setNewBoard(c.boards[0]);
+      })
+      .catch(() => setNewBoard(FALLBACK_BOARDS[0]));
   }, []);
+
+  const boards = catalog?.boards?.length ? catalog.boards : FALLBACK_BOARDS;
+  const grades = catalog?.grades?.length ? catalog.grades : FALLBACK_GRADES;
+  const subjectsFor = (board: string, level: number) =>
+    (catalog?.available || []).filter(a => a.board === board && a.gradeLevel === level);
+  const available = subjectsFor(newBoard, newGradeLevel);
 
   const handleCreate = async () => {
     if (!newName.trim()) { setError('Please enter a name'); return; }
@@ -105,7 +139,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
       const res = await authFetch('/api/learners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId, name: newName.trim(), grade: newGrade }),
+        body: JSON.stringify({
+          studentId, name: newName.trim(),
+          board: newBoard, gradeLevel: newGradeLevel, grade: `Grade ${newGradeLevel}`,
+        }),
       });
       const j = await res.json();
       onLogin(j.learner);
@@ -174,7 +211,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-semibold truncate">{p.name}</p>
-                    <p className="text-slate-400 text-xs">{p.grade}</p>
+                    <p className="text-slate-400 text-xs">{p.board ? `${p.board} · ` : ''}{p.grade}</p>
                     <div className="flex gap-3 mt-1">
                       <span className="text-indigo-300 text-xs flex items-center gap-1">
                         <Star className="w-3 h-3" /> {masteryPercent(p)}% mastery
@@ -219,13 +256,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
                   className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 outline-none text-sm transition-colors"
                 />
               </div>
-              <div>
-                <label className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1 block">Grade / Year</label>
-                <select value={newGrade} onChange={e => setNewGrade(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-white outline-none text-sm transition-colors">
-                  {GRADE_OPTIONS.map(g => <option key={g}>{g}</option>)}
-                </select>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1 block">Board</label>
+                  <select value={newBoard} onChange={e => setNewBoard(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-white outline-none text-sm transition-colors">
+                    {boards.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1 block">Grade</label>
+                  <select value={newGradeLevel} onChange={e => setNewGradeLevel(Number(e.target.value))}
+                    className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-white outline-none text-sm transition-colors">
+                    {grades.map(g => <option key={g.level} value={g.level}>{g.label}</option>)}
+                  </select>
+                </div>
               </div>
+              <p className={`text-xs ${available.length ? 'text-emerald-400' : 'text-slate-500'}`}>
+                {available.length
+                  ? `${available.length} subject${available.length > 1 ? 's' : ''} ready: ${available.map(a => a.subject).join(', ')}`
+                  : 'No subjects loaded for this board and grade yet — you can still create the profile.'}
+              </p>
               {error && <p className="text-rose-400 text-xs">{error}</p>}
               <div className="flex gap-2 pt-1">
                 <button onClick={() => { setShowNew(false); setError(''); setNewName(''); }}
@@ -241,12 +292,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
           </div>
         )}
 
-        {/* Parent Portal link */}
-        <div className="mt-8 text-center">
+        {/* Parent Portal + admin content library links */}
+        <div className="mt-8 flex flex-col items-center gap-2">
           <button onClick={onParentPortal}
-            className="text-slate-500 hover:text-slate-300 text-sm transition-colors flex items-center gap-2 mx-auto">
+            className="text-slate-500 hover:text-slate-300 text-sm transition-colors flex items-center gap-2">
             <User className="w-4 h-4" /> Parent / Teacher Portal
           </button>
+          {onAdmin && (
+            <button onClick={onAdmin}
+              className="text-slate-600 hover:text-slate-400 text-xs transition-colors flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5" /> Content library (admin)
+            </button>
+          )}
         </div>
       </div>
     </div>

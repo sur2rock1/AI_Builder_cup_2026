@@ -205,44 +205,50 @@ interface BuildParams {
 function buildSystemPromptBlock(p: BuildParams): string {
   const { curriculum, concept, chapterTitle, scopeMap, prereqDetails, misconceptionDetails } = p;
   const lines: string[] = [];
+  const rule = '───────────────────────────────────────────────────────';
 
+  // This block supplies WHAT to teach for this course and concept. HOW to
+  // teach (representation order, pacing, probing limits, when to detour to a
+  // prerequisite) comes from the persona and the per-learner Teaching Plan
+  // above it — this block deliberately gives no competing teaching order
+  // (fixed 2026-09-26: it used to hard-code "example → analogy → diagram →
+  // story", which contradicted the plan's evidence-based representation order).
   lines.push('═══════════════════════════════════════════════════════');
-  lines.push('CURRICULUM INTELLIGENCE — READ CAREFULLY BEFORE TEACHING');
+  lines.push('CURRICULUM CONTEXT — WHAT TO TEACH (the plan above says HOW)');
   lines.push('═══════════════════════════════════════════════════════');
   lines.push('');
+  if (curriculum.board) lines.push(`Board:    ${curriculum.board}`);
   lines.push(`Subject:  ${curriculum.label}`);
   lines.push(`Grade:    ${curriculum.grade}`);
   lines.push(`Chapter:  ${chapterTitle}`);
   lines.push(`Concept:  ${concept.label}`);
-  lines.push(`Source:   ${curriculum.source}`);
+  lines.push(`Source:   ${concept.book || curriculum.source}${concept.sourceRef?.pages ? `, pp. ${concept.sourceRef.pages[0]}–${concept.sourceRef.pages[1]}` : ''}`);
   lines.push('');
 
   // ─── Scope constraints ────────────────────────────────────────
   if (scopeMap) {
-    lines.push('───────────────────────────────────────────────────────');
-    lines.push('CURRICULUM SCOPE — YOU MUST ENFORCE THESE BOUNDARIES');
-    lines.push('───────────────────────────────────────────────────────');
+    lines.push(rule);
+    lines.push(scopeMap.source === 'syllabus'
+      ? `CURRICULUM SCOPE — from the official syllabus${scopeMap.syllabusRefs?.length ? ` (${scopeMap.syllabusRefs.join('; ')})` : ''}`
+      : 'CURRICULUM SCOPE — from the textbook');
+    lines.push(rule);
     lines.push('');
     if (scopeMap.gradeNote) {
       lines.push(`Grade expectation: ${scopeMap.gradeNote}`);
       lines.push('');
     }
-
     if (scopeMap.inScope.length > 0) {
-      lines.push('✅ IN SCOPE — teach these thoroughly:');
+      lines.push('IN SCOPE for this chapter:');
       scopeMap.inScope.forEach(t => lines.push(`   • ${t}`));
       lines.push('');
     }
-
     if (scopeMap.advanced.length > 0) {
-      lines.push('⚠️  ADVANCED — mention briefly only if the student explicitly asks; do not make it the lesson:');
+      lines.push('EXTENSION — only if the learner asks or is clearly ready; never the core of the lesson:');
       scopeMap.advanced.forEach(t => lines.push(`   • ${t}`));
       lines.push('');
     }
-
     if (scopeMap.outOfScope.length > 0) {
-      lines.push('🚫 OUT OF SCOPE — do NOT teach these yet; redirect with:');
-      lines.push('   "That\'s something you\'ll explore in a later grade — let\'s master this first."');
+      lines.push('NOT PART OF THIS LEVEL — if asked, acknowledge the curiosity warmly, say it comes later, and return to the concept:');
       scopeMap.outOfScope.forEach(t => lines.push(`   • ${t}`));
       lines.push('');
     }
@@ -250,63 +256,70 @@ function buildSystemPromptBlock(p: BuildParams): string {
 
   // ─── Key facts ───────────────────────────────────────────────
   if (concept.keyFacts.length > 0) {
-    lines.push('───────────────────────────────────────────────────────');
-    lines.push('KEY FACTS — the student must understand all of these:');
-    lines.push('───────────────────────────────────────────────────────');
+    lines.push(rule);
+    lines.push('KEY FACTS — the learner must understand all of these:');
+    lines.push(rule);
     concept.keyFacts.forEach(f => lines.push(`  • ${f}`));
+    lines.push('');
+  }
+
+  // ─── Worked examples (verified at ingest) ────────────────────
+  if (concept.workedExamples.length > 0) {
+    lines.push(rule);
+    lines.push(`WORKED EXAMPLES${concept.verification ? ' (checked by the automated review at ingest)' : ''} — use for WORKED_EXAMPLE; never reuse one as an assessment item:`);
+    lines.push(rule);
+    concept.workedExamples.forEach(w => lines.push(`  • ${w}`));
     lines.push('');
   }
 
   // ─── Prerequisite checks ─────────────────────────────────────
   if (prereqDetails.length > 0) {
-    lines.push('───────────────────────────────────────────────────────');
-    lines.push('PREREQUISITE CHECKS — verify BEFORE teaching the concept');
-    lines.push('───────────────────────────────────────────────────────');
-    lines.push('');
-    lines.push('If the student cannot answer a check question, STOP and teach that');
-    lines.push('prerequisite first before returning to this concept.');
-    lines.push('');
+    lines.push(rule);
+    lines.push('PREREQUISITES — check questions for PROBE_PREREQ (framed as "where to start", not a test):');
+    lines.push(rule);
     prereqDetails.forEach((d, i) => {
-      lines.push(`${i + 1}. Prerequisite: ${d.label}`);
+      lines.push(`${i + 1}. ${d.label}${d.conceptId ? ' (taught in this course)' : ' (from an earlier grade / another subject)'}`);
       lines.push(`   Why needed: ${d.reason}`);
       lines.push(`   Check question: "${d.checkQuestion}"`);
-      lines.push('');
     });
+    lines.push('');
+  }
+
+  // ─── Evidence-ladder items ───────────────────────────────────
+  if (concept.ladderItems?.length) {
+    lines.push(rule);
+    lines.push('EVIDENCE-LADDER ITEMS for this concept (adapt the wording; L3/L4 are the items that count toward mastery):');
+    lines.push(rule);
+    concept.ladderItems.forEach(l => {
+      lines.push(`  L${l.level}: "${l.prompt}"`);
+      if (l.lookFor) lines.push(`      A sound answer: ${l.lookFor}`);
+      if (l.hints?.length) lines.push(`      If the learner asks for the answer, give hints IN THIS ORDER, one per request, never the answer itself: ${l.hints.map((h, i) => `(${i + 1}) ${h}`).join(' ')}`);
+    });
+    lines.push('');
+  }
+
+  // ─── Representation ideas ─────────────────────────────────────
+  if (concept.representationIdeas?.length) {
+    lines.push(rule);
+    lines.push('REPRESENTATION IDEAS — concrete options when the plan calls for that representation:');
+    lines.push(rule);
+    concept.representationIdeas.forEach(r => lines.push(`  • ${r.strategy.replace(/_/g, ' ')}: ${r.idea}`));
+    lines.push('');
   }
 
   // ─── Misconception diagnostic probes ─────────────────────────
   if (misconceptionDetails.length > 0) {
-    lines.push('───────────────────────────────────────────────────────');
-    lines.push('DIAGNOSTIC MISCONCEPTION PROBES');
-    lines.push('───────────────────────────────────────────────────────');
-    lines.push('');
-    lines.push('IMPORTANT: A correct answer does NOT mean the student understands.');
-    lines.push('After any correct answer, use one of these probe questions to test');
-    lines.push('whether the student holds a common misconception.');
-    lines.push('');
+    lines.push(rule);
+    lines.push('KNOWN MISCONCEPTIONS — a correct answer does not rule these out:');
+    lines.push(rule);
     misconceptionDetails.forEach((m, i) => {
-      lines.push(`Probe ${i + 1}:`);
-      lines.push(`  Wrong belief: "${m.belief}"`);
-      if (m.triggerPattern) {
-        lines.push(`  Watch for: ${m.triggerPattern}`);
-      }
-      lines.push(`  Probe question: "${m.probeQuestion}"`);
-      lines.push(`  If misconception confirmed: ${m.correctionHint}`);
-      lines.push('');
+      lines.push(`${i + 1}. Wrong belief: "${m.belief}"`);
+      if (m.triggerPattern) lines.push(`   Watch for: ${m.triggerPattern}`);
+      lines.push(`   Discriminating probe: "${m.probeQuestion}"`);
+      lines.push(`   If confirmed (by the diagnosis, not by you): ${m.correctionHint}`);
     });
+    lines.push('');
   }
-
-  // ─── Teaching reminders ───────────────────────────────────────
-  lines.push('───────────────────────────────────────────────────────');
-  lines.push('TEACHING PRINCIPLES');
-  lines.push('───────────────────────────────────────────────────────');
-  lines.push('• Never move forward merely because the student gave a correct answer.');
-  lines.push('  Distinguish memorisation from genuine understanding.');
-  lines.push('• If the student appears stuck, check the prerequisite chain above first.');
-  lines.push('• If an explanation fails twice, switch strategy entirely.');
-  lines.push('  Use: example → analogy → diagram → story → step-by-step.');
-  lines.push('• The student must be able to EXPLAIN the concept in their own words.');
-  lines.push('• Never shame, compare or pressure. The goal is understanding, not speed.');
   lines.push('═══════════════════════════════════════════════════════');
   lines.push('');
 

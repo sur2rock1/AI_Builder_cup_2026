@@ -1,0 +1,157 @@
+// ─────────────────────────────────────────────────────────────────
+// Lesson text generator: draft → lint → independent critic → repair → ship or withhold.
+// The same loop the board pictures use (src/visual/generate.ts), for the words:
+// tagline, overview, chalk notes, the quiz, suggested questions, tutor diagnostics.
+//
+// Fails closed (decision D2): a lesson with an unresolved error is NOT returned as
+// `lesson`; the caller gets `withheld` + `quarantined` + the issues.
+// ─────────────────────────────────────────────────────────────────
+import { JsonModel, gatewayModel } from '../quality/model';
+import { lintLesson, LessonDraft } from '../quality/lessonLint';
+import { reviewLessonText, LessonCriticResult } from '../quality/critic';
+import { QualityIssue, errorsOf, warningsOf } from '../quality/types';
+import { shuffleQuiz, isQuizShape, QuizLike } from '../quality/quizTools';
+import type { VisualConceptContext } from '../visual/prompt';
+import { buildLessonPrompt, buildLessonRepairPrompt, ladderPair, toProblems, PrerequisiteInput } from './lessonPrompt';
+
+export interface LessonData {
+  topic: string;
+  grade: string;
+  subject: string;
+  tagline: string;
+  overview: string;
+  chalkNotes: { title: string; subtitle: string; coreRuleOrFormula: string; bulletPoints: string[]; keyTakeaways: string[] };
+  quiz: QuizLike & { lookFor?: string; parallelOf?: string };
+  suggestedQuestions: string[];
+  /** Tutor-only probes; never rendered to the child. */
+  diagnostics: Array<{ purpose: 'prerequisite' | 'misconception'; question: string; listenFor?: string }>;
+}
+
+export interface LessonGenOptions {
+  /** Needed unless `model` is given. */
+  apiKey?: string;
+  model?: JsonModel;
+  prerequisiteDetails?: PrerequisiteInput[];
+  /** Draft + repairs. Default 3. */
+  maxAttempts?: number;
+  critic?: boolean;
+  transientRetries?: number;
+  timeoutMs?: number;
+  /** Seeds the quiz shuffle so a re-run is reproducible. Default: the concept topic. */
+  seed?: string;
+}
+
+export interface LessonGenResult {
+  lesson: LessonData | null;
+  /** Warnings still open on a shipped lesson, or the errors that got it withheld. */
+  quality: QualityIssue[];
+  attempts: number;
+  model?: string;
+  criticRan: boolean;
+  withheld?: boolean;
+  quarantined?: LessonData;
+  error?: string;
+}
+
+const str = (v: unknown, max = 600) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
+const strs = (v: unknown, n: number, max = 300) => (Array.isArray(v) ? v.map((x) => str(x, max)).filter(Boolean).slice(0, n) : []);
+
+/** Coerce a model answer into LessonData (drops legacy fields; never invents content). */
+export function normalizeLesson(raw: any, ctx: VisualConceptContext, seed: string): LessonData | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const c = raw.chalkNotes || {};
+  const q = raw.quiz;
+  if (!q || typeof q.question !== 'string') return null;
+  const options = strs(q.options, 6, 220);
+  const correctIndex = Number.isInteger(Number(q.correctIndex)) ? Number(q.correctIndex) : -1;
+  const notes = Array.isArray(q.optionNotes) ? q.optionNotes.map((x: unknown) => str(x, 200)) : [];
+  const { formA, formB } = ladderPair(ctx);
+  const quiz: LessonData['quiz'] = {
+    question: str(q.question, 500), options, correctIndex,
+    explanation: str(q.explanation, 700), hint: str(q.hint, 300) || undefined,
+    lookFor: str(q.lookFor, 400) || undefined,
+    optionNotes: notes.length === options.length ? notes : undefined,
+    itemId: formB ? formB.id || 'L3-B' : 'L3-B',
+    parallelOf: formA ? formA.id || 'L3-A' : undefined,
+  };
+  const diagnostics = (Array.isArray(raw.diagnostics) ? raw.diagnostics : [])
+    .map((d: any) => ({ purpose: d?.purpose === 'prerequisite' ? 'prerequisite' as const : 'misconception' as const, question: str(d?.question, 300), listenFor: str(d?.listenFor, 300) || undefined }))
+    .filter((d: { question: string }) => d.question).slice(0, 4);
+  const lesson: LessonData = {
+    topic: ctx.topic, grade: ctx.grade, subject: ctx.subjectLabel || str(raw.subject, 60) || 'School subject',
+    tagline: str(raw.tagline, 200), overview: str(raw.overview, 500),
+    chalkNotes: {
+      title: str(c.title, 100), subtitle: str(c.subtitle, 140), coreRuleOrFormula: str(c.coreRuleOrFormula, 300),
+      bulletPoints: strs(c.bulletPoints, 6), keyTakeaways: strs(c.keyTakeaways, 4),
+    },
+    quiz, suggestedQuestions: strs(raw.suggestedQuestions, 3, 200), diagnostics,
+  };
+  // Shuffle at generation so the correct slot is never the model's habit (review finding).
+  if (isQuizShape(lesson.quiz)) lesson.quiz = shuffleQuiz(lesson.quiz, `${seed}|${ctx.topic}`);
+  return lesson;
+}
+
+interface Candidate { lesson: LessonData; lint: QualityIssue[]; critic: LessonCriticResult | null; errors: number; warns: number }
+
+const scoreOf = (lint: QualityIssue[], critic: LessonCriticResult | null) => ({
+  errors: errorsOf(lint).length + errorsOf(critic?.issues || []).length,
+  warns: warningsOf(lint).length + warningsOf(critic?.issues || []).length,
+});
+
+export async function generateLessonText(ctx: VisualConceptContext, opts: LessonGenOptions): Promise<LessonGenResult> {
+  const model: JsonModel = opts.model ?? gatewayModel(opts.apiKey || '', opts.transientRetries ?? 0, opts.timeoutMs ?? 60_000);
+  const maxAttempts = Math.max(1, opts.maxAttempts ?? 3);
+  const useCritic = opts.critic !== false;
+  const seed = opts.seed ?? 'lesson';
+  const input = { ctx, prerequisiteDetails: opts.prerequisiteDetails };
+  const { formA } = ladderPair(ctx);
+
+  let prompt = buildLessonPrompt(input);
+  let best: Candidate | null = null;
+  let attempts = 0, criticEverRan = false, modelName: string | undefined, lastError: string | undefined;
+
+  let prevSig = '';
+  while (attempts < maxAttempts) {
+    attempts++;
+    let raw: any;
+    try {
+      const r = await model({ call: attempts === 1 ? 'lesson.text' : 'lesson.text.repair', role: 'strong', prompt, timeoutMs: opts.timeoutMs ?? 60_000 });
+      raw = r.data; modelName = r.model;
+    } catch (err: any) { lastError = String(err?.message || err); break; }
+
+    const lesson = normalizeLesson(raw, ctx, seed);
+    if (!lesson) {
+      prompt = buildLessonRepairPrompt(input, JSON.stringify(raw ?? null).slice(0, 12_000), [{ message: 'the answer is not a lesson object with a quiz — return the full JSON schema' }]);
+      continue;
+    }
+    const lint = lintLesson(lesson as LessonDraft, { keyFacts: ctx.keyFacts, workedExamples: ctx.workedExamples, applyItem: formA });
+    let critic: LessonCriticResult | null = null;
+    if (useCritic && errorsOf(lint).length === 0) {
+      critic = await reviewLessonText(model, ctx, lesson as LessonDraft);
+      criticEverRan = criticEverRan || critic.ran;
+    }
+    const cand: Candidate = { lesson, lint, critic, ...scoreOf(lint, critic) };
+    if (!best || cand.errors < best.errors || (cand.errors === best.errors && cand.warns <= best.warns)) best = cand;
+    // Only errors justify another paid repair round; warnings are recorded, not chased.
+    if (cand.errors === 0) break;
+    if (attempts >= maxAttempts) break;
+    const sig = [...errorsOf(lint), ...(critic?.issues ? errorsOf(critic.issues) : [])].map((i) => i.code).sort().join('|') + `#${cand.errors}`;
+    if (sig === prevSig) { console.warn(`[lesson] ${ctx.topic}: repair is not converging (${sig}) — stopping early to save calls`); break; }
+    prevSig = sig;
+
+    const problems = toProblems([...lint, ...(critic?.issues || [])]);
+    if (!problems.length) break;
+    console.warn(`[lesson] ${ctx.topic}: ${problems.length} problem(s) — asking the model to repair:\n  ${problems.map((p) => (p.where ? p.where + ': ' : '') + p.message).join('\n  ')}`);
+    prompt = buildLessonRepairPrompt(input, JSON.stringify(lesson), problems);
+  }
+
+  if (!best) return { lesson: null, quality: [], attempts, model: modelName, criticRan: criticEverRan, error: lastError || 'no usable lesson' };
+  const blocking = [...errorsOf(best.lint), ...errorsOf(best.critic?.issues || [])];
+  if (blocking.length) {
+    console.warn(`[lesson] ${ctx.topic}: WITHHELD — ${blocking.length} error(s) survived ${attempts} attempt(s):\n  ${blocking.map((b) => b.where + ': ' + b.message).join('\n  ')}`);
+    return { lesson: null, quality: blocking, attempts, model: modelName, criticRan: criticEverRan, withheld: true, quarantined: best.lesson };
+  }
+  const open = [...warningsOf(best.lint), ...warningsOf(best.critic?.issues || [])];
+  console.log(`[lesson] ${ctx.topic}: ok — ${attempts} attempt(s), ${open.length} open warning(s), critic ${criticEverRan ? 'ran' : 'did not run'}`);
+  return { lesson: best.lesson, quality: open, attempts, model: modelName, criticRan: criticEverRan };
+}

@@ -8,7 +8,7 @@
 import {
   LearnerProfile, ConceptState, TeachingStrategy, MasteryLevel,
   AdaptiveSessionState, AssessmentResult, QuizAttempt,
-  EvidenceEvent, ErrorClass, Confidence3, MisconceptionRecord,
+  EvidenceEvent, ErrorClass, Confidence3, MisconceptionRecord, EscalationEvent,
 } from './learnerModel';
 import { getRepo } from './repo';
 import { updateMastery, BKTObservation, MASTERY_THRESHOLD } from './bkt';
@@ -26,12 +26,19 @@ function scoreToLevel(score: number): MasteryLevel {
 
 // ─── Public profile API ─────────────────────────────────────────
 
-export async function getOrCreateLearner(studentId: string, name: string, grade: string): Promise<LearnerProfile> {
+export async function getOrCreateLearner(
+  studentId: string, name: string, grade: string,
+  /** Board + numeric grade chosen at signup (docs/CURRICULUM.md §6). Only
+   * applied when the profile is created; an existing profile is returned as is. */
+  extra: { board?: string; gradeLevel?: number } = {},
+): Promise<LearnerProfile> {
   const repo = getRepo();
   const existing = await repo.getProfile(studentId);
   if (existing) return existing;
   const fresh: LearnerProfile = {
     studentId, name, grade,
+    ...(extra.board ? { board: extra.board } : {}),
+    ...(extra.gradeLevel ? { gradeLevel: extra.gradeLevel } : {}),
     createdAt: Date.now(), updatedAt: Date.now(),
     subjects: {}, globalInsights: [],
   };
@@ -198,6 +205,77 @@ export async function recordConfusionSignal(
     totalForSignal: learner.affect.confusionSignals[input.signal],
     notedOnConcept,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// T22 (FR-20) — durable persistence for the plan compiler's PARK_AND_ESCALATE
+// move. See EscalationEvent's comment in learnerModel.ts and
+// docs/AGENT_GUIDE.md landmine #4 for why this exists: `delta.escalate` was
+// computed by compilePlanDelta() every time a concept's retry cap was hit,
+// but nothing ever wrote it down -- it was recorded nowhere, so there was no
+// durable record for a parent/teacher to see and no way to know later how
+// often, or on which concepts, a learner was getting stuck badly enough to
+// need a human. Called from server.ts's WS handler at the same
+// compilePlanDelta() call site that discovered the gap.
+// ─────────────────────────────────────────────────────────────────
+export interface RecordEscalationInput {
+  studentId: string;
+  subjectId: string;
+  conceptId: string;
+  conceptLabel?: string;
+  retryCount: number;
+  sessionId?: string;
+}
+
+export async function recordEscalation(
+  input: RecordEscalationInput
+): Promise<EscalationEvent | null> {
+  const repo = getRepo();
+  const learner = await repo.getProfile(input.studentId);
+  if (!learner) return null;
+
+  const event: EscalationEvent = {
+    id: `esc_${input.conceptId}_${Date.now()}`,
+    subjectId: input.subjectId,
+    conceptId: input.conceptId,
+    conceptLabel: input.conceptLabel,
+    reason: 'retry_cap_reached',
+    retryCount: input.retryCount,
+    timestamp: Date.now(),
+    sessionId: input.sessionId,
+    resolved: false,
+  };
+
+  learner.escalations = learner.escalations || [];
+  learner.escalations.push(event);
+  // Cap like every other unbounded-append list in this store (notes,
+  // globalInsights) -- a hackathon demo learner shouldn't grow this forever.
+  if (learner.escalations.length > 50) learner.escalations = learner.escalations.slice(-50);
+
+  learner.updatedAt = Date.now();
+  await repo.saveProfile(learner);
+  return event;
+}
+
+export async function resolveEscalation(
+  studentId: string,
+  escalationId: string,
+  note?: string,
+): Promise<EscalationEvent | null> {
+  const repo = getRepo();
+  const learner = await repo.getProfile(studentId);
+  if (!learner || !learner.escalations) return null;
+
+  const event = learner.escalations.find((e) => e.id === escalationId);
+  if (!event) return null;
+
+  event.resolved = true;
+  event.resolvedAt = Date.now();
+  if (note) event.resolvedNote = note;
+
+  learner.updatedAt = Date.now();
+  await repo.saveProfile(learner);
+  return event;
 }
 
 /**

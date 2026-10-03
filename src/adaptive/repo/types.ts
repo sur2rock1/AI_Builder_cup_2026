@@ -17,6 +17,8 @@ import { LearnerProfile, LearningEvidence } from '../learnerModel';
 export interface EventFilter {
   subjectId?: string;
   conceptId?: string;
+  /** T14 (Profiler) — "this session's events" per docs/LEARNER_MODEL.md §5.2. */
+  sessionId?: string;
   limit?: number;
 }
 

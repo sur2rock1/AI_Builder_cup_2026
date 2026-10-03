@@ -1,0 +1,373 @@
+// ─────────────────────────────────────────────────────────────────
+// T08 — text-channel tutor turn (docs/BUILD_PLAN.md T08, docs/TRACEABILITY.md
+// FR-25). A backend-only doorway onto the SAME tutor the voice channel
+// drives: the same persona (src/persona/compose.ts), the same Teaching
+// Plan (src/plan/*), and the same diagnostic pipeline
+// (assessReasoningWithDeadline + recordReasoningEvidence + compilePlanDelta)
+// as the wss.on('connection', ...) handler in server.ts. It exists so that:
+//
+//   1. EV-01/EV-02/EV-03 (docs/BUILD_PLAN.md) can drive many turns with a
+//      scripted or LLM-simulated learner — no microphone, no WebSocket —
+//      and get back the SAME diagnosis the voice channel would have
+//      produced, on the SAME reasoning code.
+//   2. There is a text fallback if Gemini Live is unreachable.
+//
+// Deliberately NOT surfaced in the UI (docs/DECISIONS.md D-2026-09-28-2) —
+// no chat box was built for it. Nothing here changes what the student sees;
+// only eval scripts and this route call each other.
+//
+// Divergence from the voice path, both intentional:
+//   - No board/UI tools are declared (switch_board_view, update_diagram,
+//     etc.) — there is no board on this channel. Only assess_child_reasoning
+//     and record_confusion_signal are offered, filtered from the SAME
+//     src/live/liveConfig.ts ALL_TOOLS array the voice path uses, so the
+//     two tool schemas can never drift apart.
+//   - The voice path queues plan-delta guidance (compilePlanDelta's
+//     instruction) and merges it onto whichever tool response fires NEXT
+//     (T19's fix, server.ts sendToolResponse) because interrupting a
+//     synthesised voice turn is not possible. Text has no such constraint,
+//     so the guidance is merged onto assess_child_reasoning's OWN response
+//     immediately — see docs/DECISIONS.md D-2026-09-28-3.
+// ─────────────────────────────────────────────────────────────────
+import type { Express, Response } from 'express';
+import { GoogleGenAI, createPartFromFunctionResponse } from '@google/genai';
+import type { Content, Part } from '@google/genai';
+import { requireAuth, AuthedRequest } from '../middleware/requireAuth';
+import {
+  getSession, getLearner, getConceptState, recordReasoningEvidence,
+  recordConfusionSignal,
+} from '../../src/adaptive/learnerStore';
+import { getRepo } from '../../src/adaptive/repo';
+import { getCurriculum } from '../../src/curriculum/ingest';
+import { buildCurriculumIntelligenceContext } from '../../src/curriculum/curriculumIntelligence';
+import { conceptTypeFor, gradeLevelFromLabel } from '../../src/curriculum/catalog';
+import { composeSystemInstruction, composeKickoff } from '../../src/persona/compose';
+import { ageBandFromGrade } from '../../src/persona/ageBands';
+import { subjectModeForCurriculum } from '../../src/persona/subjectModes';
+import { renderPlanForPrompt } from '../../src/plan/render';
+import { compilePlanDelta, initialDeltaState, deriveOutcome } from '../../src/plan/delta';
+import type { TeachingPlan, PlanDeltaState } from '../../src/plan/types';
+import {
+  assessReasoningWithDeadline, misconceptionText,
+} from '../../src/adaptive/reasoningAssessor';
+import { resolveModelSync } from '../../src/ai/gateway';
+import { ALL_TOOLS } from '../../src/live/liveConfig';
+import type { AdaptiveSessionState, TeachingStrategy } from '../../src/adaptive/learnerModel';
+
+// Only the two tools that have meaning off a board. Filtered from the same
+// declarations the voice path sends, so the schemas can never diverge.
+const TEXT_TOOL_NAMES = ['assess_child_reasoning', 'record_confusion_signal'];
+const TEXT_TOOLS = ALL_TOOLS.filter((t) => TEXT_TOOL_NAMES.includes(t.name));
+
+// How long the text model may be kept waiting for a diagnosis. Mirrors
+// server.ts's ASSESS_BUDGET_MS for the voice path — there is no speech to
+// protect here, but an eval harness running hundreds of turns still needs a
+// bound, or one slow diagnostician call stalls the whole run.
+const ASSESS_BUDGET_MS = Number(process.env.ASSESS_BUDGET_MS) || 2500;
+
+// A tool-call loop that never terminates in a final text turn would hang an
+// eval run forever. Real turns resolve in 0-2 tool calls; this is a safety
+// cap, not an expected depth.
+const MAX_TOOL_HOPS = 4;
+
+interface TextTurnState {
+  contents: Content[];
+  deltaState: PlanDeltaState;
+  turnCount: number;
+  systemInstruction: string;
+  resolvedPlan: TeachingPlan | null;
+  topic: string;
+}
+
+// In-memory, per-sessionId — same lifetime model as learnerStore's
+// activeSessions map (server.ts), which this piggybacks on: a session must
+// already exist via POST /api/session/start before this route will serve it.
+const textTurnStates = new Map<string, TextTurnState>();
+
+/** Called from POST /api/session/:sessionId/end so this map does not grow
+ * unbounded across a long demo/eval day. */
+export function clearTutorTurnState(sessionId: string): void {
+  textTurnStates.delete(sessionId);
+}
+
+async function initState(session: AdaptiveSessionState): Promise<TextTurnState> {
+  const curriculum = getCurriculum(session.subjectId);
+  const conceptDef = curriculum?.concepts.find((c) => c.id === session.currentConceptId);
+  const topic = conceptDef?.label || session.subjectId;
+  const learner = await getLearner(session.studentId);
+  const grade = learner?.grade || '';
+  const latestPlan = await getRepo().getLatestPlan(session.studentId, session.subjectId);
+  const resolvedPlan = (latestPlan?.plan as TeachingPlan) || null;
+
+  const curriculumCtx = (session.subjectId && session.currentConceptId)
+    ? buildCurriculumIntelligenceContext(session.subjectId, session.currentConceptId)
+    : null;
+
+  const ageBand = ageBandFromGrade(grade);
+  const subjectModeForPrompt = subjectModeForCurriculum(curriculum);
+  const planBlockText = resolvedPlan ? renderPlanForPrompt(resolvedPlan, learner?.name) : undefined;
+
+  const systemInstruction = composeSystemInstruction({
+    ageBand,
+    subjectMode: subjectModeForPrompt as any,
+    channel: 'text',
+    learnerName: learner?.name,
+    planBlock: planBlockText,
+    curriculumContext: curriculumCtx?.systemPromptBlock,
+    topic,
+  });
+
+  return {
+    contents: [],
+    deltaState: initialDeltaState(),
+    turnCount: 0,
+    systemInstruction,
+    resolvedPlan,
+    topic,
+  };
+}
+
+/** Mirrors server.ts's handleAssessChildReasoning (the wss.on('connection')
+ * handler) — same assessor call, same evidence recording, same plan delta.
+ * Returns data instead of pushing onto a WebSocket. */
+async function handleAssessChildReasoning(
+  call: { name?: string; args?: Record<string, unknown> },
+  state: TextTurnState,
+  session: AdaptiveSessionState,
+  apiKey: string,
+): Promise<{ response: Record<string, unknown>; diagnosis: Record<string, unknown> | null; planUpdate: Record<string, unknown> | null; move: string | null }> {
+  const args = call.args || {};
+  const { studentId, subjectId, currentConceptId: conceptId } = session;
+  const curriculumHere = getCurriculum(subjectId);
+  const conceptDef = curriculumHere?.concepts.find((c) => c.id === conceptId);
+  if (!conceptDef) {
+    return {
+      response: { instruction: 'Ask the learner to explain their method, one step at a time.' },
+      diagnosis: null, planUpdate: null, move: null,
+    };
+  }
+  const conceptStateHere = await getConceptState(studentId, subjectId, conceptId);
+  const strategyInUse = (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy;
+
+  const deadlineResult = await assessReasoningWithDeadline({
+    concept: conceptDef,
+    conceptState: conceptStateHere,
+    questionAsked: String(args.questionAsked || ''),
+    childAnswer: String(args.childAnswer || ''),
+    childReasoning: String(args.childReasoning || ''),
+    expectedAnswer: args.expectedAnswer ? String(args.expectedAnswer) : undefined,
+    currentStrategy: strategyInUse,
+    apiKey,
+    subjectLabel: curriculumHere?.label,
+    gradeLevel: curriculumHere?.gradeLevel ?? gradeLevelFromLabel(curriculumHere?.grade),
+    subjectMode: subjectModeForCurriculum(curriculumHere),
+  }, ASSESS_BUDGET_MS);
+  const assessment = deadlineResult.assessment;
+
+  const candidateMisconceptions = assessment.candidateMisconceptionIds
+    .map((id) => ({ id, text: misconceptionText(conceptDef, id) || id }));
+
+  const promptTypeRaw = args.promptType;
+  const promptType = (typeof promptTypeRaw === 'string' && ['teach', 'check', 'probe', 'transfer'].includes(promptTypeRaw))
+    ? (promptTypeRaw as 'teach' | 'check' | 'probe' | 'transfer')
+    : 'check';
+
+  const evidenceResult = await recordReasoningEvidence({
+    studentId, subjectId, conceptId,
+    conceptType: conceptTypeFor(conceptDef, conceptStateHere || undefined),
+    difficultyLevel: conceptDef.difficultyLevel || 2,
+    promptType,
+    questionAsked: String(args.questionAsked || ''),
+    childAnswer: String(args.childAnswer || ''),
+    childReasoning: String(args.childReasoning || ''),
+    classification: assessment.classification,
+    understandingDepth: assessment.understandingDepth,
+    candidateMisconceptions,
+    confidence: assessment.confidence,
+    strategyInUse,
+    moveUsed: assessment.shouldProbe ? 'DISCRIMINATING_PROBE' : 'ELICIT_REASONING',
+    sessionId: session.sessionId,
+    planVersion: state.resolvedPlan?.planVersion,
+    diagnosticianModel: 'gemini (reasoningAssessor)',
+    source: 'text',
+  });
+
+  const moveUsed = assessment.shouldProbe ? 'DISCRIMINATING_PROBE' : 'ELICIT_REASONING';
+
+  let planUpdate: Record<string, unknown> | null = null;
+  let instructionForModel = assessment.tutorGuidance;
+  if (state.resolvedPlan) {
+    // Single source of truth shared with server.ts's voice handler — see
+    // deriveOutcome() in src/plan/delta.ts (docs/DECISIONS.md D-2026-09-28-5)
+    // for why this was extracted out of both channels' own copies.
+    const outcome = deriveOutcome({
+      classification: assessment.classification,
+      candidateMisconceptionsCount: candidateMisconceptions.length,
+      newlyConfirmedCount: evidenceResult ? evidenceResult.newlyConfirmed.length : 0,
+    });
+    const delta = compilePlanDelta(state.resolvedPlan, state.deltaState, {
+      conceptId,
+      outcome,
+      representationUsed: strategyInUse,
+      questionKey: String(args.questionAsked || conceptId),
+      hasReasoning: String(args.childReasoning || '').trim().length > 3,
+    });
+    state.deltaState = delta.state;
+    planUpdate = { instruction: delta.instruction, nextRepresentation: delta.nextRepresentation, outcome, moveUsed };
+    // Delivered immediately (see file header) rather than queued for a later
+    // tool response — text has no "must not interrupt speech" constraint.
+    // Plan guidance is authoritative on a miss: the assessor's own guidance
+    // is "probe", and without this precedence the tutor keeps probing with
+    // new numbers instead of teaching (D-2026-09-30-9).
+    instructionForModel = `${delta.instruction} (Assessor note, lower priority: ${instructionForModel})`;
+  }
+
+  const diagnosis = {
+    classification: assessment.classification,
+    understandingDepth: assessment.understandingDepth,
+    confidence: assessment.confidence,
+    shouldProbe: assessment.shouldProbe,
+    tutorGuidance: assessment.tutorGuidance,
+    moveUsed,
+    questionAsked: String(args.questionAsked || ''),
+    childAnswer: String(args.childAnswer || ''),
+    childReasoning: String(args.childReasoning || ''),
+    candidateMisconceptions,
+    diagnosisLatencyMs: deadlineResult.elapsedMs,
+    diagnosisTimedOut: deadlineResult.timedOut,
+  };
+
+  return { response: { instruction: instructionForModel }, diagnosis, planUpdate, move: moveUsed };
+}
+
+/** Mirrors server.ts's handleRecordConfusionSignal. */
+async function handleRecordConfusionSignal(
+  call: { args?: Record<string, unknown> },
+  session: AdaptiveSessionState,
+): Promise<Record<string, unknown>> {
+  const args = call.args || {};
+  const signal = String(args.signal || '');
+  if (!session.studentId || !signal) return { result: 'noted' };
+  const result = await recordConfusionSignal({
+    studentId: session.studentId,
+    subjectId: session.subjectId || undefined,
+    conceptId: session.currentConceptId || undefined,
+    signal,
+    aboutWhat: args.aboutWhat ? String(args.aboutWhat) : undefined,
+  });
+  return result
+    ? { result: 'recorded', signal: result.signal, notedOnConcept: result.notedOnConcept }
+    : { result: 'noted' };
+}
+
+export function registerTutorRoutes(app: Express): void {
+  app.post('/api/tutor/turn', requireAuth, async (req: AuthedRequest, res: Response) => {
+    try {
+      const { sessionId, learnerText } = req.body || {};
+      if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
+
+      const session = getSession(String(sessionId));
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found. Start one via POST /api/session/start first.' });
+      }
+      if (req.authUid !== session.studentId) {
+        return res.status(403).json({ error: 'Not authorized for this session' });
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY is not configured' });
+
+      let state = textTurnStates.get(session.sessionId);
+      if (!state) {
+        state = await initState(session);
+        textTurnStates.set(session.sessionId, state);
+      }
+
+      const isOpening = state.contents.length === 0;
+      const userText = isOpening
+        ? composeKickoff(state.topic, Boolean(state.resolvedPlan))
+        : String(learnerText ?? '').trim();
+      if (!isOpening && !userText) {
+        return res.status(400).json({ error: 'learnerText is required after the opening turn' });
+      }
+
+      state.contents.push({ role: 'user', parts: [{ text: userText }] });
+
+      const ai = new GoogleGenAI({ apiKey, vertexai: false });
+      const model = resolveModelSync('strong');
+
+      let diagnosis: Record<string, unknown> | null = null;
+      let planUpdate: Record<string, unknown> | null = null;
+      let move: string | null = null;
+      let finalText = '';
+
+      for (let hop = 0; hop <= MAX_TOOL_HOPS; hop++) {
+        const resp = await ai.models.generateContent({
+          model,
+          contents: state.contents,
+          config: {
+            systemInstruction: state.systemInstruction,
+            tools: [{ functionDeclarations: TEXT_TOOLS }],
+          },
+        });
+
+        const calls = resp.functionCalls || [];
+        if (!calls.length) {
+          // Verified via tests/smoke/tutor-turn-offline.mjs (2026-09-28,
+          // docs/DECISIONS.md D-2026-09-28-4): an empty/whitespace model
+          // reply was previously sent straight through as tutorText: "" —
+          // a silent turn the child would see as the tutor going blank.
+          // Fall back to a neutral prompt instead, same tone as the
+          // MAX_TOOL_HOPS safety net below.
+          const modelText = (resp.text || '').trim();
+          finalText = modelText || "Sorry, could you say that again?";
+          state.contents.push({ role: 'model', parts: [{ text: finalText }] });
+          break;
+        }
+
+        // Preserve the model's own turn (which may include a spoken lead-in
+        // alongside the call) verbatim, exactly as sent — needed so the next
+        // generateContent call has a valid functionCall/functionResponse pair.
+        const modelContent = resp.candidates?.[0]?.content;
+        if (modelContent) state.contents.push(modelContent);
+
+        const responseParts: Part[] = [];
+        for (const call of calls) {
+          const callId = call.id || call.name || 'call';
+          if (call.name === 'assess_child_reasoning') {
+            const result = await handleAssessChildReasoning(call, state, session, apiKey);
+            diagnosis = result.diagnosis;
+            planUpdate = result.planUpdate;
+            move = result.move;
+            responseParts.push(createPartFromFunctionResponse(callId, call.name, result.response));
+          } else if (call.name === 'record_confusion_signal') {
+            const result = await handleRecordConfusionSignal(call, session);
+            responseParts.push(createPartFromFunctionResponse(callId, call.name, result));
+          } else {
+            responseParts.push(createPartFromFunctionResponse(callId, call.name || 'unknown', { result: 'ok' }));
+          }
+        }
+        state.contents.push({ role: 'user', parts: responseParts });
+
+        if (hop === MAX_TOOL_HOPS) {
+          console.warn(`[tutor/turn] hit MAX_TOOL_HOPS (${MAX_TOOL_HOPS}) for session ${session.sessionId} — returning a safety-net reply`);
+          finalText = "Let's keep going — tell me more about how you got there.";
+          state.contents.push({ role: 'model', parts: [{ text: finalText }] });
+        }
+      }
+
+      state.turnCount += 1;
+      res.json({
+        sessionId: session.sessionId,
+        turn: state.turnCount,
+        tutorText: finalText,
+        move,
+        diagnosis,
+        planUpdate,
+      });
+    } catch (err: any) {
+      console.error('[POST /api/tutor/turn]', err);
+      res.status(500).json({ error: err?.message || 'Failed to process tutor turn' });
+    }
+  });
+}

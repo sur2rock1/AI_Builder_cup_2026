@@ -12,7 +12,7 @@
 // ─────────────────────────────────────────────────────────────────
 import { GoogleGenAI } from '@google/genai';
 
-export type GatewayRole = 'fast' | 'strong' | 'live' | 'image';
+export type GatewayRole = 'fast' | 'strong' | 'review' | 'live' | 'image';
 
 interface RoleConfig {
   envVar: string;
@@ -30,6 +30,13 @@ const ROLE_CONFIG: Record<GatewayRole, RoleConfig> = {
   strong: {
     envVar: 'MODEL_STRONG',
     candidates: ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'],
+  },
+  // The independent critic (src/quality/critic.ts): re-derives answers and checks facts
+  // in a call that has never seen the drafting prompt. Set MODEL_REVIEW to a different
+  // model from MODEL_STRONG for a genuinely independent second opinion.
+  review: {
+    envVar: 'MODEL_REVIEW',
+    candidates: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'],
   },
   live: {
     envVar: 'MODEL_LIVE',
@@ -53,6 +60,20 @@ export interface GatewayCallLog {
 }
 
 export type GatewayLogSink = (entry: GatewayCallLog) => void;
+
+// ── call accounting (so a long run can show — and cap — what it spends) ──
+const stats = { calls: 0, failed: 0, fallback: 0, ms: 0, byCall: {} as Record<string, number> };
+let callBudget = Infinity;
+export class CallBudgetExceeded extends Error { constructor(n: number) { super(`call budget of ${n} model calls reached`); } }
+/** Stop the process's model calls after `n` more calls (throws CallBudgetExceeded). */
+export function setCallBudget(n: number) { callBudget = stats.calls + n; }
+export function gatewayStats() { return { ...stats, byCall: { ...stats.byCall } }; }
+function account(entry: GatewayCallLog) {
+  stats.calls++; if (!entry.ok) stats.failed++; if (entry.usedFallback) stats.fallback++; stats.ms += entry.ms;
+  const k = String(entry.call).replace(/^(critic\.picture|visual\.(focus|contrast))[.:].*/, '$1').replace(/\.repair$/, '.repair');
+  stats.byCall[k] = (stats.byCall[k] || 0) + 1;
+}
+export function assertCallBudget() { if (stats.calls >= callBudget) throw new CallBudgetExceeded(callBudget - 0); }
 
 let logSink: GatewayLogSink = (entry) => {
   const line = `[gateway] ${entry.call} role=${entry.role} model=${entry.model} ok=${entry.ok} ms=${entry.ms}${entry.usedFallback ? ' FALLBACK' : ''}${entry.error ? ' err=' + entry.error : ''}`;
@@ -147,6 +168,22 @@ export interface GenerateOptions {
   timeoutMs?: number;
   /** When provided, the response is parsed as JSON before being returned. */
   responseMimeType?: 'application/json' | 'text/plain';
+  /** Extra content parts sent BEFORE the text prompt — e.g. a PDF uploaded via
+   * the Files API (createPartFromUri). Added for curriculum ingestion
+   * (src/curriculum/pdfIngest.ts) so it no longer needs its own model list. */
+  parts?: unknown[];
+  /** Retry the SAME model this many times on a transient error (429/503/
+   * overloaded), with exponential back-off, before falling through to the next
+   * candidate. Default 0 (unchanged behaviour for latency-bound callers such as
+   * the diagnostician). Long batch jobs (ingestion) set this so a brief rate
+   * limit does not silently downgrade them to a weaker fallback model. */
+  transientRetries?: number;
+}
+
+/** True for errors that are worth retrying on the same model. */
+export function isTransientModelError(err: any): boolean {
+  const msg = String(err?.message ?? err?.status ?? err?.code ?? '');
+  return /\b(429|500|502|503|504)\b|overload|too many|resource.?exhausted|rate.?limit|temporarily|high demand|unavailable|deadline of \d+ms exceeded/i.test(msg);
 }
 
 class DeadlineError extends Error {}
@@ -171,6 +208,7 @@ async function withDeadline<T>(p: Promise<T>, ms: number): Promise<T> {
  * broken model never silently degrades a live demo.
  */
 export async function generateText(opts: GenerateOptions): Promise<{ text: string; model: string }> {
+  assertCallBudget();
   const { role, call, apiKey, prompt, systemInstruction, timeoutMs = 8000 } = opts;
   const ai = new GoogleGenAI({ apiKey, vertexai: false });
   const candidates = resolved[role] ? [resolved[role]!, ...candidatesFor(role)] : candidatesFor(role);
@@ -178,9 +216,13 @@ export async function generateText(opts: GenerateOptions): Promise<{ text: strin
 
   let lastError: any = null;
   let usedFallback = false;
+  /** A model that is merely slow or busy must not be demoted for the rest of the process; only a hard failure (not found, unsupported…) is remembered. */
+  let hardFailure = false;
+  const retries = Math.max(0, opts.transientRetries || 0);
   for (const model of candidates) {
     if (tried.has(model)) continue;
     tried.add(model);
+    for (let attempt = 0; attempt <= retries; attempt++) {
     const start = Date.now();
     try {
       // Bug fixed here (found while wiring liveObserver.ts onto the gateway):
@@ -191,18 +233,19 @@ export async function generateText(opts: GenerateOptions): Promise<{ text: strin
       const config: Record<string, unknown> = {};
       if (systemInstruction) config.systemInstruction = systemInstruction;
       if (opts.responseMimeType) config.responseMimeType = opts.responseMimeType;
+      const parts: unknown[] = [...(opts.parts || []), { text: prompt }];
       const resp = await withDeadline(
         ai.models.generateContent({
           model,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          contents: [{ role: 'user', parts: parts as any }],
           ...(Object.keys(config).length ? { config } : {}),
         }),
         timeoutMs,
       );
       const text = (resp as any).text ?? '';
       const ms = Date.now() - start;
-      resolved[role] = model;
-      logSink({ role, model, call, ok: true, ms, outputChars: text.length, usedFallback });
+      if (!usedFallback || hardFailure) resolved[role] = model;
+      { const e = { role, model, call, ok: true, ms, outputChars: text.length, usedFallback }; account(e); logSink(e); }
       if (usedFallback && isDemoMode()) {
         raiseDemoWarning(`${call}: fell back to ${model} — check MODEL_${role.toUpperCase()}`);
       }
@@ -210,9 +253,18 @@ export async function generateText(opts: GenerateOptions): Promise<{ text: strin
     } catch (err: any) {
       const ms = Date.now() - start;
       lastError = err;
-      logSink({ role, model, call, ok: false, ms, error: String(err?.message || err), usedFallback });
-      usedFallback = true;
+      if (!(err instanceof DeadlineError) && !isTransientModelError(err)) hardFailure = true;
+      { const e = { role, model, call, ok: false, ms, error: String(err?.message || err), usedFallback }; account(e); logSink(e); }
+      if (attempt < retries && isTransientModelError(err)) {
+        const wait = Math.min(60_000, 5_000 * 2 ** attempt);
+        console.warn(`[gateway] ${call}: ${model} transient error, retrying in ${wait / 1000}s (${attempt + 1}/${retries})`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      break; // non-transient or out of retries → next candidate
     }
+    }
+    usedFallback = true;
   }
   if (isDemoMode()) {
     raiseDemoWarning(`${call}: ALL models failed for role=${role} — ${String(lastError?.message || lastError)}`);

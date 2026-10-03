@@ -5,6 +5,8 @@ import {
   BlackboardTab,
   ConceptNode,
   GradeLevel,
+  DynamicQuizData,
+  QuizReasoning,
 } from '../types';
 import {
   Sparkles,
@@ -38,7 +40,8 @@ interface DynamicBlackboardProps {
   onTabChange: (tab: BlackboardTab) => void;
   onNodeClick: (node: ConceptNode) => void;
   onVariableChange: (varId: string, val: number) => void;
-  onQuizAnswer: (index: number) => void;
+  /** Called once, with the pick and the child's own account of how they chose. The board reveals only after this. */
+  onQuizAnswer: (index: number, reasoning?: QuizReasoning) => void;
   onAskSuggestedQuestion?: (question: string) => void;
   onSetTopicOnTheFly?: (topic: string, grade?: string) => void;
   onAskVisualOrCommand?: (command: string) => void;
@@ -53,6 +56,105 @@ const INSPIRING_TOPICS = [
   { topic: 'Neural Networks & Backpropagation', grade: 'College / Undergraduate', icon: Zap },
   { topic: 'Plate Tectonics & Continental Drift', grade: 'Secondary 2 (Grade 8)', icon: Compass },
 ];
+
+const HOW_CHIPS: Array<{ id: NonNullable<QuizReasoning['how']>; label: string }> = [
+  { id: 'worked_out', label: 'I worked it out' },
+  { id: 'remembered', label: 'I remembered it' },
+  { id: 'guessed', label: 'I guessed' },
+  { id: 'unsure', label: 'Not sure' },
+];
+
+/**
+ * A quiz the way the tutor asks one (docs/TUTOR_PERSONA.md §5, §10): the child picks, says HOW they chose,
+ * and only then does the board reveal — in neutral colours, with no verdict symbols. The pick alone is
+ * recognition; the child's own words are the evidence (src/adaptive/assessmentEngine.ts capForEvidence).
+ */
+const QuizPanel: React.FC<{
+  topic: string;
+  quiz: DynamicQuizData;
+  selected: number | null;
+  revealed: boolean;
+  onSubmit: (index: number, reasoning?: QuizReasoning) => void;
+}> = ({ topic, quiz, selected, revealed, onSubmit }) => {
+  const [pending, setPending] = useState<number | null>(null);
+  const [how, setHow] = useState<QuizReasoning['how']>(undefined);
+  const [text, setText] = useState('');
+  const picked = revealed ? selected : pending;
+
+  return (
+    <div id="view-quiz" className="w-full flex flex-col gap-6 animate-fadeIn max-w-3xl mx-auto">
+      <div className="p-6 sm:p-8 rounded-3xl bg-[#092215] border-2 border-[#1f4e34] shadow-2xl">
+        <div className="mb-4">
+          <span className="text-[10px] uppercase font-mono font-bold text-emerald-300">Try it</span>
+          <h3 className="text-sm font-semibold text-[#a0c8b2]">A new situation for {topic}</h3>
+        </div>
+
+        <h4 className="text-lg sm:text-xl font-bold font-serif text-white mb-6 leading-relaxed">{quiz.question}</h4>
+
+        <div className="space-y-3 mb-6">
+          {quiz.options.map((option, idx) => {
+            const isPicked = picked === idx;
+            const isKey = idx === quiz.correctIndex;
+            let style = 'bg-[#0e2a1b] border-[#1d4c30] text-[#e8f7ee] hover:bg-[#143d26] hover:border-emerald-400';
+            if (revealed) {
+              // Neutral reveal: the answer that works is marked; the child's own pick is only outlined. No red, no cross.
+              style = isKey
+                ? 'bg-emerald-950/80 border-emerald-400 text-emerald-200 ring-2 ring-emerald-400'
+                : isPicked ? 'bg-[#10261a] border-slate-400 text-slate-200 ring-2 ring-slate-400' : 'bg-[#0b2015] border-[#1d4c30] text-[#9dc1ad] opacity-80';
+            } else if (isPicked) {
+              style = 'bg-amber-950/60 border-amber-400 text-amber-200 ring-2 ring-amber-400';
+            }
+            return (
+              <button key={idx} onClick={() => setPending(idx)} disabled={revealed}
+                className={`w-full p-4 rounded-xl border-2 text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${style}`}>
+                <div className="flex items-center gap-3">
+                  <span className="w-6 h-6 rounded-lg bg-[#06180e] border border-[#23583a] text-xs font-mono font-bold text-amber-300 flex items-center justify-center shrink-0">
+                    {String.fromCharCode(65 + idx)}
+                  </span>
+                  <span className="text-sm sm:text-base">{option}</span>
+                </div>
+                {revealed && isKey && <span className="text-xs font-semibold text-emerald-300 shrink-0">this one works</span>}
+                {revealed && isPicked && !isKey && <span className="text-xs text-slate-300 shrink-0">your pick</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {!revealed && pending !== null && (
+          <div className="p-4 rounded-2xl border-2 border-[#1f4e34] bg-[#0b2216] animate-fadeIn">
+            <p className="text-sm font-semibold text-white mb-3">How did you decide?</p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {HOW_CHIPS.map((c) => (
+                <button key={c.id} onClick={() => setHow(how === c.id ? undefined : c.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${how === c.id ? 'bg-emerald-400 text-black border-emerald-300' : 'bg-[#0e2a1b] text-[#cfe8da] border-[#23583a] hover:border-emerald-400'}`}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} maxLength={400}
+              placeholder="In your own words — what made you pick that one? (optional)"
+              className="w-full px-3 py-2 text-sm rounded-xl bg-[#06180e] border border-[#23583a] focus:border-emerald-400 focus:outline-none text-white placeholder-[#5e8b72] resize-none" />
+            <div className="flex items-center justify-between mt-3">
+              <button onClick={() => { setPending(null); setHow(undefined); setText(''); }} className="text-xs text-[#8ab69e] hover:text-white cursor-pointer">Pick a different one</button>
+              <button onClick={() => onSubmit(pending, { how, text: text.trim() || undefined })}
+                className="px-4 py-2 rounded-xl bg-emerald-500 text-black font-bold text-sm hover:opacity-95 cursor-pointer">Show me</button>
+            </div>
+          </div>
+        )}
+
+        {revealed && (
+          <div className="p-4 rounded-2xl border-2 animate-fadeIn bg-[#0b2216] border-[#2f6b47] text-[#dff3e8]">
+            <div className="flex items-center gap-2 mb-1">
+              <Lightbulb className="w-4 h-4 text-amber-400" />
+              <span className="text-xs font-bold uppercase tracking-wider font-mono">Here is how it works</span>
+            </div>
+            <p className="text-xs sm:text-sm leading-relaxed">{quiz.explanation}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
   blackboard,
@@ -70,6 +172,7 @@ export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
     lessonData,
     isLoading,
     isGeneratingPhoto,
+    photoNotice,
     highlightedNodeId,
     interactiveValues,
     selectedQuizOption,
@@ -453,6 +556,7 @@ export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
               grade={grade}
               photoData={lessonData.photoVisual}
               isLoadingPhoto={isGeneratingPhoto}
+              notice={photoNotice}
               onGeneratePhoto={onGeneratePhoto || (() => {})}
             />
           </div>
@@ -661,90 +765,14 @@ export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
         {/* TAB 6: CONCEPT QUIZ */}
         {/* ============================================================ */}
         {currentTab === 'quiz' && quiz && (
-          <div id="view-quiz" className="w-full flex flex-col gap-6 animate-fadeIn max-w-3xl mx-auto">
-            <div className="p-6 sm:p-8 rounded-3xl bg-[#092215] border-2 border-[#1f4e34] shadow-2xl">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center font-bold text-sm">
-                  ?
-                </span>
-                <div>
-                  <span className="text-[10px] uppercase font-mono font-bold text-rose-300">
-                    CONCEPT MASTERY CHALLENGE
-                  </span>
-                  <h3 className="text-sm font-semibold text-[#a0c8b2]">
-                    Test your understanding of {topic}
-                  </h3>
-                </div>
-              </div>
-
-              {/* Question */}
-              <h4 className="text-lg sm:text-xl font-bold font-serif text-white mb-6 leading-relaxed">
-                {quiz.question}
-              </h4>
-
-              {/* Options */}
-              <div className="space-y-3 mb-6">
-                {quiz.options.map((option, idx) => {
-                  const isSelected = selectedQuizOption === idx;
-                  const isCorrect = idx === quiz.correctIndex;
-
-                  let btnStyle =
-                    'bg-[#0e2a1b] border-[#1d4c30] text-[#e8f7ee] hover:bg-[#143d26] hover:border-emerald-400';
-
-                  if (showQuizResult) {
-                    if (isCorrect) {
-                      btnStyle = 'bg-emerald-950/80 border-emerald-400 text-emerald-200 ring-2 ring-emerald-400';
-                    } else if (isSelected && !isCorrect) {
-                      btnStyle = 'bg-rose-950/80 border-rose-400 text-rose-200 ring-2 ring-rose-400';
-                    }
-                  } else if (isSelected) {
-                    btnStyle = 'bg-amber-950/60 border-amber-400 text-amber-200 ring-2 ring-amber-400';
-                  }
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => onQuizAnswer(idx)}
-                      disabled={showQuizResult}
-                      className={`w-full p-4 rounded-xl border-2 text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${btnStyle}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded-lg bg-[#06180e] border border-[#23583a] text-xs font-mono font-bold text-amber-300 flex items-center justify-center shrink-0">
-                          {String.fromCharCode(65 + idx)}
-                        </span>
-                        <span className="text-sm sm:text-base">{option}</span>
-                      </div>
-                      {showQuizResult && isCorrect && (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                      )}
-                      {showQuizResult && isSelected && !isCorrect && (
-                        <XCircle className="w-5 h-5 text-rose-400 shrink-0" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Explanation Box */}
-              {showQuizResult && (
-                <div
-                  className={`p-4 rounded-2xl border-2 animate-fadeIn ${
-                    selectedQuizOption === quiz.correctIndex
-                      ? 'bg-emerald-950/40 border-emerald-400/80 text-emerald-100'
-                      : 'bg-amber-950/40 border-amber-400/80 text-amber-100'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Lightbulb className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs font-bold uppercase tracking-wider font-mono">
-                      Pedagogical Explanation:
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm leading-relaxed">{quiz.explanation}</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <QuizPanel
+            key={quiz.question}
+            topic={topic}
+            quiz={quiz}
+            selected={selectedQuizOption}
+            revealed={showQuizResult}
+            onSubmit={onQuizAnswer}
+          />
         )}
       </main>
 

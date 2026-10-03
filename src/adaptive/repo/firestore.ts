@@ -48,6 +48,7 @@ export class FirestoreLearnerRepository implements LearnerRepository {
   async listEvents(studentId: string, filter: EventFilter = {}): Promise<(LearningEvidence & { eventId: string })[]> {
     let q: FirebaseFirestore.Query = db().collection('learners').doc(studentId).collection('events');
     if (filter.conceptId) q = q.where('conceptId', '==', filter.conceptId);
+    if (filter.sessionId) q = q.where('sessionId', '==', filter.sessionId);
     q = q.orderBy('timestamp', 'asc');
     if (filter.limit) q = q.limitToLast(filter.limit);
     const snap = await q.get();

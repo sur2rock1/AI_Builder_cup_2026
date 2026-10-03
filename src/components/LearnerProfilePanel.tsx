@@ -69,7 +69,8 @@ interface Props {
   session: AdaptiveSessionUI | null;
   currentConcept: CurriculumConceptUI | null;
   lastAssessment: AssessmentResultUI | null;
-  onStartSession: (studentId: string, name: string, grade: string, subjectId: string) => void;
+  /** Unused since the hard-coded demo start button was removed (2026-09-26); kept optional for callers. */
+  onStartSession?: (studentId: string, name: string, grade: string, subjectId: string) => void;
   onAssessQuiz: (questionSummary: string, studentAnswer: string, correctAnswer: string, selectedIdx: number, correctIdx: number) => void;
   sessionId: string | null;
   isVisible: boolean;
@@ -247,8 +248,6 @@ export const LearnerProfilePanel: React.FC<Props> = ({
   learner, session, currentConcept, lastAssessment,
   onStartSession, sessionId, isVisible, onToggle, hideTab,
 }) => {
-  const [studentName, setStudentName] = useState('Alex');
-
   const subjectProgress: SubjectProgressUI | null = learner && session
     ? learner.subjects[session.subjectId] || null
     : null;
@@ -261,9 +260,10 @@ export const LearnerProfilePanel: React.FC<Props> = ({
     ? Math.round(conceptStates.reduce((sum, cs) => sum + cs.masteryScore, 0) / conceptStates.length)
     : 0;
 
-  const handleStart = () => {
-    onStartSession('student-demo', studentName, 'Secondary 2 (Grade 8)', 'pythagoras');
-  };
+  // The old "Begin Adaptive Session" button here started a hard-coded
+  // 'pythagoras' demo subject that no longer exists in the curriculum library
+  // (removed 2026-09-26, docs/CURRICULUM.md). Sessions start from the Subjects
+  // screen, where the learner picks a course + concept for their board/grade.
 
   if (!isVisible) {
     if (hideTab) return null;
@@ -312,23 +312,10 @@ export const LearnerProfilePanel: React.FC<Props> = ({
         {/* Session setup (before session starts) */}
         {!session && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 8 }}>START A LEARNING SESSION</div>
-            <input
-              value={studentName}
-              onChange={e => setStudentName(e.target.value)}
-              placeholder="Student name"
-              style={{
-                width: '100%', background: '#1f2937', border: '1px solid #374151',
-                borderRadius: 8, padding: '8px 10px', color: '#e5e7eb', fontSize: 13,
-                marginBottom: 8, boxSizing: 'border-box',
-              }}
-            />
-            <button onClick={handleStart} style={{
-              width: '100%', background: '#1d4ed8', color: 'white', border: 'none',
-              borderRadius: 8, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            }}>
-              Begin Adaptive Session →
-            </button>
+            <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 6 }}>NO SESSION YET</div>
+            <div style={{ color: '#6b7280', fontSize: 12, lineHeight: 1.5 }}>
+              Choose a subject and concept from the Subjects screen to start a lesson — this panel then shows the learner's progress on it.
+            </div>
           </div>
         )}
 

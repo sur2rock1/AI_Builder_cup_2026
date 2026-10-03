@@ -24,12 +24,13 @@ import { authFetch } from './firebase/auth';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { LearnerProfilePanel } from './components/LearnerProfilePanel';
 import { TutorReasoningPanel } from './components/TutorReasoningPanel';
-import { CurriculumUpload } from './components/CurriculumUpload';
+import { AdminLibrary } from './components/AdminLibrary';
 import {
   LearnerProfileUI, AdaptiveSessionUI, AssessmentResultUI,
   CurriculumConceptUI,
 } from './types';
 import { LoginScreen, StudentProfile } from './components/LoginScreen';
+import { Onboarding } from './components/Onboarding';
 import { SubjectSelector } from './components/SubjectSelector';
 import { ParentPortal } from './components/ParentPortal';
 import {
@@ -41,6 +42,11 @@ import type { LearnerSnapshot } from './adaptive/liveObserver';
 import { ImmersiveStage, PresenterMedia } from './components/ImmersiveStage';
 import { PanelMode } from './components/ScenePanel';
 import { getScene } from './scenes/genericScenes';
+import type { StepState } from './components/BoardVisualView';
+import type { BoardVisual, BoardVisual3D } from './visual/types';
+import { matchRevealTarget } from './visual/tutorBrief';
+import { normalizeQuiz, isQuizShape } from './quality/quizTools';
+import type { QuizReasoning } from './types';
 
 // Which teaching surface to render.
 //   'immersive' — presenter on a stage beside a real whiteboard (current)
@@ -68,7 +74,7 @@ const PRESENTER: PresenterMedia = {
 
 export const App: React.FC = () => {
   // ─── Navigation / screen state ───────────────────────────────
-  type AppScreen = 'login' | 'subject-select' | 'tutor' | 'parent-portal';
+  type AppScreen = 'login' | 'onboarding' | 'subject-select' | 'tutor' | 'parent-portal' | 'admin';
   const [screen, setScreen] = useState<AppScreen>('login');
   const [loggedInStudent, setLoggedInStudent] = useState<StudentProfile | null>(null);
 
@@ -83,8 +89,12 @@ export const App: React.FC = () => {
   const [lastAssessment, setLastAssessment] = useState<AssessmentResultUI | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [curriculaVersion, setCurriculaVersion] = useState(0);
+  // Curriculum concept behind the current lesson, so lesson/diagram requests
+  // can hit the per-concept pregenerated cache (data/pregenerated/<conceptId>.json)
+  // rather than a label slug that two courses might share (docs/CURRICULUM.md §8).
+  const lessonConceptRef = useRef<{ id: string; label: string } | null>(null);
+  const conceptIdFor = (label: string) =>
+    lessonConceptRef.current && lessonConceptRef.current.label === label ? lessonConceptRef.current.id : undefined;
 
   // ─── Live teaching state (new canvas) ────────────────────────
   const [figure, setFigure] = useState<FigureSpec>({ a: 4, b: 3, unknownSide: null });
@@ -92,6 +102,7 @@ export const App: React.FC = () => {
   // Pre-generated real-world photo for this topic (base64 data URI from pregen cache).
   // Shown in the real-world panel when the scene photo is not available or not calibrated.
   const [pregenPhoto, setPregenPhoto] = useState<string | null>(null);
+  const [pregenPhotoCaption, setPregenPhotoCaption] = useState<string | null>(null);
   const [focusPart, setFocusPart] = useState<FigurePart | null>(null);
   // Lesson opens on a real situation, then fades to the bare shape (concreteness fading).
   const [panelMode, setPanelMode] = useState<PanelMode>('real');
@@ -127,6 +138,49 @@ export const App: React.FC = () => {
     window.setTimeout(() => setFocusPart(curr => (curr === part ? null : curr)), 6000);
   }, []);
 
+  // ─── Board pictures (docs/BOARD_VISUALS.md) ──────────────────
+  // How far each picture has been built. The tutor moves these with reveal_part;
+  // the learner can also step through with the arrows on the board.
+  const [visualStep, setVisualStep] = useState<StepState>(0);
+  const [visual3dStep, setVisual3dStep] = useState<StepState>(0);
+  // Bricks the tutor is pointing at right now (reveal_part / highlight_concept of a part).
+  const [visualSpotlight, setVisualSpotlight] = useState<string[]>([]);
+  const spotlightTimerRef = useRef<number | null>(null);
+  // Tool calls arrive in a callback that does not re-render with the lesson, so the
+  // pictures currently on the board are mirrored into a ref for it to read.
+  const boardVisualsRef = useRef<{ visual: BoardVisual | null; visual3d: BoardVisual3D | null; legacy3d: boolean }>({ visual: null, visual3d: null, legacy3d: false });
+
+  const spotlight = useCallback((ids: string[]) => {
+    if (spotlightTimerRef.current) window.clearTimeout(spotlightTimerRef.current);
+    setVisualSpotlight(ids);
+    // Like revealPart's focus: a moment, not a state.
+    if (ids.length) spotlightTimerRef.current = window.setTimeout(() => setVisualSpotlight([]), 6000);
+  }, []);
+
+  /** Point the board at whatever the tutor just named. Returns false when nothing matched. */
+  const showOnBoard = useCallback((phrase: string, opts: { moveStep: boolean }): boolean => {
+    const { visual, visual3d } = boardVisualsRef.current;
+    const target = matchRevealTarget([{ key: 'main', visual }, { key: '3d', visual: visual3d }], phrase);
+    if (!target) return false;
+    const isStep = target.elementIds.length === 0;
+    const advance = (prev: StepState): StepState => {
+      const idx = target.stepIndex;
+      if (idx === null) return prev;
+      if (isStep && opts.moveStep) return idx;                 // a step name: go there, forward or back
+      if (prev === 'all') return prev;                          // everything is already on the board
+      return typeof prev === 'number' && prev < idx ? idx : prev; // a named part not drawn yet: bring its step in
+    };
+    if (target.key === '3d') {
+      setPanelMode('3d');
+      setVisual3dStep(advance);
+    } else {
+      setPanelMode('shape');
+      setVisualStep(advance);
+    }
+    spotlight(target.elementIds);
+    return true;
+  }, [spotlight]);
+
   // ─── Blackboard State
   const [blackboard, setBlackboard] = useState<BlackboardState>({
     activeTab: '2d',
@@ -139,6 +193,16 @@ export const App: React.FC = () => {
     showQuizResult: false,
     customLiveNotes: [],
   });
+
+  // Keep the tool-call handler's view of the board pictures current.
+  useEffect(() => {
+    const lesson = blackboard.lessonData;
+    boardVisualsRef.current = {
+      visual: lesson?.visual ?? null,
+      visual3d: lesson?.visual3d ?? null,
+      legacy3d: !!lesson?.scene3d && !lesson?.visual,
+    };
+  }, [blackboard.lessonData]);
 
   // Animated Tutor State
   const [tutorState, setTutorState] = useState<TutorState>({
@@ -186,13 +250,14 @@ export const App: React.FC = () => {
       const res = await fetch('/api/generate-lesson', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: targetTopic, grade: targetGrade }),
+        body: JSON.stringify({ topic: targetTopic, grade: targetGrade, conceptId: conceptIdFor(targetTopic) }),
       });
 
       const json = await res.json();
 
       // Store pre-generated real-world photo when the server includes one
       setPregenPhoto(json?.photoUrl ?? null);
+      setPregenPhotoCaption(json?.photoCaption ?? null);
 
       let finalData: DynamicLessonData;
       if (json && json.data) {
@@ -209,6 +274,19 @@ export const App: React.FC = () => {
       } else {
         // Fallback to intelligent local generator
         finalData = createDynamicLesson(targetTopic, targetGrade);
+      }
+
+      // A quiz must never be answerable by position: legacy/stored quizzes are put in seeded order at runtime
+      // (idempotent for anything already shuffled at generation), and an unusable quiz is dropped, not shown.
+      if (finalData.quiz) {
+        const q = normalizeQuiz(finalData.quiz, targetTopic);
+        finalData = { ...finalData, quiz: (q ?? undefined) as any };
+      }
+
+      // Template content the offline generator invents (a generic 3D scene, "Key Point" photo pins) is not
+      // shown: only a verified photo / a board picture the gates passed. Pythagoras keeps its hand-built scene.
+      if (!/pythag/i.test(targetTopic)) {
+        finalData = { ...finalData, scene3d: undefined, photoVisual: finalData.photoVisual?.imageUrl ? finalData.photoVisual : undefined };
       }
 
       // Initialize interactive variables
@@ -232,17 +310,29 @@ export const App: React.FC = () => {
       });
 
       // Pre-populate Pythagorean figure parts for overview before voice session.
-      // For non-Pythagorean topics the concept-map diagram handles visualisation;
+      // For non-Pythagorean topics the board picture handles visualisation;
       // revealed is left empty so no unrelated triangle parts leak into the UI.
       if (/pythag/i.test(targetTopic)) {
         setRevealed(['triangle', 'right-angle', 'leg-a', 'leg-b', 'hypotenuse', 'formula']);
       } else {
         setRevealed([]);
       }
+      // A new lesson's picture starts at its first step: one idea at a time.
+      setVisualStep(0);
+      setVisual3dStep(0);
+      setVisualSpotlight([]);
 
+      // Say only what this lesson actually has (a 3D model exists only when it helps).
+      const offer = [
+        finalData.visual ? 'a picture we’ll build step by step' : 'a diagram',
+        finalData.visual3d ? 'a 3D model' : null,
+        'a real-world photo',
+        'chalkboard notes',
+        'a question to try',
+      ].filter(Boolean) as string[];
       setOutputTranscript({
         id: `topic-${Date.now()}`,
-        text: `I have prepared a real-time interactive masterclass on "${finalData.topic}" for ${finalData.grade}. We have 2D schematics, a 3D spatial simulation, photorealistic observational visuals, chalkboard notes, and a challenge quiz ready!`,
+        text: `Ready for "${finalData.topic}" (${finalData.grade}): ${offer.slice(0, -1).join(', ')} and ${offer[offer.length - 1]}.`,
         timestamp: Date.now(),
       });
     } catch (err) {
@@ -292,7 +382,7 @@ export const App: React.FC = () => {
   // Generate Photo Visual on the Fly using AI
   const handleGeneratePhoto = async (customPrompt?: string) => {
     const activeTopic = topic || blackboard.lessonData?.topic || 'Science';
-    setBlackboard((prev) => ({ ...prev, isGeneratingPhoto: true }));
+    setBlackboard((prev) => ({ ...prev, isGeneratingPhoto: true, photoNotice: null }));
 
     try {
       const res = await fetch('/api/generate-image', {
@@ -301,6 +391,7 @@ export const App: React.FC = () => {
         body: JSON.stringify({
           topic: activeTopic,
           prompt: customPrompt,
+          conceptId: conceptIdFor(activeTopic),
         }),
       });
 
@@ -316,11 +407,10 @@ export const App: React.FC = () => {
               ...prev.lessonData,
               photoVisual: {
                 imageUrl: data.imageUrl,
-                caption: data.caption || `Photographic Study: ${activeTopic}`,
+                caption: data.caption || activeTopic,
                 promptUsed: data.promptUsed || customPrompt || activeTopic,
-                annotations: prev.lessonData.photoVisual?.annotations || [
-                  { label: 'Key Observable Feature', description: `Empirical detail of ${activeTopic}`, x: 45, y: 50 },
-                ],
+                aiGenerated: true,
+                annotations: [],
               },
             },
           };
@@ -328,15 +418,15 @@ export const App: React.FC = () => {
 
         setOutputTranscript({
           id: `photo-${Date.now()}`,
-          text: `I have generated a high-definition photorealistic visual for "${activeTopic}". Take a look at the photographic study on the blackboard!`,
+          text: `I made an illustration for "${activeTopic}" — it is AI-generated, so tell me if anything in it looks off. Take a look on the board.`,
           timestamp: Date.now(),
         });
       } else {
-        setBlackboard((prev) => ({ ...prev, isGeneratingPhoto: false, activeTab: 'photo' }));
+        setBlackboard((prev) => ({ ...prev, isGeneratingPhoto: false, activeTab: 'photo', photoNotice: data?.error || 'No verified picture is available for this yet.' }));
       }
     } catch (err) {
       console.error('[App] Error generating image:', err);
-      setBlackboard((prev) => ({ ...prev, isGeneratingPhoto: false, activeTab: 'photo' }));
+      setBlackboard((prev) => ({ ...prev, isGeneratingPhoto: false, activeTab: 'photo', photoNotice: 'Picture generation failed — please try again.' }));
     }
   };
 
@@ -365,16 +455,74 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  // Newest picture request wins: a slow response for an older request must never replace what the
+  // tutor is showing now (the live-drawn picture can take 20+ s).
+  const boardRequestSeq = useRef(0);
+
+  /** Send a front-end event to the server log (logs/server-*.log) so blank-board reports can be diagnosed. */
+  const clientLog = useCallback((tag: string, msg: string) => {
+    try {
+      fetch('/api/client-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tag, msg }), keepalive: true }).catch(() => {});
+    } catch { /* logging must never break the UI */ }
+  }, []);
+  useEffect(() => {
+    const onErr = (e: ErrorEvent) => clientLog('window.error', `${e.message} @ ${e.filename}:${e.lineno}`);
+    const onRej = (e: PromiseRejectionEvent) => clientLog('unhandledrejection', String((e.reason && (e.reason.stack || e.reason.message)) || e.reason));
+    window.addEventListener('error', onErr);
+    window.addEventListener('unhandledrejection', onRej);
+    return () => { window.removeEventListener('error', onErr); window.removeEventListener('unhandledrejection', onRej); };
+  }, [clientLog]);
+
   // Handle Tool Calls from Gemini Live Voice Model
   const handleToolCall = useCallback(
     (name: string, args: Record<string, any>, serverResult?: Record<string, any>) => {
       console.log(`[App] Handling Gemini Live tool call: ${name}`, args, serverResult);
 
+      /** Put a picture from /api/update-diagram on the board, starting at its first step.
+       * On failure the board keeps the picture it has — never a generic stand-in. */
+      const applyBoardVisual = (json: any, from: string): boolean => {
+        if (json?.success && json.visual) {
+          const v = json.visual as BoardVisual;
+          const current = boardVisualsRef.current.visual;
+          // Same picture asked for again (e.g. the tutor re-requests the lesson's main picture mid-explanation):
+          // keep the build-up where it is instead of wiping it back to step 0.
+          const same = !!current && JSON.stringify(current) === JSON.stringify(v);
+          if (!same) {
+            setBlackboard((prev) => (prev.lessonData
+              ? { ...prev, activeTab: '2d', highlightedNodeId: null, lessonData: { ...prev.lessonData, visual: v } }
+              : prev));
+            setVisualStep(0);
+            setVisualSpotlight([]);
+            // The ref is otherwise refreshed by an effect after render; a reveal_part arriving in the same
+            // moment must already see the new picture's step names.
+            boardVisualsRef.current = { ...boardVisualsRef.current, visual: v };
+          }
+          setPanelMode('shape');
+          console.log(`[${from}] board picture "${v.title}" (${json.key || 'new'}, ${json.source || 'unknown'})${same ? ' — same as current, progress kept' : ''}`);
+          clientLog('board.apply', `${from} "${v.title}" key=${json.key || 'new'} steps=${v.steps?.length} elements=${v.elements?.length} ${same ? 'SAME(kept step)' : 'replaced, step 0'}`);
+          return true;
+        }
+        console.warn(`[${from}] no picture — keeping the current one:`, json?.error || json);
+        clientLog('board.keep', `${from} no picture: ${String(json?.error || 'unknown').slice(0, 200)}`);
+        return false;
+      };
+
       switch (name) {
         // ─── New teaching canvas tools ────────────────────────
         case 'reveal_part': {
-          setPanelMode(prev => (prev === '3d' ? 'shape' : prev));
           const list: string[] = Array.isArray(args.parts) && args.parts.length ? args.parts : args.part ? [args.part] : [];
+          const { visual, visual3d } = boardVisualsRef.current;
+          if ((visual || visual3d) && !/pythag/i.test(topic || '')) {
+            // A generated board picture: each name is a step (or a part) of it. Several
+            // names in one call are shown a beat apart, keeping pace with the voice.
+            list.forEach((p, i) => {
+              window.setTimeout(() => {
+                if (!showOnBoard(String(p), { moveStep: true })) { console.info(`[reveal_part] "${p}" matched nothing on the board`); clientLog('board.reveal-miss', `"${String(p).slice(0, 60)}" matched nothing on "${boardVisualsRef.current.visual?.title}"`); }
+              }, i * 1800);
+            });
+            break;
+          }
+          setPanelMode(prev => (prev === '3d' ? 'shape' : prev));
           // One call, several parts: reveal them in order, a beat apart, so the
           // board keeps pace with the explanation without a tool call per word.
           list.forEach((p, i) => {
@@ -499,38 +647,27 @@ export const App: React.FC = () => {
             setBlackboard((prev) => ({ ...prev, activeTab: tab }));
           }
           // Six legacy tabs collapse onto three views: real world, shape, 3D.
-          setPanelMode(tab === '3d' ? '3d' : tab === 'photo' ? 'real' : tab === 'chalkboard' ? 'chalk' : 'shape');
-          // Auto-regenerate the 2D concept diagram whenever the AI switches to the
-          // '2d' tab. This ensures the diagram is always relevant to the current
-          // topic even if the AI forgot to call update_diagram first.
-          if (tab === '2d') {
+          // A 3D view exists only when it helps this idea; otherwise the Shape view stands in.
+          const { visual, visual3d, legacy3d } = boardVisualsRef.current;
+          const has3D = !!visual3d || legacy3d;
+          setPanelMode(tab === '3d' ? (has3D ? '3d' : 'shape') : tab === 'photo' ? 'real' : tab === 'chalkboard' ? 'chalk' : 'shape');
+          // An older lesson with no board picture yet: ask for its teaching picture
+          // (drawn once, then stored as the lesson's main picture). A lesson that has
+          // one keeps it — switching views never replaces the picture being built.
+          if (tab === '2d' && !visual && !/pythag/i.test(topic || '')) {
             const autoTopic = topic;
-            const autoGrade = grade;
-            console.log(`[switch_board_view] Auto-triggering diagram update for: "${autoTopic}"`);
+            const seqAuto = ++boardRequestSeq.current;
             (async () => {
               try {
                 const res = await fetch('/api/update-diagram', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ topic: autoTopic, grade: autoGrade, focus: autoTopic }),
+                  body: JSON.stringify({ topic: autoTopic, grade, focus: autoTopic, conceptId: conceptIdFor(autoTopic) }),
                 });
-                const json = await res.json();
-                if (json.success && json.diagram) {
-                  console.log(`[switch_board_view] Diagram updated (source: ${json.source || 'unknown'})`);
-                  setBlackboard((prev) => {
-                    if (!prev.lessonData) return prev;
-                    return {
-                      ...prev,
-                      activeTab: '2d',
-                      highlightedNodeId: null,
-                      lessonData: { ...prev.lessonData, diagram: json.diagram },
-                    };
-                  });
-                } else {
-                  console.warn('[switch_board_view] Auto diagram update returned no diagram:', json);
-                }
+                const jsonAuto = await res.json();
+                if (seqAuto === boardRequestSeq.current) applyBoardVisual(jsonAuto, 'switch_board_view');
               } catch (err) {
-                console.warn('[switch_board_view] Auto diagram update failed:', err);
+                console.warn('[switch_board_view] picture request failed:', err);
               }
             })();
           }
@@ -557,6 +694,8 @@ export const App: React.FC = () => {
 
         case 'highlight_concept': {
           const target = String(args.nodeIdOrName || '').toLowerCase();
+          // On a board picture: spotlight the named part (bringing it in if not drawn yet).
+          if (boardVisualsRef.current.visual && !/pythag/i.test(topic || '') && showOnBoard(target, { moveStep: false })) break;
           revealPart(resolvePart(target));
           setBlackboard((prev) => {
             const matched = prev.lessonData?.diagram.nodes.find(
@@ -591,7 +730,7 @@ export const App: React.FC = () => {
             setPanelMode('chalk');
           }
 
-          if (question && Array.isArray(options)) {
+          if (question && Array.isArray(options) && isQuizShape({ question, options, correctIndex, explanation })) {
             setBlackboard((prev) => {
               if (!prev.lessonData) return prev;
               return {
@@ -616,36 +755,32 @@ export const App: React.FC = () => {
 
         case 'update_diagram': {
           const focus = String(args.focus || '');
-          revealPart(resolvePart(focus));
+          if (/pythag/i.test(topic || '')) revealPart(resolvePart(focus));
           const currentTopic = topic;
           const currentGrade = grade;
-          // Show 2D tab immediately with a loading indicator while we fetch
           setBlackboard((prev) => ({ ...prev, activeTab: '2d' }));
-          // Async call to regenerate diagram — don't block the tool call response
+          // The prepared picture (a contrast case, the application picture) arrives
+          // instantly; a new one takes a few seconds. The server tells the tutor its
+          // step names in the tool response, so the tutor can build it up.
+          const seq = ++boardRequestSeq.current;
+          const t0 = Date.now();
+          clientLog('board.request', `update_diagram #${seq} focus="${focus.slice(0, 80)}"`);
           (async () => {
             try {
               const res = await fetch('/api/update-diagram', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic: currentTopic, grade: currentGrade, focus }),
+                body: JSON.stringify({ topic: currentTopic, grade: currentGrade, focus, conceptId: conceptIdFor(currentTopic) }),
               });
               const json = await res.json();
-              if (json.success && json.diagram) {
-                setBlackboard((prev) => {
-                  if (!prev.lessonData) return prev;
-                  return {
-                    ...prev,
-                    activeTab: '2d',
-                    highlightedNodeId: null,
-                    lessonData: {
-                      ...prev.lessonData,
-                      diagram: json.diagram,
-                    },
-                  };
-                });
+              if (seq !== boardRequestSeq.current) {
+                clientLog('board.stale', `update_diagram #${seq} finished after ${Date.now() - t0}ms but #${boardRequestSeq.current} is newer — discarded`);
+                return;
               }
+              applyBoardVisual(json, 'update_diagram');
             } catch (err) {
-              console.warn('[update_diagram] Diagram update failed silently:', err);
+              console.warn('[update_diagram] picture request failed — keeping the current one:', err);
+              clientLog('board.error', `update_diagram #${seq} failed: ${String((err as any)?.message || err)}`);
             }
           })();
           break;
@@ -655,7 +790,7 @@ export const App: React.FC = () => {
           console.warn(`[App] Unhandled tool call: ${name}`);
       }
     },
-    [grade, topic, loadLesson, revealPart]
+    [grade, topic, loadLesson, revealPart, showOnBoard, clientLog]
   );
 
   // ─── Adaptive session handlers ─────────────────────────────
@@ -677,6 +812,7 @@ export const App: React.FC = () => {
           sessionStarted: Date.now(), interactionCount: 0, recentAttempts: [],
         });
         setCurrentConcept(json.currentConcept || null);
+        lessonConceptRef.current = json.currentConcept ? { id: json.currentConcept.id, label: json.currentConcept.label } : null;
         // T17/T18/T23 — the deterministic Teaching Plan compiled for this
         // session, feeding the Tutor's-reasoning panel from the moment the
         // lesson opens (before any live exchange has happened yet).
@@ -694,7 +830,7 @@ export const App: React.FC = () => {
     } catch (err) { console.error('[Session] Failed to start:', err); }
   };
 
-  const handleAdaptiveQuizAnswer = async (selectedIdx: number) => {
+  const handleAdaptiveQuizAnswer = async (selectedIdx: number, reasoning?: QuizReasoning) => {
     // First update UI normally
     setBlackboard(prev => ({ ...prev, selectedQuizOption: selectedIdx, showQuizResult: true }));
 
@@ -712,6 +848,8 @@ export const App: React.FC = () => {
           correctAnswer: quiz.options[quiz.correctIndex],
           selectedOptionIndex: selectedIdx,
           correctOptionIndex: quiz.correctIndex,
+          itemId: quiz.itemId,
+          reasoning,
         }),
       });
       const json = await res.json();
@@ -723,28 +861,18 @@ export const App: React.FC = () => {
           setCurrentConcept(json.advancedToConcept);
           setOutputTranscript({
             id: `advance-${Date.now()}`,
-            text: `Excellent! You have shown solid understanding. Let us move on to "${json.advancedToConcept.label}".`,
+            text: `You have this one. Let's move on to "${json.advancedToConcept.label}".`,
             timestamp: Date.now(),
           });
         } else if (json.assessment.recommendedAction === 'switch_strategy') {
           setOutputTranscript({
             id: `switch-${Date.now()}`,
-            text: `Good try! ${json.assessment.teachingNote} Let me explain this differently — using a ${json.nextStrategy?.replace(/_/g,' ')} approach.`,
+            text: `Let's look at this another way — I'll show it with ${json.nextStrategy?.replace(/_/g, ' ')}.`,
             timestamp: Date.now(),
           });
         }
       }
     } catch (err) { console.error('[Assessment] Failed:', err); }
-  };
-
-  const handleCurriculumLoaded = (subjectId: string, label: string) => {
-    setUploadModalOpen(false);
-    setCurriculaVersion(v => v + 1);
-    setOutputTranscript({
-      id: `curriculum-${Date.now()}`,
-      text: `Curriculum loaded: "${label}". You can now start an adaptive session on this topic.`,
-      timestamp: Date.now(),
-    });
   };
 
   // Start or Stop Live Voice Lesson
@@ -862,6 +990,10 @@ export const App: React.FC = () => {
             // This is the start of the concreteness-fading teaching sequence.
             setRevealed([]);
             setFocusPart(null);
+            // The board picture, likewise, is built up again from its first step as the tutor speaks.
+            setVisualStep(0);
+            setVisual3dStep(0);
+            setVisualSpotlight([]);
           } else if (msg.type === 'interrupted') {
             audioMgr.flushPlayback();
           } else if (msg.type === 'tool_call') {
@@ -1043,7 +1175,10 @@ export const App: React.FC = () => {
   const handleLogin = (profile: StudentProfile) => {
     setLoggedInStudent(profile);
     setGrade(profile.grade);
-    setScreen('subject-select');
+    // Only new/incomplete learners see onboarding — a returning learner who
+    // already finished it (learner.onboarding?.completedAt is set) goes
+    // straight to subject-select.
+    setScreen(profile.onboarding?.completedAt ? 'subject-select' : 'onboarding');
   };
 
   const handleSubjectConceptSelect = async (
@@ -1079,10 +1214,16 @@ export const App: React.FC = () => {
           sessionStarted: Date.now(), interactionCount: 0, recentAttempts: [],
         });
         setCurrentConcept(json.currentConcept || null);
+        // Bug fixed 2026-09-26: this path (the normal one — picking a concept
+        // on the Subjects screen) never stored the compiled plan, so the
+        // Tutor's-reasoning panel was empty for every session started here;
+        // only the legacy handleStartSession path set it.
+        setTeachingPlan(json.plan || null);
+        setReasoningLog([]);
         // Panel stays closed — user can open it via the Profile button in the top nav
-
       }
     } catch (err) { console.error('[Session] Failed to start:', err); }
+    lessonConceptRef.current = { id: conceptId, label: conceptLabel };
     setTopic(conceptLabel);
     setGrade(studentGrade);
     setScreen('tutor');
@@ -1100,6 +1241,20 @@ export const App: React.FC = () => {
       <LoginScreen
         onLogin={handleLogin}
         onParentPortal={() => setScreen('parent-portal')}
+        onAdmin={() => setScreen('admin')}
+      />
+    );
+  }
+
+  if (screen === 'admin') {
+    return <AdminLibrary onBack={() => setScreen(loggedInStudent ? 'subject-select' : 'login')} />;
+  }
+
+  if (screen === 'onboarding' && loggedInStudent) {
+    return (
+      <Onboarding
+        student={loggedInStudent}
+        onDone={() => setScreen('subject-select')}
       />
     );
   }
@@ -1111,11 +1266,6 @@ export const App: React.FC = () => {
           onBack={() => setScreen(loggedInStudent ? 'subject-select' : 'login')}
           initialStudentId={loggedInStudent?.studentId}
         />
-        <CurriculumUpload
-          isOpen={uploadModalOpen}
-          onClose={() => setUploadModalOpen(false)}
-          onCurriculumLoaded={handleCurriculumLoaded}
-        />
       </>
     );
   }
@@ -1124,17 +1274,10 @@ export const App: React.FC = () => {
     return (
       <>
         <SubjectSelector
-          key={curriculaVersion}
           student={loggedInStudent as any}
           onSelectSubjectConcept={handleSubjectConceptSelect}
           onLogout={() => { setLoggedInStudent(null); setScreen('login'); }}
-          onUploadCurriculum={() => setUploadModalOpen(true)}
           onParentPortal={() => setScreen('parent-portal')}
-        />
-        <CurriculumUpload
-          isOpen={uploadModalOpen}
-          onClose={() => setUploadModalOpen(false)}
-          onCurriculumLoaded={(sid, label) => { handleCurriculumLoaded(sid, label); setUploadModalOpen(false); }}
         />
       </>
     );
@@ -1257,7 +1400,15 @@ export const App: React.FC = () => {
               scene={getScene(sceneId)}
               topicDiagram={blackboard.lessonData?.diagram}
               scene3d={blackboard.lessonData?.scene3d}
+              visual={blackboard.lessonData?.visual ?? null}
+              visual3d={blackboard.lessonData?.visual3d ?? null}
+              visualStep={visualStep}
+              visual3dStep={visual3dStep}
+              onVisualStepChange={setVisualStep}
+              onVisual3dStepChange={setVisual3dStep}
+              visualSpotlight={visualSpotlight}
               pregenPhoto={pregenPhoto}
+              pregenPhotoCaption={pregenPhotoCaption}
               tutorLine={outputTranscript?.text}
               presenter={PRESENTER}
               studentName={loggedInStudent?.name}
@@ -1306,9 +1457,9 @@ export const App: React.FC = () => {
                 },
               }));
             }}
-            onQuizAnswer={(idx) => {
+            onQuizAnswer={(idx, reasoning) => {
               if (sessionId) {
-                handleAdaptiveQuizAnswer(idx);
+                handleAdaptiveQuizAnswer(idx, reasoning);
               } else {
                 setBlackboard((prev) => ({
                   ...prev,
@@ -1344,11 +1495,6 @@ export const App: React.FC = () => {
         log={reasoningLog}
         isVisible={reasoningPanelOpen}
         onToggle={() => setReasoningPanelOpen(p => !p)}
-      />
-      <CurriculumUpload
-        isOpen={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
-        onCurriculumLoaded={handleCurriculumLoaded}
       />
 
       {/* BOTTOM CONTROL BAR — immersive stage supplies its own, so skip it there. */}

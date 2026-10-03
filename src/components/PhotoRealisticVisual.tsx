@@ -8,6 +8,8 @@ interface PhotoRealisticVisualProps {
   photoData?: PhotoVisualData;
   isLoadingPhoto?: boolean;
   onGeneratePhoto: (customPrompt?: string) => void;
+  /** Shown when a requested picture could not be verified. */
+  notice?: string | null;
 }
 
 export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
@@ -16,6 +18,7 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
   photoData,
   isLoadingPhoto = false,
   onGeneratePhoto,
+  notice,
 }) => {
   const [customPrompt, setCustomPrompt] = useState('');
   const [activeAnnotation, setActiveAnnotation] = useState<{ label: string; description: string } | null>(null);
@@ -28,112 +31,8 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
     setCustomPrompt('');
   };
 
-  // Generate a topic-relevant SVG diagram as a reliable fallback when AI image generation is unavailable.
-  // This is always on-topic, always educational, and never requires API credits.
-  const buildFallbackSvg = (topicText: string): string => {
-    const isMath = /right.?angle.?triangle|pythagoras|hypotenuse|a\^2.*b\^2|trigonometry|sohcahtoa/i.test(topicText);
-    const isGeometry = !isMath && /geometry|bisect|perpendicular|parallel|angle|polygon|circle|arc|chord|tangent|congruent|similar|proof|theorem/i.test(topicText);
-    const isScience = /cell|biology|chemistry|molecule|atom|physics|force|energy|wave/i.test(topicText);
-    const label = topicText.length > 40 ? topicText.slice(0, 37) + '...' : topicText;
-
-    if (isMath) {
-      // Right-angle triangle SVG diagram
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
-  <rect width="800" height="500" fill="#060f07"/>
-  <text x="400" y="44" fill="#34d399" font-size="18" font-family="serif" text-anchor="middle" font-weight="bold">Geometric Diagram: ${label}</text>
-  <!-- Triangle -->
-  <polygon points="140,380 620,380 140,80" fill="rgba(16,185,129,0.18)" stroke="#10b981" stroke-width="2.5"/>
-  <!-- Right-angle marker -->
-  <polyline points="140,340 180,340 180,380" fill="none" stroke="#fbbf24" stroke-width="2"/>
-  <!-- Side labels -->
-  <text x="390" y="408" fill="#86efac" font-size="15" font-family="monospace" text-anchor="middle">a (base)</text>
-  <text x="108" y="238" fill="#86efac" font-size="15" font-family="monospace" text-anchor="middle" transform="rotate(-90,108,238)">b (height)</text>
-  <text x="410" y="208" fill="#fbbf24" font-size="15" font-family="monospace" text-anchor="middle" transform="rotate(-31,410,208)">c (hypotenuse)</text>
-  <!-- Formula box -->
-  <rect x="490" y="70" width="260" height="80" rx="12" fill="#071a0c" stroke="#1f4e33" stroke-width="1.5"/>
-  <text x="620" y="102" fill="#fbbf24" font-size="20" font-family="monospace" text-anchor="middle" font-weight="bold">a² + b² = c²</text>
-  <text x="620" y="132" fill="#86efac" font-size="13" font-family="sans-serif" text-anchor="middle">Pythagoras' Theorem</text>
-  <!-- Vertex dots -->
-  <circle cx="140" cy="380" r="7" fill="#fbbf24"/>
-  <circle cx="620" cy="380" r="7" fill="#38bdf8"/>
-  <circle cx="140" cy="80" r="7" fill="#f43f5e"/>
-  <text x="118" y="400" fill="#fbbf24" font-size="13" font-family="sans-serif">90°</text>
-  <text x="630" y="400" fill="#38bdf8" font-size="13" font-family="sans-serif">B</text>
-  <text x="118" y="76" fill="#f43f5e" font-size="13" font-family="sans-serif">A</text>
-  <text x="400" y="478" fill="#4a7a5e" font-size="12" font-family="sans-serif" text-anchor="middle">Educational Diagram — Generated for: ${label}</text>
-</svg>`)}`;
-    } else if (isGeometry) {
-      // Geometry fallback: perpendicular bisector / compass / angle diagram
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
-  <rect width="800" height="500" fill="#060f07"/>
-  <text x="400" y="44" fill="#34d399" font-size="18" font-family="serif" text-anchor="middle" font-weight="bold">Geometric Diagram: ${label}</text>
-  <!-- Horizontal base line AB -->
-  <line x1="120" y1="310" x2="680" y2="310" stroke="#86efac" stroke-width="2.5"/>
-  <circle cx="120" cy="310" r="6" fill="#38bdf8"/>
-  <circle cx="680" cy="310" r="6" fill="#38bdf8"/>
-  <text x="104" y="332" fill="#38bdf8" font-size="14" font-family="sans-serif">A</text>
-  <text x="684" y="332" fill="#38bdf8" font-size="14" font-family="sans-serif">B</text>
-  <!-- Midpoint M -->
-  <circle cx="400" cy="310" r="5" fill="#fbbf24"/>
-  <text x="396" y="336" fill="#fbbf24" font-size="13" font-family="sans-serif">M</text>
-  <!-- Perpendicular bisector (vertical line through M) -->
-  <line x1="400" y1="80" x2="400" y2="430" stroke="#f43f5e" stroke-width="2" stroke-dasharray="8,4"/>
-  <!-- Right-angle marker at M -->
-  <rect x="400" y="295" width="15" height="15" fill="none" stroke="#fbbf24" stroke-width="1.8"/>
-  <!-- Compass arcs (two overlapping arcs from A and B) -->
-  <path d="M 200,170 A 220,220 0 0,1 510,170" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.7"/>
-  <path d="M 290,170 A 220,220 0 0,0 600,170" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.7"/>
-  <!-- Intersection points P and Q -->
-  <circle cx="400" cy="130" r="5" fill="#34d399"/>
-  <circle cx="400" cy="430" r="5" fill="#34d399"/>
-  <text x="410" y="128" fill="#34d399" font-size="13" font-family="sans-serif">P</text>
-  <text x="410" y="445" fill="#34d399" font-size="13" font-family="sans-serif">Q</text>
-  <!-- Labels -->
-  <text x="418" y="200" fill="#f43f5e" font-size="13" font-family="sans-serif" opacity="0.9">Perpendicular Bisector</text>
-  <text x="148" y="220" fill="#a78bfa" font-size="12" font-family="sans-serif" opacity="0.8">equal distances</text>
-  <text x="400" y="478" fill="#4a7a5e" font-size="12" font-family="sans-serif" text-anchor="middle">Educational Diagram — Generated for: ${label}</text>
-</svg>`)}`;
-    } else if (isScience) {
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
-  <rect width="800" height="500" fill="#060f07"/>
-  <text x="400" y="44" fill="#34d399" font-size="18" font-family="serif" text-anchor="middle" font-weight="bold">Scientific Diagram: ${label}</text>
-  <circle cx="400" cy="240" r="90" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="2.5"/>
-  <circle cx="400" cy="240" r="40" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="2"/>
-  <circle cx="280" cy="180" r="25" fill="rgba(56,189,248,0.3)" stroke="#38bdf8" stroke-width="1.5"/>
-  <circle cx="520" cy="180" r="25" fill="rgba(244,63,94,0.3)" stroke="#f43f5e" stroke-width="1.5"/>
-  <circle cx="280" cy="300" r="25" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"/>
-  <circle cx="520" cy="300" r="25" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1.5"/>
-  <line x1="305" y1="180" x2="360" y2="220" stroke="#4a7a5e" stroke-width="1.5" stroke-dasharray="4"/>
-  <line x1="495" y1="180" x2="440" y2="220" stroke="#4a7a5e" stroke-width="1.5" stroke-dasharray="4"/>
-  <line x1="305" y1="300" x2="360" y2="260" stroke="#4a7a5e" stroke-width="1.5" stroke-dasharray="4"/>
-  <line x1="495" y1="300" x2="440" y2="260" stroke="#4a7a5e" stroke-width="1.5" stroke-dasharray="4"/>
-  <text x="400" y="245" fill="#fbbf24" font-size="13" font-family="monospace" text-anchor="middle" font-weight="bold">Core</text>
-  <text x="400" y="478" fill="#4a7a5e" font-size="12" font-family="sans-serif" text-anchor="middle">Educational Diagram — Generated for: ${label}</text>
-</svg>`)}`;
-    } else {
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
-  <rect width="800" height="500" fill="#060f07"/>
-  <text x="400" y="44" fill="#34d399" font-size="18" font-family="serif" text-anchor="middle" font-weight="bold">Concept Map: ${label}</text>
-  <rect x="300" y="180" width="200" height="60" rx="10" fill="rgba(16,185,129,0.18)" stroke="#10b981" stroke-width="2"/>
-  <text x="400" y="216" fill="#f2faf5" font-size="14" font-family="sans-serif" text-anchor="middle">${label}</text>
-  <rect x="80" y="310" width="160" height="50" rx="8" fill="rgba(56,189,248,0.18)" stroke="#38bdf8" stroke-width="1.5"/>
-  <text x="160" y="340" fill="#f2faf5" font-size="12" font-family="sans-serif" text-anchor="middle">Core Concept</text>
-  <rect x="560" y="310" width="160" height="50" rx="8" fill="rgba(251,191,36,0.18)" stroke="#fbbf24" stroke-width="1.5"/>
-  <text x="640" y="340" fill="#f2faf5" font-size="12" font-family="sans-serif" text-anchor="middle">Application</text>
-  <line x1="300" y1="220" x2="240" y2="310" stroke="#4a7a5e" stroke-width="1.5" marker-end="url(#arr)"/>
-  <line x1="500" y1="220" x2="560" y2="310" stroke="#4a7a5e" stroke-width="1.5" marker-end="url(#arr)"/>
-  <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#4a7a5e"/></marker></defs>
-  <text x="400" y="478" fill="#4a7a5e" font-size="12" font-family="sans-serif" text-anchor="middle">Educational Diagram — Generated for: ${label}</text>
-</svg>`)}`;
-    }
-  };
-
-  const defaultImageUrl = photoData?.imageUrl || buildFallbackSvg(topic);
-  const isAiGenerated = !!photoData?.imageUrl;
+  // Only a reviewed, AI-generated image is ever shown — no stock or placeholder picture (docs/BOARD_VISUALS.md §Photos).
+  const imageUrl = photoData?.imageUrl;
 
 
   return (
@@ -146,13 +45,13 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-bold text-white font-serif flex items-center gap-2">
-              <span>Photorealistic &amp; Scientific Visuals</span>
+              <span>Illustrations</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 font-mono font-bold border border-amber-400/30">
-                REAL-TIME AI
+                AI-GENERATED
               </span>
             </h3>
             <p className="text-[11px] text-[#86b59b]">
-              Visual evidence, microscopy, and photographic depictions of <strong className="text-white">{topic}</strong>
+              An AI-made picture of <strong className="text-white">{topic}</strong>
             </p>
           </div>
         </div>
@@ -164,7 +63,7 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
               type="text"
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder={`Ask for specific photo/angle (e.g. inside leaf cell)...`}
+              placeholder={`Ask to see something (e.g. inside a leaf cell)...`}
               className="w-full pl-3 pr-8 py-1.5 text-xs rounded-xl bg-[#0c2819] border border-[#215337] focus:border-amber-400 focus:outline-none text-white placeholder-[#5e8b72]"
             />
             {customPrompt && (
@@ -195,43 +94,40 @@ export const PhotoRealisticVisual: React.FC<PhotoRealisticVisualProps> = ({
             <div className="w-12 h-12 rounded-2xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center mb-3 animate-pulse">
               <Sparkles className="w-6 h-6 text-amber-300 animate-spin" />
             </div>
-            <h4 className="text-sm font-bold text-white mb-1">Generating AI Realistic Photo...</h4>
+            <h4 className="text-sm font-bold text-white mb-1">Making a picture and checking it...</h4>
             <p className="text-xs text-[#8ab69e]">
-              Synthesizing photorealistic educational visualization for &ldquo;{topic}&rdquo;...
+              Drawing &ldquo;{topic}&rdquo; and checking it is accurate before showing you...
             </p>
           </div>
         ) : (
           <div className="relative max-w-4xl max-h-[82%] w-full h-full flex items-center justify-center rounded-2xl overflow-hidden border-2 border-[#1f4e34] shadow-2xl group bg-[#020b06]">
-            {/* The Image */}
-            <img
-              src={defaultImageUrl}
-              alt={photoData?.caption || `Photorealistic depiction of ${topic}`}
-              referrerPolicy="no-referrer"
-              className={`w-full h-full object-contain rounded-xl transition-transform duration-300 ${
-                isZoomed ? 'scale-125 cursor-zoom-out' : 'cursor-zoom-in'
-              }`}
-              onClick={() => setIsZoomed(!isZoomed)}
-            />
-
-            {/* Overlay Gradient for readability */}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-5 pt-12 pointer-events-none">
-              <div className="max-w-2xl">
-                <span className="text-[10px] text-amber-400 uppercase font-mono font-bold tracking-wider block mb-1">
-                  {isAiGenerated ? 'AI-Generated Scientific Visual' : 'Educational Diagram — Tap "Generate" for AI photo'}
-                </span>
-                <h4 className="text-base font-bold text-white font-serif leading-snug">
-                  {photoData?.caption || `Diagram: ${topic}`}
-                </h4>
-                <p className="text-xs text-[#b8dfcc] mt-1 leading-relaxed line-clamp-2">
-                  {isAiGenerated
-                    ? (photoData?.promptUsed || `Photorealistic representation of ${topic} for ${grade}.`)
-                    : `Structural concept diagram for ${topic}. Click "Generate" above to request an AI-generated photorealistic visual.`}
-                </p>
+            {imageUrl ? (
+              <>
+                <img
+                  src={imageUrl}
+                  alt={photoData?.caption || `Illustration of ${topic}`}
+                  referrerPolicy="no-referrer"
+                  className={`w-full h-full object-contain rounded-xl transition-transform duration-300 ${
+                    isZoomed ? 'scale-125 cursor-zoom-out' : 'cursor-zoom-in'
+                  }`}
+                  onClick={() => setIsZoomed(!isZoomed)}
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-5 pt-12 pointer-events-none">
+                  <div className="max-w-2xl">
+                    <span className="text-[10px] text-amber-400 uppercase font-mono font-bold tracking-wider block mb-1">AI-generated illustration</span>
+                    {photoData?.caption && <h4 className="text-sm font-semibold text-white leading-snug">{photoData.caption}</h4>}
+                    <p className="text-[11px] text-[#b8dfcc] mt-1">Made by AI and checked, but it can still be wrong. If something looks odd, ask me.</p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="p-8 text-center max-w-sm">
+                <p className="text-sm text-[#cce7da] leading-relaxed">{notice || 'There is no picture here yet. Ask for something you would like to see.'}</p>
               </div>
-            </div>
+            )}
 
             {/* Interactive Annotation Pins if available */}
-            {photoData?.annotations?.map((ann, idx) => (
+            {imageUrl && photoData?.annotations?.map((ann, idx) => (
               <button
                 key={idx}
                 onClick={(e) => {

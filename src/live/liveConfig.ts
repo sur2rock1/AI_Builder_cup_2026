@@ -134,13 +134,13 @@ export const ALL_TOOLS: any[] = [
   },
   {
     name: 'update_diagram',
-    description: 'Regenerates the 2D concept diagram on the blackboard to visually represent the specific concept or aspect you are currently explaining. Call this when you want the diagram to reflect a particular focus area, sub-concept, or worked example during your explanation.',
+    description: 'Puts a different picture in the Shape view. Prepared pictures are shown instantly: "contrast:<misconception id>" (the contrast case for a known misconception — use it when the diagnosis suspects or confirms that misconception) and "apply" (the application problem\'s situation, never its answer). Any other focus draws a new picture of what you are explaining. The response lists the new picture\'s step names — build it up with reveal_part.',
     parameters: {
       type: Type.OBJECT,
       properties: {
         focus: {
           type: Type.STRING,
-          description: 'The specific concept, sub-topic, or aspect currently being explained (e.g. "how force and acceleration relate", "the water cycle evaporation step", "calculating the missing side")',
+          description: 'A prepared picture ("contrast:<id>" or "apply", as listed under THE BOARD PICTURES), or what you are explaining right now (e.g. "why the gradient of a vertical line is undefined", "the evaporation step")',
         },
       },
       required: ['focus'],
@@ -227,14 +227,14 @@ export const ALL_TOOLS: any[] = [
   {
     name: 'reveal_part',
     description:
-      "Shows named parts of the visual figure currently on screen. Pass every part you are about to talk about in ONE call, in the order you will mention them — the board animates them in that order while you speak. Each tool call pauses your speech, so never call this once per word. The available part names depend on the topic currently shown on the board; use the labels as they appear in the figure.",
+      "Builds up the picture on the board as you speak. Call it at the moment you START explaining the next step, with that step's name from THE BOARD PICTURES (or from update_diagram's response) — the board draws that step in and spotlights it. You can also name one part of the picture (\"point B\", \"the vertical line\") to spotlight it, or an earlier step to go back. One call per step, between spoken chunks — each call pauses your speech.",
     parameters: {
       type: Type.OBJECT,
       properties: {
         parts: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
-          description: 'Named parts of the current figure to reveal, in the order you will mention them (e.g. for a triangle topic: "triangle", "right-angle", "hypotenuse"; for a circuit topic: "battery", "resistor", "switch")',
+          description: 'Step names (preferred) or part names of the current picture, in the order you will talk about them (e.g. ["the vertical line"], or for the right-triangle figure: ["right-angle", "hypotenuse"])',
         },
         part: {
           type: Type.STRING,

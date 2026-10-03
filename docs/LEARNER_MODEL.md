@@ -30,7 +30,7 @@ Model**, to avoid implying fixed personality labels.
 
 ```
 LearnerProfile
-├── identity            studentId, displayName, grade, ageBand, locale
+├── identity            studentId, displayName, grade (label), board + gradeLevel (signup, 2026-09-26), ageBand, locale
 ├── onboarding          interests[], subjectFeelings{}, accessibility{}, languagePrefs
 ├── subjects{}          per subject
 │   └── conceptStates{} per concept (EXISTING, extended)
@@ -74,7 +74,8 @@ export interface EvidenceEvent extends LearningEvidence {
   eventId: string;                 // uuid
   sessionId: string;
   subjectId: string;
-  conceptType: string;             // e.g. 'geometry.relationship' — drives strategyProfile
+  conceptType: string;             // e.g. 'similarity-and-scaling' — drives strategyProfile. Assigned per concept at
+                                   // curriculum ingest; always read/written via conceptTypeFor() (docs/CURRICULUM.md §7)
   itemId?: string;                 // distinct-item check for the mastery rule
   ladderLevel: LadderLevel;        // derived from understandingDepth (TUTOR_PERSONA §5)
   errorClass: ErrorClass;
@@ -137,6 +138,19 @@ export interface SessionSummary {
 // LearnerProfile additions (all optional)
 //   ageBand?: AgeBand; onboarding?: Onboarding; strategyProfile?: StrategyProfile;
 //   affect?: AffectState; claims?: LearnerClaim[]; sessionSummaries?: SessionSummary[];
+//   escalations?: EscalationEvent[];
+
+// T22 (FR-20/D-2026-09-26-5) — a durable record of the plan compiler's
+// PARK_AND_ESCALATE move (src/plan/delta.ts: retries >= plan.limits.retryCap).
+// Deliberately NOT a LearnerClaim: PARK_AND_ESCALATE is a deterministic rule,
+// not a Gemini judgment, so there is nothing for the claim validator (§5.2)
+// to validate. Surfaced directly in ParentPortal.tsx's "Needs Your Attention"
+// section rather than waiting on §5.2's Profiler pipeline to exist.
+interface EscalationEvent {
+  id: string; subjectId: string; conceptId: string; conceptLabel?: string;
+  reason: 'retry_cap_reached'; retryCount: number; timestamp: number;
+  sessionId?: string; resolved: boolean; resolvedAt?: number; resolvedNote?: string;
+}
 ```
 
 **Backward compatibility:** every new field is optional. Existing `globalInsights` and `notes`
@@ -164,7 +178,8 @@ are kept read-only and superseded by `claims`.
 
 ```
 learner answers + reasoning (voice transcript / text / click)
-  → Diagnostician (Gemini, JSON schema, closed misconception catalogue)
+  → Diagnostician (Gemini, JSON schema, closed misconception catalogue — ids `<conceptId>::<misconceptionId>`
+                   from the course's stable misconception ids; positional `::m1` only for older data)
       output: classification, understandingDepth, errorClass, candidateMisconceptionIds, confidence
   → recordEvidence()                               [deterministic]
       1. append EvidenceEvent (eventId)
@@ -180,6 +195,25 @@ learner answers + reasoning (voice transcript / text / click)
 
 **Gain definition** for strategy statistics: the event's `masteryAfter > masteryBefore`
 **or** its ladder level is above the previous event's level on the same concept.
+
+### 5.1a Quiz evidence rules (added 2026-09-30 — D-2026-09-30-4, `src/adaptive/assessmentEngine.ts`)
+
+The quiz is a *recognition* instrument until the learner says why. Rules, all enforced in code:
+
+1. **Reasoning is collected before the answer is revealed.** The quiz panel asks "why did you pick
+   that?" (`QuizReasoning`) before it shows right/wrong. Reasoning that is missing or shorter than
+   `MIN_REASONING_WORDS = 3` counts as *no reasoning* (`hasReasoning`).
+2. **No reasoning caps the evidence at L1.** `capForEvidence` lowers any classification above
+   recognition (`understood`, `applied`, …) to `recognised` when there is no reasoning. A correct
+   click alone can never be L2+.
+3. **Evidence is tied to an item.** The quiz item is `itemId = 'L3-B'` with `parallelOf = 'L3-A'`
+   (the apply picture is form A, the quiz form B — the two are parallel forms of one L3 skill, so
+   they count as two *distinct* L3 items for the provisional-mastery rule in TUTOR_PERSONA §5).
+4. **The key never reaches the browser.** The server resolves the correct option and the
+   tutor-only notes (`lookFor`, `chosenOptionNote`) from the *stored* quiz by matching option text
+   (`src/curriculum/serve.ts`), then passes them to the assessor. The client cannot supply them.
+5. **Quarantined quizzes give no evidence.** A quiz that failed a lint is withheld
+   (docs/CH1_FIX_PLAN.md D2) so it cannot generate evidence from a broken item.
 
 ### 5.2 Slow loop — session end
 

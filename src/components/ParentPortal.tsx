@@ -2,10 +2,26 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Brain, Clock, Star, BookOpen, AlertTriangle, TrendingUp,
   ChevronDown, ChevronRight, CheckCircle2, Circle, BarChart3, User, Lightbulb,
-  Milestone, ShieldOff, History, Loader2,
+  Milestone, ShieldOff, History, Loader2, Siren,
 } from 'lucide-react';
 import { authFetch } from '../firebase/auth';
 import type { StudentProfile, ConceptSummary, SubjectSummary } from './LoginScreen';
+
+// T22 (FR-20) — a durable PARK_AND_ESCALATE record (docs/AGENT_GUIDE.md
+// landmine #4). Mirrors src/adaptive/learnerModel.ts's EscalationEvent.
+interface EscalationEvent {
+  id: string;
+  subjectId: string;
+  conceptId: string;
+  conceptLabel?: string;
+  reason: string;
+  retryCount: number;
+  timestamp: number;
+  sessionId?: string;
+  resolved: boolean;
+  resolvedAt?: number;
+  resolvedNote?: string;
+}
 
 // T21/T22 — richer ledger entry (status + observation count), not just the
 // flat confirmedMisconceptions[] string list the rest of this file predates.
@@ -64,6 +80,7 @@ interface SubjectData extends SubjectSummary {
 interface FullLearner extends StudentProfile {
   subjects: Record<string, SubjectData>;
   globalInsights: string[];
+  escalations?: EscalationEvent[];
 }
 
 const MASTERY_COLOR: Record<string, string> = {
@@ -121,6 +138,8 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
   const [replayEvents, setReplayEvents] = useState<Record<string, EvidenceEvent[]>>({});
   const [replayLoading, setReplayLoading] = useState<Set<string>>(new Set());
   const [replayOpenFor, setReplayOpenFor] = useState<string | null>(null);
+  // T22 — PARK_AND_ESCALATE events (docs/AGENT_GUIDE.md landmine #4).
+  const [resolvingEscalation, setResolvingEscalation] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     authFetch('/api/learners')
@@ -170,6 +189,33 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
       setReplayEvents(prev => ({ ...prev, [key]: [] }));
     } finally {
       setReplayLoading(prev => { const s = new Set(prev); s.delete(key); return s; });
+    }
+  };
+
+  // T22 — unresolved PARK_AND_ESCALATE events for a learner, most recent first.
+  const unresolvedEscalations = (learner: FullLearner): EscalationEvent[] =>
+    (learner.escalations || []).filter(e => !e.resolved).sort((a, b) => b.timestamp - a.timestamp);
+
+  const markEscalationResolved = async (studentId: string, escalationId: string) => {
+    setResolvingEscalation(prev => new Set(prev).add(escalationId));
+    try {
+      await authFetch(`/api/learners/${encodeURIComponent(studentId)}/escalations/${encodeURIComponent(escalationId)}/resolve`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      });
+      setLearners(prev => prev.map(l => l.studentId !== studentId ? l : {
+        ...l,
+        escalations: (l.escalations || []).map(e => e.id === escalationId
+          ? { ...e, resolved: true, resolvedAt: Date.now() } : e),
+      }));
+      setSelected(prev => prev && prev.studentId === studentId ? {
+        ...prev,
+        escalations: (prev.escalations || []).map(e => e.id === escalationId
+          ? { ...e, resolved: true, resolvedAt: Date.now() } : e),
+      } : prev);
+    } catch (err) {
+      console.error('[ParentPortal] resolve escalation failed', err);
+    } finally {
+      setResolvingEscalation(prev => { const s = new Set(prev); s.delete(escalationId); return s; });
     }
   };
 
@@ -245,10 +291,15 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
                         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getAvatarColor(l.name)} flex items-center justify-center text-white font-bold text-sm`}>
                           {initials(l.name)}
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-white font-semibold">{l.name}</p>
                           <p className="text-slate-400 text-xs">{l.grade}</p>
                         </div>
+                        {unresolvedEscalations(l).length > 0 && (
+                          <span className="flex-shrink-0 inline-flex items-center gap-1 bg-rose-500/20 text-rose-300 text-xs font-semibold px-2 py-1 rounded-lg">
+                            <Siren className="w-3 h-3" /> {unresolvedEscalations(l).length}
+                          </span>
+                        )}
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-center">
                         <div className="bg-white/5 rounded-xl p-2">
@@ -274,6 +325,45 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
           {/* ─── Selected learner detail ─── */}
           {selected && (
             <>
+              {/* T22 (FR-20) — PARK_AND_ESCALATE events needing a human. This is the
+                  Parent Portal gap the T19 investigation surfaced: the tutor was
+                  told to park a concept and escalate, but nothing durable ever
+                  reached a parent/teacher. docs/AGENT_GUIDE.md landmine #4. */}
+              {unresolvedEscalations(selected).length > 0 && (
+                <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4">
+                  <h3 className="text-rose-300 text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Siren className="w-4 h-4" /> Needs Your Attention
+                  </h3>
+                  <div className="space-y-2">
+                    {unresolvedEscalations(selected).map((esc) => {
+                      const subLabel = selected.subjects[esc.subjectId]?.subjectLabel || esc.subjectId;
+                      const isResolving = resolvingEscalation.has(esc.id);
+                      return (
+                        <div key={esc.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-start gap-3">
+                          <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm font-medium">
+                              {esc.conceptLabel || esc.conceptId} <span className="text-slate-500 font-normal">· {subLabel}</span>
+                            </p>
+                            <p className="text-slate-400 text-xs mt-0.5">
+                              Retry cap reached after {esc.retryCount} attempts — the tutor paused this concept and told {selected.name} it would come back to it. {relativeTime(esc.timestamp)}.
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => markEscalationResolved(selected.studentId, esc.id)}
+                            disabled={isResolving}
+                            className="flex-shrink-0 text-xs font-medium bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                          >
+                            {isResolving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                            Mark reviewed
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Subject tabs */}
               {Object.keys(selected.subjects).length > 1 && (
                 <div className="flex gap-2 flex-wrap">

@@ -54,8 +54,8 @@ export const MOVES: MoveSpec[] = [
     shape: 'State a scoped belief, its reason, and invite correction' },
   { id: 'ENCOURAGE_RESET', purpose: 'Handle frustration or fatigue', trigger: '2+ consecutive failures or a frustration signal',
     shape: 'Normalise, shrink the step, offer a choice or a break' },
-  { id: 'PARK_AND_ESCALATE', purpose: 'Avoid endless loops', trigger: 'Retry cap reached',
-    shape: 'Park the concept, schedule a revisit, flag for teacher/parent' },
+  { id: 'TEACH_DIRECTLY', purpose: 'Break a run of misses by explaining, not testing', trigger: 'Retry cap reached or 2+ misses in a row',
+    shape: 'Stop questioning. Worked example of a PARALLEL problem in a not-yet-used representation, one small step at a time, then ONE much smaller question. Never park, defer, end the lesson or mention teachers/parents.' },
   { id: 'CLOSE_SESSION', purpose: 'Consolidate and motivate', trigger: 'Mastery reached, time cap, or fatigue',
     shape: "2-3 lines: what the learner did, what's next, when the review is" },
 ];

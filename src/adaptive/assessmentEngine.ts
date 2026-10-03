@@ -7,6 +7,41 @@ import { AssessmentResult, ConceptState, TeachingStrategy, CurriculumConcept } f
 
 const ASSESSMENT_MODEL = 'gemini-3.6-flash';
 
+/** What the child said about HOW they chose, collected BEFORE the answer is revealed. */
+export interface QuizReasoning {
+  how?: 'worked_out' | 'remembered' | 'guessed' | 'unsure';
+  /** Free text in the child's own words. */
+  text?: string;
+}
+
+/** A multiple-choice pick with no explanation is recognition at best (docs/LEARNER_MODEL.md §Quiz evidence). */
+export const MIN_REASONING_WORDS = 3;
+export function hasReasoning(r?: QuizReasoning | null): boolean {
+  return !!r?.text && r.text.trim().split(/\s+/).filter(Boolean).length >= MIN_REASONING_WORDS;
+}
+
+const ABOVE_RECOGNITION = new Set(['understood', 'applied', 'transferred']);
+
+/**
+ * Deterministic guard applied AFTER the model's assessment: without the child's own reasoning, a right
+ * answer cannot be scored above recognition, and a "guessed" self-report is never scored as understanding.
+ * The model can still say "incorrect"/"confused"; it cannot promote a bare pick.
+ */
+export function capForEvidence(result: AssessmentResult, reasoning: QuizReasoning | null | undefined, isCorrect: boolean): AssessmentResult {
+  const reasoned = hasReasoning(reasoning);
+  const guessed = reasoning?.how === 'guessed';
+  if (reasoned && !guessed) return result;
+  const out: AssessmentResult = { ...result };
+  if (ABOVE_RECOGNITION.has(out.understandingDepth)) out.understandingDepth = guessed ? 'guessed' : 'recognised';
+  if (isCorrect) {
+    out.masteryDelta = Math.min(out.masteryDelta, guessed ? 0 : 5);
+    if (out.recommendedAction === 'advance') out.recommendedAction = 'reinforce';
+    if (out.confidence === 'high') out.confidence = 'medium';
+    out.teachingNote = `${out.teachingNote} (Right pick, but ${guessed ? 'the child said they guessed' : 'no reasoning was given'} — ask them to explain before moving on.)`.trim();
+  }
+  return out;
+}
+
 export interface AssessmentInput {
   concept: CurriculumConcept;
   questionAsked: string;
@@ -16,6 +51,12 @@ export interface AssessmentInput {
   selectedOptionIndex: number;
   conceptState: ConceptState;
   apiKey: string;
+  /** The child's account of how they chose (collected before the reveal). */
+  reasoning?: QuizReasoning | null;
+  /** From the stored lesson quiz (tutor-only): what a sound explanation contains. */
+  lookFor?: string;
+  /** From the stored lesson quiz (tutor-only): what choosing THIS option suggests. */
+  chosenOptionNote?: string;
 }
 
 const STRATEGY_DESCRIPTIONS: Record<TeachingStrategy, string> = {
@@ -34,7 +75,7 @@ const STRATEGY_DESCRIPTIONS: Record<TeachingStrategy, string> = {
 export async function assessUnderstanding(input: AssessmentInput): Promise<AssessmentResult> {
   const {
     concept, questionAsked, studentAnswer, correctAnswer,
-    isCorrect, conceptState, apiKey,
+    isCorrect, conceptState, apiKey, reasoning, lookFor, chosenOptionNote,
   } = input;
 
   const usedStrategies = conceptState.strategiesUsed.join(', ');
@@ -51,7 +92,8 @@ QUESTION ASKED: "${questionAsked}"
 CORRECT ANSWER: "${correctAnswer}"
 STUDENT'S ANSWER: "${studentAnswer}"
 IS ANSWER CORRECT: ${isCorrect}
-
+HOW THE STUDENT SAYS THEY CHOSE (self-report: ${reasoning?.how ?? 'not given'}): ${reasoning?.text?.trim() ? `"${reasoning.text.trim().slice(0, 400)}"` : '(no explanation given)'}
+${lookFor ? `A SOUND EXPLANATION CONTAINS: ${lookFor}\n` : ''}${chosenOptionNote ? `CHOOSING THIS OPTION SUGGESTS: ${chosenOptionNote}\n` : ''}
 STUDENT'S LEARNING HISTORY FOR THIS CONCEPT:
 - Mastery score so far: ${conceptState.masteryScore}/100 (${conceptState.masteryLevel})
 - Total attempts: ${conceptState.attemptCount}
@@ -83,6 +125,7 @@ Return ONLY a valid JSON object with exactly this structure:
 
 Rules:
 - masteryDelta should be +10 to +15 for genuine understanding, +5 for correct but rote, -10 to -20 for wrong with misconception, -5 for simple error
+- A multiple-choice pick with NO explanation is evidence of recognition at most; judge depth from the student's own words when given. If their reasoning is wrong or hollow while the pick is right, understandingDepth = "memorised" or "guessed", and name the reasoning error as the misconception
 - If the student was correct but likely memorised, understandingDepth = "memorised" and recommendedAction = "reinforce" (test with a novel variant)
 - Never suggest a strategy that is already in the ineffective list
 - Be specific about the misconceptionDescription if detected`;
@@ -96,10 +139,10 @@ Rules:
     });
     const text = response.text?.replace(/```json\s*|\s*```/g, '').trim() || '';
     const parsed = JSON.parse(text) as AssessmentResult;
-    return parsed;
+    return capForEvidence(parsed, reasoning, isCorrect);
   } catch (err) {
     console.error('[Assessment] Gemini assessment failed, using fallback:', err);
-    return fallbackAssessment(isCorrect, conceptState);
+    return capForEvidence(fallbackAssessment(isCorrect, conceptState), reasoning, isCorrect);
   }
 }
 
@@ -116,7 +159,7 @@ function fallbackAssessment(isCorrect: boolean, state: ConceptState): Assessment
     confidence:                'low',
     recommendedAction:         isCorrect ? 'praise_and_continue' : 'switch_strategy',
     suggestedNextStrategy:     next,
-    teachingNote:              isCorrect ? 'Student answered correctly.' : 'Student got this wrong — switch teaching strategy.',
+    teachingNote:              isCorrect ? 'Student picked the expected option.' : 'Student picked a different option — try another representation.',
     masteryDelta:              isCorrect ? 5 : -10,
   };
 }

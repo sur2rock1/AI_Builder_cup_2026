@@ -28,12 +28,19 @@ Problem Alignment & Impact 25% · Innovation & Creativity 25% · UX & Solution D
 | **Parent** | See real progress and where help is needed | Parent portal |
 | **Teacher** (secondary, light) | See misconception patterns; get escalations | Escalation notes in the parent/teacher view |
 | **Judge / demo viewer** | See the adaptivity and the GenAI's role | Tutor's-reasoning panel, seeded learners |
+| **Admin** (content owner) | Load textbooks + syllabi for each board / grade / subject | Content library (admin only) |
 
 ## 3. User journeys
 
+### J0 — Admin loads a course (docs/CURRICULUM.md)
+1. Admin opens the content library (login screen → "Content library (admin)"; `ADMIN_TOKEN` or local machine).
+2. Chooses board, grade, subject; uploads textbook PDF(s) and, optionally, the official syllabus PDF.
+3. The pipeline reads, structures (prerequisites, concept types, subject mode) and **AI-reviews** the content (worked examples re-worked, facts checked, ladder items written), then publishes automatically. The review report is shown and stored.
+4. Every learner with that board + grade now sees the subject, chapter by chapter.
+
 ### J1 — First session (cold start)
-1. Learner signs in → **onboarding** (≈3 min): name, grade/age band, 3 interests, how they feel about the subject, accessibility options.
-2. Picks a subject/topic (or accepts the suggested one).
+1. Learner signs up with name, **board and grade** (age band follows from the grade) → **onboarding** (≈3 min): 3 interests, how they feel about each of *their* subjects, accessibility options.
+2. Picks one of their subjects → a chapter → a concept (any concept; "Builds on" hints, no locks).
 3. Tutor opens (persona `OPEN_SESSION`), **probes prerequisites** (max 3), then teaches the first chunk with a visual + concise board notes.
 4. Check → "walk me through it" → diagnosis → next move. The learner card begins to fill with evidence.
 5. Session closes with a summary of what the learner did and a review scheduled.
@@ -81,6 +88,17 @@ Priority: **M** = must · **H** = high value · **N** = nice to have.
 | FR-15 | Cross-concept strategy profile (Beta per conceptType × representation) | M | Updated on every event; unit-tested |
 | FR-16 | Session-end Profiler writes scoped claims with evidence refs; decay + spaced review | M | Claims without valid refs rejected (test); banned-label lexicon enforced; reviews scheduled |
 
+### Content quality (added 2026-09-30 — docs/CH1_FIX_PLAN.md)
+| ID | Requirement | Pri | Acceptance criteria |
+|---|---|---|---|
+| FR-40 | Pre-generated lesson content passes deterministic lints and an independent critic before it can be served | M | `npm run test:quality` passes; `review:pregen` scorecard lists lint errors and critic status per record; a critic that did not run is never counted as a pass |
+| FR-41 | Content that fails a gate is withheld and quarantined, never shown or replaced by a generic fallback | M | Quarantined items appear in the record's `quarantine` with reasons; the learner-facing lesson omits them (`serve.mjs`) |
+| FR-42 | Learner-facing text obeys the language contract (banned verdict words, no verdict symbols, no pre-announced misconceptions, no tutor jargon) | M | `language.ts` lints; zero language errors in shipped records |
+| FR-43 | Quiz answer key and tutor-only notes never reach the browser; quiz evidence needs reasoning before reveal | M | `serve.mjs` (4 checks), `quiz-evidence.mjs` (5 checks) |
+| FR-44 | The L3 rung has a parallel pair (apply picture = L3-A, quiz = L3-B); curriculum coverage gaps are reported, not invented | H | `ladder-pair.mjs` (5 checks); `coverageGaps` in the ingest report |
+| FR-45 | Photos are lesson-specific, vision-verified, labelled AI-generated; no stock fallback | H | `photo-gen.mjs` (5 checks); no image is shipped when the reviewer is unreachable |
+| FR-46 | Board pictures teach one idea each (planner: ≤ 4 pictures, 1–2 facts each) and open with a prediction question | H | Planner prompt + `predict.no-hook-question` lint; `quality.mjs` |
+
 ### Teaching plan
 | ID | Requirement | Pri | Acceptance criteria |
 |---|---|---|---|
@@ -98,6 +116,10 @@ Priority: **M** = must · **H** = high value · **N** = nice to have.
 | FR-24 | Tutor's-reasoning panel (move, why, evidence) | M | Updates live in the demo |
 | FR-25 | Text-channel tutor (same persona) | M | Used by eval harness; fallback when voice is unavailable |
 | FR-26 | Seeded demo learners with synthetic histories, labelled "simulated" | M | 2–3 seeded profiles load in < 2 s |
+| FR-27 | Curriculum library: one course per board + grade + subject; learner signs up with board + grade and sees only their courses, by chapter | M | Filtered `/api/curricula`; stable ids independent of file names |
+| FR-28 | Admin-only ingestion of textbooks + optional official syllabus (scope from the syllabus when given, never model-invented) | M | Upload refused without admin; scope maps carry provenance |
+| FR-29 | Automated AI review before publishing: examples re-worked, facts checked, misconception ids, L1–L4 ladder items, representation ideas; report stored | M | `npm run test:curriculum`; review report shown in the admin library |
+| FR-30 | Ingested structure drives the tutor: prerequisite DAG (probe first, detour on evidence), conceptType, subject mode, age band from grade | M | Plan checks in `tests/smoke/curriculum-ingest.mjs` |
 
 ## 5. Evaluation requirements
 

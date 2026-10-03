@@ -1,0 +1,368 @@
+// ─────────────────────────────────────────────────────────────────
+// Generating board pictures (server / pregen only — uses the model gateway).
+//
+//   prompt ─► model ─► sanitize + fact-check ─► lints ─► independent critic ─┬─ clean ──────► picture
+//                                                                             └─ problems ─► repair ─► (again, up to maxAttempts)
+//                                                                                   still failing?  ─► strip false labels, and if an
+//                                                                                   error remains: WITHHOLD (quarantine), never ship
+//
+// Three layers judge every picture (docs/BOARD_VISUALS.md §Quality gates):
+//   1. src/visual/sanitize.ts  — labels are true of the geometry;
+//   2. src/quality/visualLint.ts, leakLint.ts, language.ts — it teaches the way the tutor does;
+//   3. src/quality/critic.ts   — an independent model call checks facts, label↔drawing, coverage.
+//
+// Every call goes through a `JsonModel` (src/quality/model.ts): in production the
+// gateway (logged, timed, model fallback); in tests a scripted fake.
+// ─────────────────────────────────────────────────────────────────
+import { misconceptionKey } from '../curriculum/catalog';
+import {
+  buildVisualPrompt, buildRepairPrompt, buildPlannerPrompt, PicturePlanItem, RepairProblem,
+  VisualConceptContext, VisualRequest,
+} from './prompt';
+import {
+  sanitizeBoardVisual, repairableIssues, stripUnverifiedClaims, SanitizeResult, VisualIssue,
+} from './sanitize';
+import { AnyBoardVisual, VISUAL_KEYS } from './types';
+import { JsonModel, gatewayModel } from '../quality/model';
+import { lintVisual } from '../quality/visualLint';
+import { lintApplyPicture, lintPictureVsQuiz } from '../quality/leakLint';
+import { reviewPicture, CriticResult } from '../quality/critic';
+import { QualityIssue, errorsOf, warningsOf, qerr } from '../quality/types';
+import type { QuizLike } from '../quality/quizTools';
+
+export interface GenerateVisualOptions {
+  /** Needed unless `model` is given. */
+  apiKey?: string;
+  /** Inject a model (tests). Defaults to the gateway. */
+  model?: JsonModel;
+  timeoutMs?: number;
+  /** Retries on 429/503 per model (batch jobs set this; live calls don't). */
+  transientRetries?: number;
+  /** Suffix for the gateway log label, e.g. "main", "contrast". */
+  label?: string;
+  /** Storage key for lint messages (main · focus:<slug> · contrast:<id> · apply · 3d). */
+  key?: string;
+  /** Run the independent critic. Default true; false only for offline lint-only runs. */
+  critic?: boolean;
+  /** Draft + repairs. Default 3 (live calls use 2 to bound the child's wait). */
+  maxAttempts?: number;
+  /** Learner age for PREDICT_FIRST (default 13). */
+  ageYears?: number;
+  /** The lesson's quiz, so no picture states its answer. */
+  quiz?: QuizLike | null;
+}
+
+export interface GenerateVisualResult {
+  /** The picture to ship. Null when none was usable OR when an error survived repair (see `withheld`). */
+  visual: AnyBoardVisual | null;
+  /** Sanitizer fixes on the way (all non-blocking by now). */
+  issues: VisualIssue[];
+  /** Everything still open on the shipped picture (warnings), or what got it withheld (errors). */
+  quality: QualityIssue[];
+  attempts: number;
+  model?: string;
+  /** 1-based key facts the critic says this picture teaches. */
+  keyFactsCovered: number[];
+  criticRan: boolean;
+  /** An error survived repair: the picture is in `quarantined`, not `visual`. */
+  withheld?: boolean;
+  quarantined?: AnyBoardVisual;
+  /** For 3D: the model judged a 3D view not useful (or the critic found it adds nothing), and why. */
+  skipped?: string;
+  error?: string;
+}
+
+interface Candidate {
+  result: SanitizeResult<AnyBoardVisual>;
+  lint: QualityIssue[];
+  critic: CriticResult;
+  errors: number;
+  warns: number;
+}
+
+/** Sanitizer errors are strippable (false label removed); anything else at 'error' blocks. */
+function score(result: SanitizeResult<AnyBoardVisual>, lint: QualityIssue[], critic: CriticResult) {
+  const strippable = result.issues.filter((i) => i.severity === 'error' && i.strip?.length).length;
+  const unstrippable = result.issues.filter((i) => i.severity === 'error' && !i.strip?.length).length;
+  const errors = unstrippable + errorsOf(lint).length + errorsOf(critic.issues).length;
+  const warns = result.issues.filter((i) => i.severity === 'warn').length + warningsOf(lint).length + warningsOf(critic.issues).length + strippable * 0.01;
+  return { errors, warns };
+}
+
+function better(a: Candidate | null, b: Candidate | null): Candidate | null {
+  if (!a?.result.visual) return b;
+  if (!b?.result.visual) return a;
+  if (a.errors !== b.errors) return a.errors < b.errors ? a : b;
+  return a.warns <= b.warns ? a : b;
+}
+
+function stamp(visual: AnyBoardVisual, req: VisualRequest): AnyBoardVisual {
+  switch (req.purpose) {
+    case 'teach': return { ...visual, purpose: 'teach', focus: req.focus || visual.focus };
+    case 'contrast': return { ...visual, purpose: 'contrast', misconceptionId: req.misconception.id, focus: req.misconception.belief };
+    case 'apply': return { ...visual, purpose: 'apply', focus: req.item.prompt };
+    case 'space': return { ...visual, purpose: 'teach' };
+  }
+}
+
+const keyFor = (req: VisualRequest, given?: string) => given ?? (
+  req.purpose === 'teach' ? VISUAL_KEYS.main
+    : req.purpose === 'contrast' ? VISUAL_KEYS.contrast(req.misconception.id || misconceptionKey(req.misconception.belief))
+      : req.purpose === 'apply' ? VISUAL_KEYS.apply : VISUAL_KEYS.space);
+
+export async function generateBoardVisual(
+  ctx: VisualConceptContext,
+  req: VisualRequest,
+  opts: GenerateVisualOptions,
+): Promise<GenerateVisualResult> {
+  const dim: '2d' | '3d' = req.purpose === 'space' ? '3d' : '2d';
+  const call = `visual.${opts.label ?? req.purpose}`;
+  const key = keyFor(req, opts.key);
+  const model: JsonModel = opts.model ?? gatewayModel(opts.apiKey || '', opts.transientRetries ?? 0, opts.timeoutMs ?? 45_000);
+  const maxAttempts = Math.max(1, opts.maxAttempts ?? 3);
+  const useCritic = opts.critic !== false;
+
+  let prompt = buildVisualPrompt(ctx, req);
+  let best: Candidate | null = null;
+  let modelName: string | undefined;
+  let attempts = 0;
+  let lastError: string | undefined;
+  let criticEverRan = false;
+
+  while (attempts < maxAttempts) {
+    attempts++;
+    let data: any;
+    let raw = '';
+    try {
+      const r = await model({ call: attempts === 1 ? call : `${call}.repair`, role: 'strong', prompt, timeoutMs: opts.timeoutMs ?? 45_000 });
+      data = r.data; raw = JSON.stringify(r.data); modelName = r.model;
+    } catch (err: any) {
+      lastError = String(err?.message || err);
+      break; // keep whatever an earlier attempt produced
+    }
+
+    if (dim === '3d') {
+      if (attempts === 1 && data && data.useful === false) {
+        return { visual: null, issues: [], quality: [], attempts, model: modelName, keyFactsCovered: [], criticRan: false, skipped: String(data.reason || 'a 3D view would not help this idea').slice(0, 200) };
+      }
+      if (data?.visual && !Array.isArray(data.elements)) data = data.visual;
+    }
+
+    const result = sanitizeBoardVisual(data, dim);
+    if (!result.visual) {
+      const issues = result.issues.map((i) => ({ message: i.message }));
+      best = better(best, { result, lint: [], critic: { ran: false, issues: [], keyFactsCovered: [] }, errors: 1, warns: 0 });
+      if (attempts >= maxAttempts) break;
+      prompt = buildRepairPrompt(raw.slice(0, 12_000), issues, dim);
+      continue;
+    }
+
+    // Lints run on the visual as it would ship (false labels already removable).
+    const preview = stripUnverifiedClaims(result.visual, result.issues).visual;
+    const lint: QualityIssue[] = [...lintVisual(preview, { key, ageYears: opts.ageYears })];
+    if (req.purpose === 'apply') lint.push(...lintApplyPicture(preview, req.item, key));
+    else if (opts.quiz) lint.push(...lintPictureVsQuiz(preview, opts.quiz, key));
+
+    let critic: CriticResult = { ran: false, issues: [], keyFactsCovered: [] };
+    // Ask the critic only once the cheap gates are quiet: it is the expensive call.
+    if (useCritic && errorsOf(lint).length === 0) {
+      critic = await reviewPicture(model, ctx, req, preview, key);
+      criticEverRan = criticEverRan || critic.ran;
+    }
+    const s = score(result, lint, critic);
+    const cand: Candidate = { result, lint, critic, ...s };
+    best = better(best, cand);
+
+    if (s.errors === 0 && (s.warns <= 2 || attempts >= maxAttempts)) break;   // clean: the best candidate is this one
+    if (attempts >= maxAttempts) break;
+
+    const problems: RepairProblem[] = [
+      ...repairableIssues(result.issues).map((i) => ({ message: i.message })),
+      ...lint.map((i) => ({ where: i.where, message: i.message })),
+      ...critic.issues.map((i) => ({ where: i.where, message: i.message })),
+    ];
+    if (!problems.length) break; // nothing to repair (e.g. the critic was unreachable): ship what we have and record it
+    console.warn(`[visual] ${call}: ${problems.length} problem(s) found — asking the model to repair:\n  ${problems.map((i) => (i.where ? i.where + ': ' : '') + i.message).join('\n  ')}`);
+    prompt = buildRepairPrompt(JSON.stringify(preview), problems, dim);
+  }
+
+  if (!best?.result.visual) {
+    return { visual: null, issues: best?.result.issues ?? [], quality: [], attempts, model: modelName, keyFactsCovered: [], criticRan: criticEverRan, error: lastError || 'no usable picture' };
+  }
+
+  const { visual, stripped } = stripUnverifiedClaims(best.result.visual, best.result.issues);
+  const fixes: VisualIssue[] = [...best.result.issues.filter((i) => i.severity !== 'error'), ...stripped];
+  if (stripped.length) console.warn(`[visual] ${call}: removed ${stripped.length} label(s) the checker could not verify`);
+  // What can still block: unstrippable sanitizer errors, lint errors, critic errors.
+  const blocking = [
+    ...best.result.issues.filter((i) => i.severity === 'error' && !i.strip?.length).map((i) => qerr('sanitize.error', key, i.message)),
+    ...errorsOf(best.lint), ...errorsOf(best.critic.issues),
+  ];
+  const open = [...warningsOf(best.lint), ...warningsOf(best.critic.issues)];
+
+  if (blocking.length) {
+    // 3D that a flat picture would show equally well is a decline, not a failure.
+    if (dim === '3d' && blocking.some((b) => b.code === 'critic.scope')) {
+      return { visual: null, issues: fixes, quality: blocking, attempts, model: modelName, keyFactsCovered: [], criticRan: criticEverRan, skipped: 'a 3D model would show nothing a flat picture does not' };
+    }
+    console.warn(`[visual] ${call}: WITHHELD — ${blocking.length} error(s) survived ${attempts} attempt(s):\n  ${blocking.map((b) => b.where + ': ' + b.message).join('\n  ')}`);
+    return {
+      visual: null, issues: fixes, quality: blocking, attempts, model: modelName, keyFactsCovered: best.critic.keyFactsCovered,
+      criticRan: criticEverRan, withheld: true, quarantined: stamp(visual, req),
+    };
+  }
+  console.log(`[visual] ${call}: "${visual.title}" — ${visual.elements.length} bricks, ${visual.steps.length} steps, ${attempts} attempt(s), ${fixes.length} fix(es), ${open.length} open warning(s), critic ${criticEverRan ? 'ran' : 'did not run'}`);
+  return { visual: stamp(visual, req), issues: fixes, quality: open, attempts, model: modelName, keyFactsCovered: best.critic.keyFactsCovered, criticRan: criticEverRan };
+}
+
+// ─── planning: one idea per picture ─────────────────────────────────
+
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'idea';
+
+export const MAX_TEACHING_PICTURES = 4;
+
+/** Deterministic fallback: contiguous pairs of key facts, at most MAX pictures. */
+export function chunkPlan(ctx: VisualConceptContext): PicturePlanItem[] {
+  const n = ctx.keyFacts.length;
+  if (n <= 2) return [{ focus: ctx.topic, keyFacts: Array.from({ length: n }, (_, i) => i + 1) }];
+  const per = Math.max(2, Math.ceil(n / MAX_TEACHING_PICTURES));
+  const plan: PicturePlanItem[] = [];
+  for (let i = 0; i < n; i += per) {
+    const facts = Array.from({ length: Math.min(per, n - i) }, (_, k) => i + k + 1);
+    const words = ctx.keyFacts[i].replace(/[^A-Za-z0-9 ]+/g, ' ').split(/\s+/).filter(Boolean).slice(0, 5).join(' ');
+    plan.push({ focus: plan.length === 0 ? ctx.topic : words, keyFacts: facts });
+  }
+  return plan;
+}
+
+/** A plan is usable when every key fact is in exactly one picture and there are 1..MAX pictures. */
+export function validatePlan(raw: any, keyFactCount: number): PicturePlanItem[] | null {
+  const list = Array.isArray(raw?.pictures) ? raw.pictures : null;
+  if (!list || !list.length || list.length > MAX_TEACHING_PICTURES) return null;
+  const seen = new Set<number>();
+  const plan: PicturePlanItem[] = [];
+  for (const p of list) {
+    const focus = typeof p?.focus === 'string' ? p.focus.replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+    const facts = (Array.isArray(p?.keyFacts) ? p.keyFacts : []).map(Number);
+    if (!focus || !facts.length || facts.length > 2 || facts.some((f) => !Number.isInteger(f) || f < 1 || f > keyFactCount || seen.has(f))) return null;
+    facts.forEach((f: number) => seen.add(f));
+    plan.push({ focus, keyFacts: facts });
+  }
+  return seen.size === keyFactCount ? plan : null;
+}
+
+export async function planTeachingPictures(model: JsonModel, ctx: VisualConceptContext): Promise<{ plan: PicturePlanItem[]; usedModel: boolean }> {
+  if (ctx.keyFacts.length <= 2) return { plan: chunkPlan(ctx), usedModel: false };
+  try {
+    const r = await model({ call: 'visual.plan', role: 'strong', prompt: buildPlannerPrompt(ctx, MAX_TEACHING_PICTURES), timeoutMs: 45_000 });
+    const plan = validatePlan(r.data, ctx.keyFacts.length);
+    if (plan) return { plan, usedModel: true };
+    console.warn('[visual] planner returned an unusable plan — using the deterministic grouping');
+  } catch (e: any) {
+    console.warn(`[visual] planner failed (${String(e?.message || e)}) — using the deterministic grouping`);
+  }
+  return { plan: chunkPlan(ctx), usedModel: false };
+}
+
+// ─── the whole set for a concept ────────────────────────────────────
+
+export interface LessonVisualsOptions extends GenerateVisualOptions {
+  include3D?: boolean;
+  maxContrasts?: number;
+  /** Pause between calls (batch rate-limit courtesy). */
+  pauseMs?: number;
+  /** Skip keys that already exist (e.g. a re-run after a partial failure). */
+  existing?: Record<string, AnyBoardVisual>;
+  /** Keys the model already declined (e.g. "3d": "the idea is flat") — not asked again. */
+  declined?: Record<string, string>;
+  /** Existing quarantine: keys listed here are re-drawn even though they are not in `existing`. */
+  quarantine?: Record<string, QuarantinedVisual>;
+}
+
+export interface QuarantinedVisual { visual: AnyBoardVisual; issues: QualityIssue[] }
+
+export interface LessonVisualsReport {
+  key: string;
+  ok: boolean;
+  attempts: number;
+  fixes: number;
+  skipped?: string;
+  error?: string;
+  withheld?: boolean;
+  quality?: QualityIssue[];
+}
+
+export interface LessonVisualsOutcome {
+  visuals: Record<string, AnyBoardVisual>;
+  declined: Record<string, string>;
+  quarantine: Record<string, QuarantinedVisual>;
+  report: LessonVisualsReport[];
+  /** Key facts (1-based) no shipped teaching picture covers, per the critic. */
+  coverageGaps: number[];
+  criticRan: boolean;
+}
+
+/**
+ * Every picture a concept needs for the tutor's lesson arc:
+ *   main + focus:<slug>  — the teaching pictures, ONE idea each (planner, ≤ 4)
+ *   contrast:<id>        — one per known misconception
+ *   apply                — the ladder's application item (form A), situation only
+ *   3d                   — only when it is intrinsically spatial and adds something
+ */
+export async function generateLessonVisuals(
+  ctx: VisualConceptContext,
+  opts: LessonVisualsOptions,
+): Promise<LessonVisualsOutcome> {
+  const model: JsonModel = opts.model ?? gatewayModel(opts.apiKey || '', opts.transientRetries ?? 0, opts.timeoutMs ?? 45_000);
+  const visuals: Record<string, AnyBoardVisual> = { ...(opts.existing || {}) };
+  const declined: Record<string, string> = { ...(opts.declined || {}) };
+  const quarantine: Record<string, QuarantinedVisual> = {};
+  const report: LessonVisualsReport[] = [];
+  const covered = new Set<number>();
+  let criticRan = false;
+
+  const { plan } = await planTeachingPictures(model, ctx);
+  const jobs: Array<{ key: string; req: VisualRequest; label: string }> = plan.map((p, i) => ({
+    key: i === 0 ? VISUAL_KEYS.main : VISUAL_KEYS.focus(slug(p.focus)),
+    req: { purpose: 'teach', focus: p.focus, keyFacts: p.keyFacts },
+    label: i === 0 ? 'main' : 'focus',
+  }));
+  for (const m of ctx.misconceptions.slice(0, opts.maxContrasts ?? 3)) {
+    const id = m.id || misconceptionKey(m.belief);
+    jobs.push({ key: VISUAL_KEYS.contrast(id), req: { purpose: 'contrast', misconception: { ...m, id } }, label: 'contrast' });
+  }
+  const applyItem = ctx.ladderItems.find((l) => l.level === 3) || ctx.ladderItems.find((l) => l.level === 4);
+  if (applyItem) jobs.push({ key: VISUAL_KEYS.apply, req: { purpose: 'apply', item: applyItem }, label: 'apply' });
+  if (opts.include3D !== false) jobs.push({ key: VISUAL_KEYS.space, req: { purpose: 'space' }, label: '3d' });
+
+  for (const [i, job] of jobs.entries()) {
+    if (opts.existing?.[job.key]) {
+      report.push({ key: job.key, ok: true, attempts: 0, fixes: 0, skipped: 'already generated' });
+      if (job.req.purpose === 'teach') (job.req.keyFacts || []).forEach((n) => covered.add(n));
+      continue;
+    }
+    if (declined[job.key]) {
+      report.push({ key: job.key, ok: true, attempts: 0, fixes: 0, skipped: declined[job.key] });
+      continue;
+    }
+    if (i > 0 && opts.pauseMs) await new Promise((r) => setTimeout(r, opts.pauseMs));
+    const r = await generateBoardVisual(ctx, job.req, { ...opts, model, label: job.label, key: job.key });
+    criticRan = criticRan || r.criticRan;
+    if (r.visual) {
+      visuals[job.key] = r.visual;
+      delete declined[job.key];
+      if (job.req.purpose === 'teach') {
+        // Trust the critic's coverage when it ran; otherwise the plan's assignment.
+        (r.criticRan ? r.keyFactsCovered : job.req.keyFacts || []).forEach((n) => covered.add(n));
+      }
+    }
+    if (r.withheld && r.quarantined) quarantine[job.key] = { visual: r.quarantined, issues: r.quality };
+    if (r.skipped) declined[job.key] = r.skipped;
+    report.push({
+      key: job.key, ok: !!r.visual || !!r.skipped, attempts: r.attempts, fixes: r.issues.length,
+      skipped: r.skipped, error: r.error, withheld: r.withheld, quality: r.quality,
+    });
+  }
+  const coverageGaps = ctx.keyFacts.map((_, i) => i + 1).filter((n) => !covered.has(n));
+  return { visuals, declined, quarantine, report, coverageGaps, criticRan };
+}

@@ -31,9 +31,25 @@ async function runScenario(scenario, drive) {
   const srv = spawn(process.execPath, [bundle], { cwd, stdio: 'ignore',
     env: { ...process.env, PORT: String(PORT), LIVE_SCENARIO: scenario, LIVE_RECORD: rec, NODE_ENV: 'production', GEMINI_API_KEY: 'test' } });
   try {
-    for (let i = 0; i < 40; i++) { try { await fetch(`http://localhost:${PORT}/api/health`); break; } catch { await sleep(150); } }
+    // Two fixes made 2026-09-28 while investigating why `npm run test`
+    // (which runs this file) hung/failed after T08 wired
+    // server/routes/tutor.ts into server.ts — see docs/DECISIONS.md
+    // D-2026-09-28-5. Neither is a T08 regression; both are pre-existing
+    // gaps in this file that nothing had surfaced before, because this is
+    // the first time `npm run test` (the full aggregate, this file
+    // included) appears to have been run to completion in this
+    // network-mounted-filesystem environment:
+    //   1. 40 x 150ms = 6s was nowhere near enough for this server to
+    //      finish starting here — it took ~19s in practice (this same
+    //      slow-filesystem startup cost is why docs/AGENT_GUIDE.md's own
+    //      landmine notes elsewhere needed a 60s budget, e.g.
+    //      tests/smoke/tutor-turn.mjs's waitForHealth). Bumped to match.
+    //   2. `localhost` hits the same IPv6-vs-IPv4 resolution hang as
+    //      docs/AGENT_GUIDE.md landmine #8 (server binds 0.0.0.0/IPv4
+    //      only) — switched to the 127.0.0.1 literal, same fix.
+    for (let i = 0; i < 400; i++) { try { await fetch(`http://127.0.0.1:${PORT}/api/health`); break; } catch { await sleep(150); } }
     const got = [];
-    const ws = new WebSocket(`ws://localhost:${PORT}/ws/live?topic=Pythagoras&grade=Sec%202`);
+    const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws/live?topic=Pythagoras&grade=Sec%202`);
     ws.on('message', d => { const m = JSON.parse(d.toString()); m._t = Date.now(); got.push(m); });
     await drive(ws);
     ws.close(); await sleep(300);

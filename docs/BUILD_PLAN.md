@@ -101,10 +101,46 @@ the plan. Acceptance: live voice works end-to-end locally with `PERSONA=v1`; `PE
 restores the old prompt; P-01 and P-16 are spot-checked manually on one session (log
 transcript attached to the PR).
 
-**T08.** Files: new `server/routes/tutor.ts` (or a section in `server.ts`). Steps: stateless per
-turn with session history in memory/Firestore; returns `{tutorText, move, board?, reasoning}`;
-runs the same per-exchange pipeline as voice. Acceptance: a curl script runs a 6-turn lesson;
-events are recorded.
+**T08.** ✅ Built 2026-09-28. Files: `server/routes/tutor.ts`. Per-session history kept in memory
+(keyed by sessionId, cleared on `/api/session/:id/end`), not Firestore — acceptable for eval-harness
+and fallback use; a restart loses in-flight text sessions the same way the voice WS connection does.
+Returns `{sessionId, turn, tutorText, move, diagnosis, planUpdate}` (`board` dropped — there is no
+board on this channel; `diagnosis`/`planUpdate` carry the same fields `learner_update_v2`/`plan_update`
+send over the voice WS, so EV-01/EV-02/EV-03 can score against them directly). Runs the same
+per-exchange pipeline as voice (`assessReasoningWithDeadline` → `recordReasoningEvidence` →
+`compilePlanDelta`), gated behind the model's own `assess_child_reasoning`/`record_confusion_signal`
+tool calls exactly as voice does — no board tools declared, since there is no board to update.
+Acceptance: `tests/smoke/tutor-turn.mjs` (`npm run test:tutor-turn`) starts the real server and runs
+session-start → opening turn → a turn with a reasoning-bearing answer → session end, over real HTTP;
+verified against the running server (auth/ownership/404s, session wiring) but **not yet against a
+live Gemini call** — see docs/TRACEABILITY.md FR-25 and docs/DECISIONS.md D-2026-09-28-2/3 for why
+and what's left (one run from the user's own machine).
+
+Re-reviewed 2026-09-28 (user could not run `test:tutor-turn` from mobile). Added an offline,
+network-independent test — `tests/offline-tutor-setup.ts`, `tests/genai-tool-stub.mjs`,
+`tests/smoke/tutor-turn-offline.mjs` (`npm run test:tutor-turn-offline`) — that runs the real
+production pipeline against a scripted fake model to verify the tool-calling loop's LOGIC (not
+prompt quality). It found and fixed two real bugs (see docs/DECISIONS.md D-2026-09-28-4 for full
+detail): an empty model reply used to reach the child as a blank turn (now falls back to a neutral
+prompt), and a `misconception_behind_correct` diagnosis with no catalogued misconception id used to
+silently compile to `outcome: 'sound'` instead of `'misconception_suspected'` — a pre-existing bug
+also present in, and now also fixed in, `server.ts`'s voice handler. All 22 offline checks now pass;
+`npm run test:assessor` (13/13) shows no regression; `npx tsc --noEmit` clean.
+
+Reviewed a third time same day, after the user asked how to stop finding these bugs one at a time and
+to build the fix: the outcome-derivation branch was **extracted into `deriveOutcome()`**
+(`src/plan/delta.ts`), the single place both channels now call, with a **branch-coverage test**
+(`tests/smoke/plan-delta-outcome.mjs`, `npm run test:plan-delta-outcome`, in the main `npm run test`
+aggregate) enumerating every classification × candidate-count × confirmed-count combination — 16/16.
+Getting the full `npm run test` aggregate to actually build and run (apparently for the first time in
+this environment) surfaced and fixed two more pre-existing gaps unrelated to T08 (a missing
+`createPartFromFunctionResponse` export in `tests/live/genai-live-stub.mjs`; a too-short health-check
+timeout and a `localhost`-vs-`127.0.0.1` bug in `tests/live/run.mjs`, the same landmine #8 class of bug
+`tutor-turn.mjs` had already fixed once). Doing so also surfaced a separate, **not fixed** finding:
+`tests/live/run.mjs`'s own regression checks fail 7 assertions against what looks like a stale
+"original build" snapshot (including a literal check for a persona name, "Dr. Marcus Vance", that
+predates the current persona composer) — two of the seven look like they could be a real bug in
+`src/adaptive/liveObserver.ts` rather than just stale text. Full detail: docs/DECISIONS.md D-2026-09-28-5.
 
 ## Phase 2 — Learner model
 
@@ -123,6 +159,9 @@ _(T16 is reserved for scope that comes up during the build.)_
 **T09.** Files: `src/adaptive/learnerModel.ts`, `src/types.ts` (UI mirrors), `src/curriculum/*`
 (derive `conceptType` — e.g. `subject.category` from the extractor; default `'general'`).
 Acceptance: all optional; the existing profile JSON still loads.
+_2026-09-26: the types shipped earlier but the extractor never produced `conceptType`; it is now
+assigned by the curriculum structure pass and read everywhere via `conceptTypeFor()`
+(docs/CURRICULUM.md, D-2026-09-26-7)._
 
 **T10.** Files: `src/adaptive/learnerStore.ts`, new `src/adaptive/ladder.ts`,
 `src/adaptive/strategyProfile.ts`, tests. Rules: PER §5 (depth→level map, mastery rule),
@@ -187,6 +226,14 @@ and the interruption count across ≥ 10 exchanges per option; the chosen option
 | T30 | Delete endpoint + data-minimisation review | NFR-03 | T03 | S | sonnet |
 
 ---
+
+## Post-plan work — Chapter 1 material quality (2026-09-30)
+
+Tracked in `docs/CH1_FIX_PLAN.md` (work items W-01…W-22, state in §6, runbook in §7). Built: the
+`src/quality/**` gates, shared lesson generator, photo verification, parallel L3 pair, quiz-reasoning
+evidence, in-place upgrade and scorecard. **Owner action still required:** run `npm run pregen:ch1`
+with `GEMINI_API_KEY`, then `npm run review:pregen` and `npm run preview:visuals`. Until then most
+Chapter 1 pictures are withheld by design.
 
 ## Execution waves (parallelisable)
 
