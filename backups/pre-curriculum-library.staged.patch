@@ -1,0 +1,1943 @@
+diff --git a/DECISIONS.md b/DECISIONS.md
+index 4ae518d..1b793f9 100644
+--- a/DECISIONS.md
++++ b/DECISIONS.md
+@@ -802,3 +802,261 @@ recalibrate `EVIDENCE_QUALITY` guess/slip weights without real evidence
+ data to justify new values — revisit only if `eval/` (per
+ docs/TUTOR_PERSONA.md §18) or production data later shows the current
+ weights are miscalibrated in a specific, measurable direction.
++
++## D-2026-09-26-4 — T19 guidance-injection fix: piggyback plan-delta instructions on the next tool response
++
++**Context:** docs/BUILD_PLAN.md's T19 task is a "spike": choose between
++TECHNICAL_SPEC.md §5.3's Option A (`sendClientContent` as client text at
++the next non-speaking turn boundary), Option B (`get_next_step` as a
++fast, in-memory tool), or Option C (UI/next-session fallback only), with
++acceptance criteria of p95 added voice latency < 300ms and no
++interruption of tutor speech. An earlier audit had characterized this as
++already substantially working "via a different mechanism." While
++implementing the instrumentation for that audit's claim, I re-verified
++it directly (grepped every `sendClientContent`/`liveSession.` call site
++in `server.ts`) and found the claim was incomplete/wrong: `compilePlanDelta()`'s
++`delta.instruction` — the actual plan-level guidance, including
++PARK_AND_ESCALATE's parking instruction — was being sent only to the
++browser (`plan_update` WS message), never to the live model. See
++`docs/AGENT_GUIDE.md` landmine #4 for the full symptom writeup.
++
++**Options considered:**
++1. **Option A as specified** (`sendClientContent` at a detected
++   non-speaking turn boundary): rejected. The Gemini Live API surface
++   available here gives no reliable signal for "model is not currently
++   speaking" from the server side, so "only when the model is not
++   speaking" cannot actually be implemented as a precondition — building
++   it would mean guessing, and getting it wrong risks the one failure
++   mode Option A's own acceptance criterion exists to prevent
++   (interrupting tutor speech). This sandbox also cannot reach a live
++   Gemini Live endpoint at all (`npm run test:live` → `ECONNREFUSED
++   127.0.0.1:3999`, confirmed identical on unmodified code via `git
++   stash`), so a new, speculative injection mechanism could not be
++   tested before being shipped into a hackathon demo.
++2. **Option B** (`get_next_step` fast tool): rejected for now, not
++   because it's wrong in principle (TECHNICAL_SPEC.md's own hypothesis
++   favors it) but because it requires the *model* to decide to call a
++   new tool proactively between its own turns, which depends on prompt
++   engineering in `src/persona/compose.ts` / `docs/TUTOR_PERSONA.md` to
++   get the model to actually invoke it at the right moments — a second,
++   larger, untested change layered on top of an already-untestable
++   environment. Revisit if/when live-session testing is possible.
++3. **Piggyback on the existing `sendToolResponse` funnel (chosen):** every
++   tool call the model makes already produces exactly one
++   `sendToolResponse()` call in `server.ts` — this is the one code path
++   already known to work end-to-end against live Gemini Live (it's how
++   `assess_child_reasoning`'s per-turn guidance already reaches the
++   tutor). Queue `delta.instruction` in a `pendingPlanGuidance` variable
++   when `compilePlanDelta` produces one; merge it into whichever tool
++   response fires next, concatenated with that call's own instruction
++   text rather than overwriting it. Zero new Live API surface, zero
++   incremental risk to speech continuity, reuses a call path with an
++   existing track record.
++
++**Verification:** `npx tsc --noEmit -p tsconfig.json` clean after the
++change. `git diff -- server.ts` reviewed line by line. Cannot verify
++against a live Gemini Live session in this sandbox (no reachable
++endpoint here — see above); added a `[T19 latency]` console.log emitting
++the queued-to-delivered latency in milliseconds every time guidance is
++delivered, specifically so this can be measured for real the next time
++a live session runs on a machine with real Gemini Live access (the
++user's own machine). **This decision's latency acceptance criterion
++(p95 < 300ms) is NOT YET MET WITH EVIDENCE** — it is a design choice
++expected to be low-latency in the common case (guidance normally rides
++the very next `assess_child_reasoning` response, which fires almost
++every turn), not a measured one. Action item: run a live session, grep
++server logs for `[T19 latency]`, compute p50/p95 across a real sample,
++and append the result to this entry.
++
++**Trade-off:** delivery is not instant and has no hard upper bound — if
++several turns pass with no tool call at all, the guidance sits queued
++until one occurs. Acceptable for this product because the persona
++already prompts the model to call `assess_child_reasoning` on
++essentially every substantive turn; a long tool-call-free stretch would
++itself likely indicate a different problem (the tutor isn't assessing
++at all) worth surfacing separately.
++
++**Decision:** ship the `sendToolResponse`-piggyback fix (option 3) as
++the T19 mechanism for now. Do not build Option A's speaking-boundary
++detection or Option B's `get_next_step` tool without first being able to
++test against a live Gemini Live session — implementing either
++speculatively, untested, in a hackathon demo codebase is higher risk
++than the piggyback approach's known latency trade-off. Revisit once
++real p50/p95 numbers are collected; if they exceed 300ms in practice,
++reconsider Option B.
++
++## D-2026-09-26-5 — T22 escalations: decouple from T14 (Profiler) dependency
++
++**Context:** docs/BUILD_PLAN.md's T22 row lists dependencies `T14, T03` and
++scopes "ladder, ledger, claims → evidence replay, summaries, escalations"
++as one task. T14 (the session-end Profiler + Claim Validator,
++docs/LEARNER_MODEL.md §5.2) is not built yet (tracked separately as task
++#7). The external assessment pasted into this session flagged Parent
++Portal's missing escalation view as a gap to fix now, alongside T19 —
++before T14.
++
++**Options considered:**
++1. Build escalations as a `LearnerClaim` through T14's (not-yet-existing)
++   Profiler/claimValidator pipeline, matching BUILD_PLAN's literal
++   dependency ordering. Rejected: would require building T14 first,
++   which is a much larger task (a new Gemini-backed session-end
++   pipeline with a JSON schema, a deterministic validator, and a merge
++   step) — blocking a small, high-value, low-risk fix behind a large,
++   still-unstarted one contradicts this project's own instruction to
++   prefer a smaller solution that works over a larger one that's still
++   in progress.
++2. **Treat PARK_AND_ESCALATE as its own deterministic event type,
++   independent of the claims pipeline (chosen).** A LearnerClaim (per
++   LEARNER_MODEL.md §3) is Gemini-authored and needs the claim
++   validator's evidence-ownership/scope/confidence checks precisely
++   because an LLM produced it and could be wrong. PARK_AND_ESCALATE is
++   the opposite: a pure, deterministic rule in `compilePlanDelta()`
++   (`retries >= plan.limits.retryCap`) — no LLM judgment involved, so
++   there is nothing for a claim validator to validate. Recording it as
++   a plain `EscalationEvent` (new type in `learnerModel.ts`) sidesteps
++   the dependency honestly rather than routing it through a pipeline
++   that doesn't add value for this specific event type.
++
++**Implementation:** `EscalationEvent` type + `LearnerProfile.escalations[]`
++(`src/adaptive/learnerModel.ts`); `recordEscalation()`/`resolveEscalation()`
++(`src/adaptive/learnerStore.ts`), called from the same `compilePlanDelta`
++call site in `server.ts` that T19 (D-2026-09-26-4) already touches, right
++when `delta.escalate` is true; `POST
++/api/learners/:studentId/escalations/:escalationId/resolve` for a
++parent/teacher to mark one reviewed; a "Needs Your Attention" section
++plus a roster-card badge in `ParentPortal.tsx`.
++
++**Verification:** `npx tsc --noEmit -p tsconfig.json` clean; `npx vite
++build` succeeds (1724 modules, no type errors) — confirms the new
++`ParentPortal.tsx` UI and the `EscalationEvent` type used across
++`learnerModel.ts`/`learnerStore.ts`/`server.ts`/`ParentPortal.tsx` are
++mutually consistent. Not yet verified: an actual PARK_AND_ESCALATE
++firing end-to-end against a live Gemini Live session (same sandbox
++limitation as D-2026-09-26-4 — no reachable Live endpoint here); the
++next live session run on the user's machine that hits a retry cap
++should show a banner in Parent Portal, which would be the real
++end-to-end confirmation.
++
++**Trade-off:** the remaining T22 scope from BUILD_PLAN.md ("claims →
++evidence replay, summaries") that genuinely does depend on T14's claims
++pipeline is intentionally left for after T14 is built (task #7) — this
++decision only pulls the escalations sub-scope forward, not all of T22.
++
++**Decision:** ship `EscalationEvent` as a standalone, non-claim record
++now; revisit whether escalations should ALSO surface as a
++`LearnerClaim` (e.g. "recurring escalations on fractions" as a
++cross-session pattern) once T14's Profiler exists and there's a
++narrative-level reason to, rather than duplicating the same event two
++ways today.
++
++## D-2026-09-26-6 — T14: Profiler + Claim Validator implementation choices
++
++**Context:** docs/BUILD_PLAN.md T14 ("Files: new `src/adaptive/{profiler,claimValidator}.ts`,
++hook in the session end") and docs/LEARNER_MODEL.md §5.2 fully specify the
++pipeline: session end -> Profiler (Gemini, stronger model, JSON schema) ->
++Claim validator (deterministic) -> merge + write SessionSummary -> schedule
++reviews. This was the largest remaining gap the external assessment
++flagged, and the largest item in this session's queue.
++
++**Key implementation decisions:**
++
++1. **Model role:** used the existing `src/ai/gateway.ts`'s `role: 'strong'`
++   (already resolves to `MODEL_STRONG`/`gemini-3.8-flash` with fallback
++   candidates and a single verified-once cache) rather than hand-rolling
++   another model-candidate list, which is exactly the duplication
++   `gateway.ts`'s own header says it was built to eliminate. This is the
++   first caller of `role: 'strong'` — `liveObserver.ts` is the only other
++   `gateway.ts` caller today and uses `role: 'fast'`.
++2. **Confidence ownership:** LEARNER_MODEL.md §5.2 says the Profiler
++   proposes claims and the validator is "deterministic" — read literally,
++   this means confidence (a numeric judgment) should not come from the LLM
++   at all. `ProposedClaim` (claimValidator.ts) therefore has no confidence
++   field; the Profiler prompt never asks the model for one; confidence is
++   computed exclusively by `capForEvidenceCount()` in the validator, per
++   §6.3's cap table. §6.3's formula (`confidence = min(cap(n), base) x
++   decay(age)`) does not specify what `base` is independently of the cap —
++   this is a REASONABLE INFERENCE (not a verified spec detail): `base` is
++   treated as 1.0 at creation (decay applied separately, at read/plan-
++   compile time, not in this module), so creation-time confidence reduces
++   to `cap(n)`. Flagged here rather than silently assumed.
++3. **Contradiction detection:** §5.2 says "reject claims that contradict a
++   learner_stated/parent_stated claim." True semantic contradiction
++   detection needs another model call (or the same call, which would
++   re-introduce judgment into the "deterministic" validator). Implemented
++   conservatively instead: ANY existing `learner_stated`/`parent_stated`
++   claim occupying the same slot (same `kind` + `scope`) blocks a new
++   profiler claim in that slot, whether or not they actually conflict. This
++   can over-reject (a profiler claim that would have agreed is also
++   blocked) — accepted as the safer failure direction for a claim about a
++   child, and cheap to relax later if it proves too conservative in
++   practice.
++4. **Session-end hook point:** wired into the live-voice WS `clientWs.on('close', ...)`
++   handler (`server.ts`) — the actual "session end/disconnect" trigger for
++   the real voice-tutoring loop this project is built around — not the
++   legacy quiz-click `POST /api/session/:sessionId/end` route, which is a
++   different, older interaction model (per docs/AGENT_GUIDE.md landmine #3's
++   note that the legacy path "never sets `masteryStatus`" and isn't the
++   reported failure mode either). Fire-and-forget: the client is already
++   gone by the time this fires, so nothing awaits its result; `runProfiler`
++   is written to never throw out of its own top-level catch, only log.
++   **§5.2's "idle 10 min" trigger is NOT implemented** — only end-of-session
++   (WS close) — there is no idle-timeout watcher in this codebase yet, and
++   adding one was judged out of scope for T14 itself (tracked as a gap
++   below, not silently dropped).
++5. **Event filtering:** `EventFilter` (`src/adaptive/repo/types.ts`) gained
++   a `sessionId` field, implemented in BOTH `file.ts` and `firestore.ts`
++   (per docs/AGENT_GUIDE.md's own table: "Change file.ts AND firestore.ts
++   together — never one without the other"). The Firestore query now
++   filters by `sessionId` in addition to the existing `conceptId` filter,
++   which may require a composite index in a real Firestore project the
++   first time it runs there — this sandbox cannot create or test that
++   index; noted as a deploy-time risk, not verified.
++6. **Failure isolation:** a Gemini gateway failure (all `strong`-role
++   candidates unreachable, or bad JSON) does not lose the session — the
++   deterministic `SessionSummary` facts (concepts touched, ladder moves,
++   moves/representations used, misconception changes) are computed
++   independently of the model call and always get written, with a
++   plain fallback narrative substituted for the LLM one. Verified directly
++   (see below) since this sandbox cannot reach Gemini at all.
++
++**Verification:** `npx tsc --noEmit -p tsconfig.json` clean. Wrote and ran
++two standalone integration scripts (`tsx`, no bundling needed — pure ESM/TS,
++no mocking framework in this repo) against the real `file` repo backend in
++a scratch data directory:
++- `claimValidator.ts`: 19 assertions covering the confidence cap table,
++  scope requirement, evidence-ownership check, banned-label lexicon (both
++  a learning-style label and a diagnostic label), the learner_stated
++  contradiction rule, and `mergeClaims`'s dedup/union/confidence-recompute
++  behavior. All passed.
++- `profiler.ts` end-to-end: seeded a real learner + two `recordReasoningEvidence`
++  calls in the same session (an incorrect answer, then a corrected one),
++  ran `runProfiler` with a fake API key (this sandbox has no network
++  access to Gemini regardless), and confirmed: the deterministic
++  `SessionSummary` facts were computed correctly (concept touched, ladder
++  move 0→3 matching the `incorrect`→`applied` transition, misconception
++  entry recorded, moves/representations tallied), the fallback narrative
++  fired and named the concept, and the summary was durably persisted BOTH
++  on `LearnerProfile.sessionSummaries[]` and via the dedicated
++  `saveSessionSummary()` repo call (confirmed by reading back
++  `data/sessions/<studentId>.json`). Also confirmed a session with zero
++  events correctly returns `null` (skips) rather than fabricating a claim.
++  **Not verified:** an actual successful Gemini `strong`-role call
++  producing real proposed claims — this sandbox cannot reach Gemini at
++  all; the LLM-call path itself needs to be exercised on the user's own
++  machine (with a real `GEMINI_API_KEY`) to confirm end-to-end, though the
++  prompt/parsing/validation code around that call is the same code path
++  already exercised (minus the actual network response) by the tests
++  above.
++
++**Trade-off / explicit scope cut:** spaced-review scheduling (LEARNER_MODEL.md
++§5.2's "schedule reviews (§7.2)" step and §7.1's decay half-lives) is
++**NOT implemented** in this pass — that is BUILD_PLAN's separate T15, which
++remains unstarted. The Profiler writes claims and session summaries only;
++nothing yet decays a claim's confidence over time or schedules a review
++item from a claim. Flagging this explicitly rather than letting "T14 done"
++imply T15 is also done.
++
++**Decision:** ship the Profiler + Claim Validator as scoped above (claims +
++session summaries, no review scheduling, no idle-timeout trigger). Revisit
++review scheduling as its own task (T15) rather than folding it in here
++unreviewed.
+diff --git a/PROJECT_STATE.md b/PROJECT_STATE.md
+index 8555648..cb3bda0 100644
+--- a/PROJECT_STATE.md
++++ b/PROJECT_STATE.md
+@@ -375,3 +375,100 @@ Remaining before recording:
+ 4. Write/rehearse the 3-minute script against the structure in the
+    hackathon's own instructions (problem → why existing tools fail →
+    live demo → technical architecture → measured impact).
++
++## Update — 2026-09-26 (external judge assessment triaged: T19 gap fixed + made worse-than-reported finding, T22 escalations built, T13 confirmed built-but-undeployed, T14 confirmed not started)
++
++A pasted external assessment claimed 4 gaps against Problem
++Alignment/Innovation criteria. Re-verified each against actual code
++rather than trusting it at face value (source-of-truth principle):
++
++- **T13 (onboarding UI):** confirmed correct — `Onboarding.tsx` existed
++  in the working tree from earlier this session but was uncommitted and
++  had never been deployed to the server the user tested against, which
++  is exactly why manual testing only ever saw "name + grade." Still
++  uncommitted (see docs/TRACEABILITY.md FR-09).
++- **T19 (guidance injection):** the assessment understated this. Directly
++  re-verified an earlier audit's claim that plan-delta guidance "already
++  reaches the tutor via a different mechanism" and found it was wrong —
++  `compilePlanDelta()`'s `delta.instruction` (including PARK_AND_ESCALATE's
++  own guidance) reached only the browser debug panel, never the live
++  Gemini model. Fixed by piggybacking it onto the shared
++  `sendToolResponse()` funnel every tool call already goes through — no
++  new Live API surface, so nothing new to risk-test in a sandbox with no
++  reachable Gemini Live endpoint. `[T19 latency]` log line added so real
++  p50/p95 numbers can be captured on the user's own machine (BUILD_PLAN's
++  stated acceptance criterion is not yet met with evidence — see
++  docs/AGENT_GUIDE.md landmine #4, DECISIONS.md D-2026-09-26-4).
++- **T22 (Parent Portal escalation view):** confirmed correct — zero
++  references existed. Built `EscalationEvent` (deliberately NOT a
++  `LearnerClaim`, since PARK_AND_ESCALATE is a deterministic rule with no
++  LLM judgment to validate — decouples this from the still-unbuilt T14
++  Profiler, see DECISIONS.md D-2026-09-26-5) + persistence + a resolve
++  endpoint + a "Needs Your Attention" section and roster badge in
++  `ParentPortal.tsx`. `npx tsc --noEmit` and `npx vite build` both clean.
++- **T14 (session-end Profiler):** confirmed correct — `src/adaptive/{profiler,claimValidator}.ts`
++  do not exist. Not started; largest remaining item, in progress next.
++
++**Not independently verifiable from code:** the assessment's claim that
++testing has relied entirely on simulated learners (`demo_aisha`/`demo_marcus`/`demo_priya`)
++rather than a real learner — that's a fact about how the team has been
++testing, not something the repo can confirm or refute.
++
++**Still nothing has run against a live Gemini Live session in this
++sandbox** (confirmed, again, via `git stash` producing an identical
++`ECONNREFUSED` on unmodified code) — every fix above is verified by
++`tsc`/`vite build`/direct code inspection, not by an actual voice
++session. That remains the standing pre-demo verification gap noted in
++every update above.
++
++## Update — 2026-09-26 (T14 built: session-end Profiler + Claim Validator)
++
++Built `src/adaptive/profiler.ts` and `src/adaptive/claimValidator.ts`
++(docs/LEARNER_MODEL.md §5.2), wired into the live-voice WS session-end
++(`clientWs.on('close', ...)` in `server.ts`, fire-and-forget). The
++Profiler calls Gemini (gateway `role: 'strong'`) with this session's
++evidence events + existing claims + onboarding + misconception ledger,
++proposing durable cross-exchange claims and a plain-language narrative.
++Every proposed claim passes through the deterministic Claim Validator
++before touching a learner's profile: evidence-ownership check, required
++scope, a banned-label lexicon (blocks things like "visual learner,"
++"ADHD," "gifted," "lazy" — enforcing this project's own "do not
++represent fixed psychological labels" principle at the code level, not
++just the prompt level), confidence computed ONLY from evidence count
++(never from the model — see `docs/AGENT_GUIDE.md` landmine #5), and a
++conservative contradiction check against any `learner_stated`/`parent_stated`
++claim in the same slot. Validated claims merge into the learner's
++profile; a `SessionSummary` (concepts touched, ladder moves,
++misconceptions changed, moves/representations used, narrative) is
++written both on the profile and via the dedicated `saveSessionSummary()`
++repo call that already existed but nothing had ever called.
++
++**Verified without live Gemini access** (this sandbox has none): 19 unit
++assertions against `claimValidator.ts` (confidence cap table, every
++rejection path, merge/dedup logic) and an end-to-end integration run of
++`profiler.ts` against the real file-backed repo — seeded a learner with
++two real evidence events in one session, ran `runProfiler` with a fake
++API key, confirmed the deterministic SessionSummary facts compute
++correctly, the fallback narrative fires correctly when the model call
++fails, and everything persists correctly to both storage locations. Also
++confirmed a session with zero events is correctly skipped (returns
++`null`) rather than fabricating a claim from nothing.
++
++**Explicitly NOT done in this pass (see D-2026-09-26-6):**
++- T15 (spaced-review scheduling, §7.2, and claim/strategy confidence decay
++  over time, §7.1) — separate, unstarted task. Claims are written with
++  full confidence at creation; nothing decays them yet.
++- The idle-10-minute session-end trigger from §5.2 — only WS-close
++  (true disconnect/end) is wired; there's no idle-timeout watcher.
++- An actual successful Gemini `strong`-role call producing real proposed
++  claims — needs a live run on a machine with real Gemini access to
++  confirm the prompt actually produces sensible, well-scoped claims in
++  practice (as opposed to the code path around it, which is fully
++  exercised by the tests above).
++
++**Remaining work in this session's queue:** task #8 (final consolidated
++documentation pass — this update, plus TRACEABILITY.md/AGENT_GUIDE.md/
++DECISIONS.md updates for T14, are already done as part of building T14
++itself, per this session's standing "keep docs updated in the same
++change" instruction; task #8 will do a last cross-check for anything
++missed across T13/T19/T22/T14 together).
+diff --git a/docs/AGENT_GUIDE.md b/docs/AGENT_GUIDE.md
+index edca010..bd47792 100644
+--- a/docs/AGENT_GUIDE.md
++++ b/docs/AGENT_GUIDE.md
+@@ -13,6 +13,8 @@ This file exists because two real, ship-blocking bugs already happened in this p
+ | REST routes / auth | `server/middleware/requireAuth.ts` first | `docs/ARCHITECTURE.md §5` |
+ | ParentPortal / any UI that caches per-(student, X) data | Landmine #1 below, first | — |
+ | Anything else / general layout | `docs/ARCHITECTURE.md` | — |
++| Session-end Profiler / claims / claim validation | `docs/LEARNER_MODEL.md §5.2`, `src/adaptive/claimValidator.ts`'s header | Never let the Profiler (an LLM call) write confidence or bypass the validator — see the header comments in `profiler.ts`/`claimValidator.ts` and D-2026-09-26-6. |
++| Any new Gemini text-generation call | `src/ai/gateway.ts`'s header first | Use `generateText`/`generateJSON` with a `role` — do NOT hand-roll another model-candidate-list-with-fallback (this exact duplication is why `gateway.ts` exists; see its header). |
+ | Product/strategy decisions (why X was chosen over Y) | `DECISIONS.md` (repo root) | Add a dated entry for any new architectural or product decision |
+ | Overall build status vs spec | `docs/TRACEABILITY.md`, `PROJECT_STATE.md` | Update the relevant row/section |
+ 
+@@ -34,6 +36,18 @@ This file exists because two real, ship-blocking bugs already happened in this p
+ **Verified, not just asserted:** wrote and ran a standalone repro script bundling the real `learnerStore.ts` against a temp data dir — confirmed (a) one `transferred` observation on a virgin concept now stores 74%/`'none'` instead of 96%, and (b) two more genuine, distinct-item `transferred` observations still correctly climb the score and flip status to `'provisional'` — so legitimate multi-observation progression was not broken by the fix. `npx tsc --noEmit` clean; `npm run test:assessor` (unaffected code path) still passes; `npm run test:live` fails identically on the ORIGINAL unmodified code in this environment (confirmed via `git stash`) — a pre-existing sandbox/network limitation (no reachable Gemini Live endpoint here), not a regression.
+ **Generalized rule:** whenever a system computes two different signals that both claim to represent "how well does this learner know X" (a continuous score AND a categorical status), fix disagreements AT THE SOURCE that computes the continuous one, not by gating each consumer separately — there will always be another consumer (a prompt, a new UI, an API route) you didn't think to gate. Reuse an existing, already-validated evidence-sufficiency rule before inventing a new tunable constant.
+ 
++### #4 — 2026-09-26 — Mid-session plan-delta guidance (`compilePlanDelta`) never reached the live tutor at all
++**Files:** `server.ts` (WS connection handler — `compilePlanDelta` call site, `sendToolResponse()`). **Symptom:** found while implementing T19 (docs/BUILD_PLAN.md's guidance-injection spike). An earlier audit had claimed "dynamic plan-delta injection already works end-to-end via a different mechanism." Re-verified this myself by grepping every `sendClientContent`/`liveSession.` call site and found the claim was wrong: `delta.instruction` from `compilePlanDelta()` -- which carries PARK_AND_ESCALATE's "park this concept, tell the learner you'll return to it" guidance, `encourageReset`'s pacing guidance, and representation-switch instructions -- was sent ONLY to the browser, as a `plan_update` WS message for the Tutor's-Reasoning debug panel. It was never passed to `liveSession.sendToolResponse(...)` or `sendClientContent(...)`, so the live Gemini model itself never received it. The only guidance that DID reach the model was a narrower, separately-computed value (`assessment.tutorGuidance`, from the per-turn diagnostician), via the existing `sendToolResponse(call, { instruction: assessment.tutorGuidance })` call. Net effect: if a retry cap was hit and the plan compiler decided to park a concept, the *browser* would show that decision in the debug panel, but the *tutor's voice* would carry on as if nothing had changed -- the single most safety-relevant persona move (PARK_AND_ESCALATE) was silently never delivered to the model.
++**Fix:** added a `pendingPlanGuidance` (+ `pendingPlanGuidanceQueuedAt` for latency logging) module-level variable in the WS connection closure. `compilePlanDelta`'s call site sets it whenever `delta.instruction` is truthy, in addition to (not instead of) the existing browser `plan_update` push. The shared `sendToolResponse()` function -- the single funnel every tool call already goes through -- merges any pending guidance into the *next* outgoing tool response's `instruction` field (concatenated with, not overwriting, that call's own instruction text), logs `[T19 guidance-injection]` with the queued-to-delivered latency, and clears the pending value. Zero new live-session API surface; zero risk of interrupting tutor speech, since it rides a response that was already about to be sent for an unrelated reason.
++**Why not `sendClientContent()` (TECHNICAL_SPEC.md §5.3 Option A):** that option is explicitly conditioned on "only when the model is not speaking" -- the code has no reliable way to detect that from this side of the Live API, and this sandbox cannot reach a live Gemini Live endpoint at all (`npm run test:live` -> `ECONNREFUSED 127.0.0.1:3999`, confirmed identical on unmodified code via `git stash`), so a new, untested injection path could not be validated before shipping. Piggybacking on `sendToolResponse` reuses a call path that is already exercised by every existing tool call and already known to work.
++**Trade-off / known limitation:** delivery is not instant -- the guidance waits for whatever tool call happens to fire next (in practice `assess_child_reasoning` fires on nearly every turn, so the wait is normally at most one turn, but there is no hard upper bound if the model goes several turns without calling any tool). Formal p50/p95 added-latency numbers (T19's acceptance criterion) cannot be produced from this sandbox -- see the `[T19 latency]` log line added in `server.ts` and `DECISIONS.md` entry `D-2026-09-26-4` for how to capture them on a machine with real Gemini Live access.
++**Generalized rule:** a value computed once and then "sent" is not necessarily sent everywhere it needs to go -- when a compiler/decision function's output has more than one consumer (here: browser debug panel AND live model), grep every actual delivery call site (not just where the value is *read*) before trusting a claim that it "already reaches" a destination. Don't take a prior audit's characterization of a data-flow claim at face value when it's cheap to re-verify with a grep.
++
++### #5 — 2026-09-26 — T14 built: Profiler + Claim Validator, and why confidence must never come from the LLM
++**Files:** `src/adaptive/profiler.ts` (new), `src/adaptive/claimValidator.ts` (new), `src/adaptive/repo/{types,file,firestore}.ts` (added `sessionId` to `EventFilter`), `server.ts` (wired into the live-voice WS `close` handler). **Context, not a bug:** this is the first landmine entry for a NEW capability rather than a fix, recorded because the design choice matters for anyone extending it. docs/LEARNER_MODEL.md §5.2 calls the Profiler "Gemini, stronger model, JSON schema" and the Claim validator "deterministic" — the two words together are easy to blur if you let the Profiler's JSON response include a confidence number "because the model already estimated one anyway." Don't: `ProposedClaim` (the Profiler's output shape) has NO confidence field on purpose. §6.3 gives an exact formula (`cap(n)` by evidence count, `n` = distinct evidenceRefs) and confidence is computed ONLY in `claimValidator.ts`'s `capForEvidenceCount()`. If a future change adds an LLM-supplied confidence and starts blending it in, the validator stops being deterministic and the whole point of separating "propose" from "validate" (LLMs hallucinate scope, evidence, and certainty; a fixed formula cannot) is lost.
++**Also note:** the Profiler is deliberately NOT wired into the legacy `POST /api/session/:sessionId/end` route (the quiz-click path) — only the live-voice WS `close` handler, because that is the actual "session end" this project's core loop cares about. If the quiz-click path is ever revived as a first-class flow, it needs its own explicit decision about whether/how to call `runProfiler`, not a silent copy-paste.
++**Generalized rule:** when a spec calls one stage "LLM" and the next stage "deterministic," treat that boundary as load-bearing — any value that crosses it in the wrong direction (a judgment score leaking from the LLM stage into what's supposed to be a fixed-formula gate) quietly reintroduces exactly the failure mode the deterministic stage was built to prevent. Grep for where a value ORIGINATES, not just where it's read, before assuming a "deterministic" component is still deterministic.
++
+ ## 3. The doc-sync rule (how this stays honest)
+ 
+ Every commit that touches a file in the left column of §1's table should touch the doc(s) in the corresponding right column in the SAME commit — not "later." This is enforced (as a warning, not a hard block, given hackathon time pressure) by `scripts/check-docs-sync.mjs`, wired to `npm run check:docs` and to a pre-commit hook at `.githooks/pre-commit` (enabled via `git config core.hooksPath .githooks`, already set in this repo — see `docs/ARCHITECTURE.md`). If the hook warns you and you deliberately want to skip updating docs (e.g. a pure typo fix), that's fine — it's advisory, not blocking — but a **new landmine, a new architectural decision, or a change to what a tool/route/persona does** should never be skipped.
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index 97ff50d..38e9358 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -40,6 +40,8 @@ useFirestore() === true  iff  process.env.USE_FIRESTORE_LEARNERS === 'true'  OR
+ - **`FirestoreLearnerRepository`** (`repo/firestore.ts`) — production default on Cloud Run. Collections: `learners/{studentId}`, `.../events/{eventId}`, `.../plans/{planVersion}`, `.../sessions/{sessionId}`. Uses the Admin SDK, which bypasses `firestore.rules` entirely — all four `learners/**` rule blocks are `allow read, write: if false`, i.e. client SDKs can NEVER touch learner data directly; all access is server-side only through `requireAuth`/`requireOwnership` middleware.
+ - **`firestore.indexes.json` is currently empty** (`{"indexes": [], "fieldOverrides": []}`). The Firestore repo does run `.where(...).orderBy(...)` compound queries that may need composite indexes in production — this file provides no pre-declared coverage today. Flag before scaling query volume.
+ 
++**2026-09-26:** `EventFilter` (`repo/types.ts`) gained a `sessionId` field (T14 — the Profiler needs "this session's events," not just "this concept's events"), implemented in both backends. The Firestore path now does `.where('conceptId', ...).where('sessionId', ...).orderBy('timestamp', ...)` when both are given — this MAY need a composite index the first time it runs against a real Firestore project; `firestore.indexes.json` (see above) does not pre-declare it and this sandbox cannot create/test Firestore indexes. Verify on first real deploy.
++
+ **Rule of thumb for any future storage change: change both `file.ts` and `firestore.ts` together, or you've silently made dev and prod diverge.**
+ 
+ ## 5. REST API (all routes in `server.ts`)
+@@ -54,8 +56,9 @@ useFirestore() === true  iff  process.env.USE_FIRESTORE_LEARNERS === 'true'  OR
+ | GET | `/api/curriculum/jobs/:id` | poll ingest progress |
+ | GET/POST/DELETE | `/api/learners`, `/api/learners/:studentId` | learner CRUD (`requireAuth` + `requireOwnership`) |
+ | POST | `/api/learners/:studentId/onboarding` | save onboarding answers |
+-| GET | `/api/learners/:studentId/events` | evidence event log, filterable by conceptId |
++| GET | `/api/learners/:studentId/events` | evidence event log, filterable by `conceptId` and (2026-09-26) `sessionId` |
+ | POST | `/api/learners/:studentId/subjects/:subjectId/concepts/:conceptId/misconceptions/:misconceptionId/dispute` | "That's not right" dispute action |
++| POST | `/api/learners/:studentId/escalations/:escalationId/resolve` | (2026-09-26, T22) parent/teacher marks a PARK_AND_ESCALATE event reviewed — see AGENT_GUIDE.md landmine #4, D-2026-09-26-5 |
+ | POST | `/api/session/start` | resolve/create learner + curriculum + next concept (via `isConceptMastered()` — gates on the evidence-checked `masteryStatus` when set, see AGENT_GUIDE.md landmine #3 — not raw `masteryScore` alone), compile Teaching Plan, return `sessionId` |
+ | GET | `/api/session/:sessionId` | fetch session + learner + current concept state |
+ | POST | `/api/session/:sessionId/assess` | grade a quiz-click answer (legacy, non-voice path); auto-advance also gated by `isConceptMastered()` |
+@@ -71,6 +74,30 @@ Gemini Live tool calls dispatched in `server.ts`'s switch:
+ - `record_confusion_signal` → `handleRecordConfusionSignal()` → `recordConfusionSignal()` (added 2026-09-26 — see AGENT_GUIDE.md landmine #2).
+ - Every other tool name (`update_chalkboard_notes`, `set_figure`, `reveal_part`, `pose_quiz`, `generate_photo_visual`, etc.) is a pure board/UI relay to the browser and gets an immediate generic ack — **these never touch the learner model.** If you add a new tool that SHOULD persist something, you must add an explicit dispatch case, or it silently no-ops (see AGENT_GUIDE.md landmine #2 for exactly this mistake already made once).
+ 
++### 6.1 Plan-delta guidance delivery (T19, 2026-09-26)
++
++`compilePlanDelta()`'s result (`delta.instruction` — PARK_AND_ESCALATE's parking
++guidance, `encourageReset`'s pacing guidance, representation-switch instructions)
++is queued in a `pendingPlanGuidance` closure variable and merged into the
++`instruction` field of whichever tool response fires NEXT via the shared
++`sendToolResponse()` function — not sent through a new Live API call. See
++AGENT_GUIDE.md landmine #4 and DECISIONS.md D-2026-09-26-4 for why (this
++sandbox cannot reach Gemini Live to test a new injection mechanism) and its
++known latency trade-off (`[T19 latency]` console log captures real numbers
++on a machine with Gemini Live access).
++
++### 6.2 Session-end Profiler (T14, 2026-09-26)
++
++`clientWs.on('close', ...)` fires `runProfiler()` (`src/adaptive/profiler.ts`,
++fire-and-forget) — the slow loop from `docs/LEARNER_MODEL.md §5.2`. Calls
++Gemini via `src/ai/gateway.ts`'s `role: 'strong'`, proposes claims + a
++narrative, gates every claim through `src/adaptive/claimValidator.ts`
++(deterministic — confidence, evidence-ownership, banned-label lexicon,
++scope, contradiction checks all live there, never in the LLM call — see
++AGENT_GUIDE.md landmine #5), then persists merged claims + a `SessionSummary`
++via `getRepo().saveProfile()`/`saveSessionSummary()`. T15 (decay + spaced
++review scheduling) is NOT part of this — see D-2026-09-26-6.
++
+ ## 7. The persona / prompt pipeline (read this before touching tutor behavior)
+ 
+ Session start (`POST /api/session/start`) → `compileTeachingPlan()` (`src/plan/compile.ts`) reads the learner's full history (mastery, ladder, misconception ledger, `strategyProfile`) and produces a `TeachingPlan`: target concept, prerequisites to probe, **representation order** (ranked via `rankRepresentations()` against that child's Beta-distribution strategy-effectiveness profile), representations to avoid, watched misconceptions, difficulty, pace, scaffold level.
+@@ -83,11 +110,11 @@ That plan is rendered to text by `renderPlanForPrompt()` (`src/plan/render.ts`)
+ 
+ ## 8. Frontend (`src/components/`, orchestrated by root `App.tsx`)
+ 
+-Notable ones: `DynamicBlackboard.tsx` (main teaching canvas, largest component), `Interactive2DDiagram.tsx` (client-side figure rendering — no Gemini image call needed for most concepts), `PhotoRealisticVisual.tsx` (AI-generated photo visuals via `/api/generate-image` — currently blocked by zero image quota, see DECISIONS.md), `LearnerProfilePanel.tsx` (the child's mastery/misconception card — this is what BUILD_PLAN.md calls `LearnerCard.tsx`; that file was never created, this one was extended instead — tracked drift, not a bug), `TutorReasoningPanel.tsx` (surfaces live diagnosis output for judges/parents), `ParentPortal.tsx` (parent dashboard — had a cross-student evidence-caching bug fixed 2026-09-26, see AGENT_GUIDE.md landmine #1), `CurriculumUpload.tsx`.
++Notable ones: `DynamicBlackboard.tsx` (main teaching canvas, largest component), `Interactive2DDiagram.tsx` (client-side figure rendering — no Gemini image call needed for most concepts), `PhotoRealisticVisual.tsx` (AI-generated photo visuals via `/api/generate-image` — currently blocked by zero image quota, see DECISIONS.md), `LearnerProfilePanel.tsx` (the child's mastery/misconception card — this is what BUILD_PLAN.md calls `LearnerCard.tsx`; that file was never created, this one was extended instead — tracked drift, not a bug), `TutorReasoningPanel.tsx` (surfaces live diagnosis output for judges/parents), `ParentPortal.tsx` (parent dashboard — had a cross-student evidence-caching bug fixed 2026-09-26, see AGENT_GUIDE.md landmine #1; gained a "Needs Your Attention" escalations section 2026-09-26, see landmine #4 / D-2026-09-26-5), `Onboarding.tsx` (2026-09-26 — 4-step interests/feelings/access/language flow, built but not yet deployed, see TRACEABILITY.md FR-09), `CurriculumUpload.tsx`.
+ 
+ ## 9. Test coverage — honest state
+ 
+-Real but narrow: `tests/run.mjs` (model-selection/retry/timeout edge cases for `reasoningAssessor.ts`, stubbed Gemini), `tests/live/run.mjs` (genuine WS-protocol integration test against a stubbed Live session), `tests/smoke/gateway.mjs` and `tests/smoke/plan-and-store.mjs` (the latter is NOT wired into `npm test` — runs manually only). **Zero coverage** on: every REST route, `requireAuth`/`requireOwnership`, the Firestore repo path, any React component, the persona composer, curriculum ingestion. Treat any change to those areas as untested until proven otherwise by manual verification.
++Real but narrow: `tests/run.mjs` (model-selection/retry/timeout edge cases for `reasoningAssessor.ts`, stubbed Gemini), `tests/live/run.mjs` (genuine WS-protocol integration test against a stubbed Live session), `tests/smoke/gateway.mjs` and `tests/smoke/plan-and-store.mjs` (the latter is NOT wired into `npm test` — runs manually only). **2026-09-26:** added `tests/smoke/claim-validator.mjs` (19 assertions) and `tests/smoke/profiler.mjs` (end-to-end against a real throwaway file-repo dir, deterministic-fallback path since this sandbox has no Gemini network access) — same convention as `plan-and-store.mjs`: real, runnable, NOT wired into `npm test` yet. Run manually: `npx tsx tests/smoke/claim-validator.mjs` / `npx tsx tests/smoke/profiler.mjs`. See D-2026-09-26-6. **Zero coverage** on: every REST route, `requireAuth`/`requireOwnership`, the Firestore repo path, any React component, the persona composer, curriculum ingestion. Treat any change to those areas as untested until proven otherwise by manual verification.
+ 
+ ## 10. Known drift / landmines
+ 
+diff --git a/docs/CODE_DOC_MAP.json b/docs/CODE_DOC_MAP.json
+index 0cb7c31..0515f5d 100644
+--- a/docs/CODE_DOC_MAP.json
++++ b/docs/CODE_DOC_MAP.json
+@@ -2,11 +2,13 @@
+   "_comment": "Maps source path globs to the docs that should be updated in the same commit when they change. Used by scripts/check-docs-sync.mjs. Add new rules here rather than hard-coding them in the script.",
+   "rules": [
+     { "sourceGlobs": ["src/persona/**", "src/live/liveConfig.ts"], "docs": ["docs/TUTOR_PERSONA.md", "docs/ARCHITECTURE.md"] },
+-    { "sourceGlobs": ["src/adaptive/learnerModel.ts", "src/adaptive/learnerStore.ts", "src/adaptive/strategyProfile.ts", "src/adaptive/bkt.ts", "src/adaptive/ladder.ts", "src/adaptive/reasoningAssessor.ts"], "docs": ["docs/LEARNER_MODEL.md"] },
++    { "sourceGlobs": ["src/adaptive/learnerModel.ts", "src/adaptive/learnerStore.ts", "src/adaptive/strategyProfile.ts", "src/adaptive/bkt.ts", "src/adaptive/ladder.ts", "src/adaptive/reasoningAssessor.ts", "src/adaptive/profiler.ts", "src/adaptive/claimValidator.ts"], "docs": ["docs/LEARNER_MODEL.md"] },
+     { "sourceGlobs": ["src/plan/**"], "docs": ["docs/TEACHING_PLAN.md"] },
+     { "sourceGlobs": ["src/adaptive/repo/**"], "docs": ["docs/ARCHITECTURE.md"] },
+-    { "sourceGlobs": ["server.ts"], "docs": ["docs/ARCHITECTURE.md"] },
+-    { "sourceGlobs": ["src/components/ParentPortal.tsx"], "docs": ["docs/AGENT_GUIDE.md"] },
++    { "sourceGlobs": ["src/ai/gateway.ts"], "docs": ["docs/ARCHITECTURE.md", "docs/AGENT_GUIDE.md"] },
++    { "sourceGlobs": ["server.ts"], "docs": ["docs/ARCHITECTURE.md", "docs/AGENT_GUIDE.md"] },
++    { "sourceGlobs": ["src/components/ParentPortal.tsx"], "docs": ["docs/AGENT_GUIDE.md", "docs/TRACEABILITY.md"] },
++    { "sourceGlobs": ["src/components/Onboarding.tsx"], "docs": ["docs/TRACEABILITY.md"] },
+     { "sourceGlobs": ["docs/CODE_DOC_MAP.json"], "docs": [] }
+   ]
+ }
+diff --git a/docs/LEARNER_MODEL.md b/docs/LEARNER_MODEL.md
+index 87374ca..7f3387a 100644
+--- a/docs/LEARNER_MODEL.md
++++ b/docs/LEARNER_MODEL.md
+@@ -137,6 +137,19 @@ export interface SessionSummary {
+ // LearnerProfile additions (all optional)
+ //   ageBand?: AgeBand; onboarding?: Onboarding; strategyProfile?: StrategyProfile;
+ //   affect?: AffectState; claims?: LearnerClaim[]; sessionSummaries?: SessionSummary[];
++//   escalations?: EscalationEvent[];
++
++// T22 (FR-20/D-2026-09-26-5) — a durable record of the plan compiler's
++// PARK_AND_ESCALATE move (src/plan/delta.ts: retries >= plan.limits.retryCap).
++// Deliberately NOT a LearnerClaim: PARK_AND_ESCALATE is a deterministic rule,
++// not a Gemini judgment, so there is nothing for the claim validator (§5.2)
++// to validate. Surfaced directly in ParentPortal.tsx's "Needs Your Attention"
++// section rather than waiting on §5.2's Profiler pipeline to exist.
++interface EscalationEvent {
++  id: string; subjectId: string; conceptId: string; conceptLabel?: string;
++  reason: 'retry_cap_reached'; retryCount: number; timestamp: number;
++  sessionId?: string; resolved: boolean; resolvedAt?: number; resolvedNote?: string;
++}
+ ```
+ 
+ **Backward compatibility:** every new field is optional. Existing `globalInsights` and `notes`
+diff --git a/docs/TRACEABILITY.md b/docs/TRACEABILITY.md
+index a00c7ff..c16ce45 100644
+--- a/docs/TRACEABILITY.md
++++ b/docs/TRACEABILITY.md
+@@ -15,18 +15,18 @@ _Last updated: 2026-09-26 (model connectivity confirmed on the user's real machi
+ | FR-06 | Subject modes | PER §12.2 | T05, T06 | `subjectModes.ts` | Text-mode interpretive run | (optional) | 🟨 `subjectModes.ts` built and wired; no interpretive text-mode run yet (needs T08) |
+ | FR-07 | Safety / safeguarding | PER §16 | T05, T26 | `safety.ts` | P-13 | — | 🟨 `safety.ts` built and included in every composed prompt; P-13 not run |
+ | FR-08 | Academic integrity | PER §15 | T05, T26 | `core.ts` | P-10, P-11 | — | 🟨 integrity block in `safety.ts`/`core.ts`; P-10/P-11 not run |
+-| FR-09 | Onboarding | LM §3–4 | T13 | `Onboarding.tsx` | First plan uses interests | 0:45 | ⬜ `POST /api/learners/:id/onboarding` route exists; no UI |
++| FR-09 | Onboarding | LM §3–4 | T13 | `Onboarding.tsx` | First plan uses interests | 0:45 | ✅ `Onboarding.tsx` built (4-step: interests/feelings/access/language, all skippable except nothing is hard-required, ≤6 taps), `App.tsx` routes every learner without `onboarding.completedAt` there right after profile creation; posts to the existing `POST /api/learners/:id/onboarding` route. `npx tsc --noEmit` + `npx vite build` clean. **Not yet committed/deployed** — the server the team has been testing against still predates this, which is why manual testing only saw name+grade (2026-09-26). Acceptance ("first plan uses the interests") not yet walked through live. |
+ | FR-10 | Async per-exchange diagnosis | LM §5.1, TS §5.2 | T11 | `diagnostician.ts`, `segmenter.ts` | EV-01; latency test | 1:30 | 🟨 (♻️ `reasoningAssessor.ts` unchanged, now actually wired async into the live WS path via `handleAssessChildReasoning`); not split into `segmenter.ts`/`diagnostician.ts`; EV-01 not run |
+ | FR-11 | Append-only evidence events | LM §3, §9 | T03, T10 | `repo/*`, `learnerStore.ts` | Restart persistence test | Parent replay | ✅ `src/adaptive/repo/*` (file + Firestore) + `EvidenceEvent` append in `recordReasoningEvidence`, verified by `tests/smoke/plan-and-store.mjs`. **2026-09-25: found and fixed a real data-loss bug** — this checkout's local `data/learner-profiles.json` had become `[]`, and every `saveProfile()` call was silently discarding the write (no thrown error) because `JSON.stringify` on an array drops non-index properties; the smoke test never caught it because it always runs against a fresh tmp dir. Fixed with a `readProfiles()` guard (D-2026-09-25-2); verified against real `npm run seed:demo` output, not just the smoke test |
+ | FR-12 | Misconception ledger | LM §5.1 | T10 | `learnerStore.ts` | Existing + new unit tests | 1:30 "mastery goes down" | ✅ ♻️ preserved verbatim + smoke-tested (suspected→confirmed at 2 independent observations) |
+ | FR-13 | Ladder + mastery status | PER §5, LM §3 | T10 | `ladder.ts` | Unit tests | Learner card | ✅ `src/adaptive/ladder.ts`, smoke-tested; no dedicated unit-test file yet |
+ | FR-14 | Confidence capture | PER §9 | T12 | UI + segmenter | Coverage ≥ 50% | 1:30 | ⬜ `learnerConfidence` field exists on `EvidenceEvent`; nothing populates it yet |
+ | FR-15 | Strategy profile (Beta) | LM §6.2 | T10 | `strategyProfile.ts` | Unit tests; TP-03 | 0:45 plan diff | ✅ `src/adaptive/strategyProfile.ts`, wired into `recordReasoningEvidence` and `compileTeachingPlan`'s `R-REP`/`R-AVOID`; no dedicated unit-test file yet |
+-| FR-16 | Profiler claims, validator, decay, review | LM §5.2, §7 | T14, T15 | `profiler.ts`, `claimValidator.ts`, `review.ts` | Validator tests | Learner card | ⬜ types exist (`LearnerClaim`, `SessionSummary`, `ReviewState`); nothing populates or schedules them |
++| FR-16 | Profiler claims, validator, decay, review | LM §5.2, §7 | T14, T15 | `profiler.ts`, `claimValidator.ts`, `review.ts` | Validator tests | Learner card | 🟨 **2026-09-26: T14 half done.** `profiler.ts` + `claimValidator.ts` built and wired into the live-voice WS session-end (`clientWs.on('close', ...)` in `server.ts`) — Gemini `strong`-role call proposes claims + narrative, deterministic validator gates every claim (evidence ownership, scope, banned-label lexicon, confidence = f(evidence count), contradiction check against learner/parent-stated claims), merged claims + SessionSummary persisted (`LearnerProfile.sessionSummaries[]` + dedicated `saveSessionSummary()`). 19 unit assertions on the validator + an end-to-end integration run (fake API key, exercises the deterministic-fallback path since this sandbox has no Gemini network access) all pass — see D-2026-09-26-6, `docs/AGENT_GUIDE.md` landmine #5. **Still ⬜: T15 (decay §7.1, spaced review §7.2, `review.ts`) — not started; nothing decays a claim's confidence over time or schedules review items. Also not verified: an actual successful Gemini call producing real claims (no network access here) — needs a live run on the user's own machine.** |
+ | FR-17 | Deterministic plan compile | TP §3–4 | T17 | `src/plan/compile.ts` | TP-01…TP-08 | 0:45 plan diff | ✅ `src/plan/compile.ts`, all rules R-REVIEW…R-TALK implemented; smoke-tested (R-TARGET, R-WATCH); TP-01…TP-08 not run as a formal suite |
+ | FR-18 | Plan rendered into the tutor | TP §5 | T18 | `src/plan/render.ts`, `compose.ts` | Snapshot | 0:45 | ✅ `renderPlanForPrompt` wired into `composeSystemInstruction`'s plan block and into `/api/session/start`'s response; no snapshot test yet. **2026-09-26 bug found+fixed:** `/api/session/start` ignored the concept the student actually clicked in `SubjectSelector.tsx` (always auto-picked the next unmastered concept instead — `conceptId` wasn't even sent by the client); fixed by threading `conceptId` through the request and honoring it in the route. Verified over real HTTP against `demo_marcus` |
+ | FR-19 | In-session plan deltas + guidance | TP §6, TS §5.3 | T19, T20 | `src/plan/delta.ts`, injector | Spike report; latency | 1:30 switch | 🟨 `compilePlanDelta` wired fire-and-forget into the live WS (`plan_update` message) after every `assess_child_reasoning` call; the formal T19 latency spike (≥10 exchanges, p50/p95, options A/B/C) was not run — a DECISIONS.md entry with those numbers is still owed |
+-| FR-20 | Limits enforced | PER §14 | T20 | `delta.ts`, `config.ts` | P-09; TP-06 | — | ✅ probe budget, retry cap → PARK_AND_ESCALATE, consecutive-failure → ENCOURAGE_RESET all implemented and smoke-tested (misconception-confirmed path); P-09/TP-06 not run formally |
++| FR-20 | Limits enforced | PER §14 | T20 | `delta.ts`, `config.ts` | P-09; TP-06 | — | ✅ probe budget, retry cap → PARK_AND_ESCALATE, consecutive-failure → ENCOURAGE_RESET all implemented and smoke-tested (misconception-confirmed path); P-09/TP-06 not run formally. **2026-09-26: fixed two downstream gaps found during a re-audit — (1) PARK_AND_ESCALATE's guidance never reached the live tutor model, only a browser debug panel (docs/AGENT_GUIDE.md landmine #4, D-2026-09-26-4); (2) the escalation itself was never persisted anywhere, so Parent Portal had no way to show it (D-2026-09-26-5, `EscalationEvent` + Parent Portal "Needs Your Attention" section). Both `npx tsc --noEmit` + `npx vite build` clean; not yet confirmed against a live Gemini Live session (sandbox has no reachable endpoint).** |
+ | FR-21 | Spaced review at session start | LM §7.2, TP §4.1 | T15, T18 | `review.ts` | TP-04 | 0:45 returning learner | ⬜ `R-REVIEW` rule reads `review.nextDueAt` in the compiler, but nothing ever advances/schedules `ReviewState` (T15 not started), so `reviewItems` is always empty for any learner reached through the normal app flow. **2026-09-26: confirmed over real HTTP that the rule itself works correctly once `review.nextDueAt` is set** (`demo_marcus`'s hand-seeded overdue review surfaced correctly as `reviewItems: [{rule: R-REVIEW, ...}]` from a real `/api/session/start` call) — the gap is only that nothing schedules the field in the first place (T15) |
+ | FR-22 | Learner card + dispute | LM §8 | T21 | `LearnerCard.tsx` | J3 walkthrough | 1:30 | 🟨 ♻️ `LearnerProfilePanel.tsx` extended (not a new `LearnerCard.tsx`) with ladder/mastery-status badges and a real per-entry misconception ledger + "That's not right" dispute button, wired to a new dispute route; simplified vs. spec — disputes the ledger entry directly since the Profiler/claim validator (T14) isn't built, so there are no scoped "claims" yet, only misconceptions; J3 not walked through end-to-end with a real session; **2026-09-25: a real seeded learner (`demo_aisha`, via `npm run seed:demo`) now exists with a standing, undisputed confirmed misconception specifically left in place for a live dispute-button walkthrough. 2026-09-26: the dispute ROUTE itself (not the store function) verified over real HTTP against `demo_aisha` — 200 OK, ledger status flips to `disputed`** — still not clicked through in the actual browser UI |
+ | FR-23 | Parent portal replay | LM §8 | T22 | `ParentPortal.tsx` | J4 walkthrough | (optional) | ✅ ♻️ `ParentPortal.tsx` gains ladder/mastery-status, the real ledger (status + observation count, dispute-aware), and a "View evidence" replay per concept from `GET /api/learners/:id/events` — claim→evidence→exchanges in 2 clicks per FR-23's acceptance criterion; J4 not walked through with a real multi-session learner; **2026-09-25: `npm run seed:demo` now creates 3 labelled-simulated learners with real, BKT-derived multi-session history (backdated 1-14 days) specifically so this can be walked through** — still not yet actually clicked through in the running UI. **2026-09-26: `GET /api/learners/:id/events` verified over real HTTP against `demo_priya` — correct 4-event replay returned** |
+diff --git a/server.ts b/server.ts
+index a7ba9fa..248ba7d 100644
+--- a/server.ts
++++ b/server.ts
+@@ -12,8 +12,10 @@ import {
+   ensureConceptState, getConceptState, recordAttempt, addGlobalInsight,
+   incrementSessionCount, startSession, getSession, updateSession, endSession,
+   recordReasoningEvidence, getEvidenceLog, disputeMisconception, recordConfusionSignal,
++  recordEscalation, resolveEscalation,
+ } from './src/adaptive/learnerStore';
+ import { getRepo } from './src/adaptive/repo';
++import { runProfiler } from './src/adaptive/profiler';
+ import { requireAuth, requireOwnership } from './server/middleware/requireAuth';
+ import { compileTeachingPlan } from './src/plan/compile';
+ import type { TeachingPlan } from './src/plan/types';
+@@ -790,6 +792,24 @@ app.post(
+   },
+ );
+ 
++// T22 (FR-20) — parent/teacher marks a PARK_AND_ESCALATE event as reviewed
++// from the Parent Portal, so it stops showing as needing attention.
++app.post(
++  '/api/learners/:studentId/escalations/:escalationId/resolve',
++  requireAuth, requireOwnership,
++  async (req, res) => {
++    try {
++      const { studentId, escalationId } = req.params;
++      const { note } = req.body || {};
++      const rec = await resolveEscalation(studentId, escalationId, note);
++      if (!rec) return (res as any).status(404).json({ error: 'Escalation not found' });
++      res.json({ escalation: rec });
++    } catch (err: any) {
++      res.status(500).json({ error: err?.message || 'Failed to resolve escalation' });
++    }
++  },
++);
++
+ // ─── Adaptive session endpoints ─────────────────────────────────
+ app.post('/api/session/start', requireAuth, async (req, res) => {
+   try {
+@@ -1056,6 +1076,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
+   // via POST /api/session/start, rather than trusting client-supplied values
+   // for who the learner is. topic/grade/subjectId/conceptId remain as a
+   // `?guest=1` fallback for a quick no-login demo path.
++  const wsConnectedAt = Date.now();
+   const url = new URL(req.url || '', `http://${req.headers.host}`);
+   const sessionIdParam = url.searchParams.get('sessionId') || '';
+   const isGuest = url.searchParams.get('guest') === '1';
+@@ -1124,6 +1145,30 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
+   // deadline-bounded diagnosis into the actual live path for the first time —
+   // previously it was imported but never called from here (docs/PROJECT_STATE.md).
+   let deltaState: PlanDeltaState = initialDeltaState();
++  // Bug found 2026-09-26 (T19): compilePlanDelta()'s result (delta.instruction --
++  // includes PARK_AND_ESCALATE's "park it, tell the learner..." guidance,
++  // encourageReset's pacing guidance, and representation-switch instructions)
++  // was ONLY ever sent to the browser as a 'plan_update' message for the
++  // Tutor's-reasoning panel -- it never reached the live model at all, so the
++  // tutor genuinely never knew a retry cap was hit or that it should park a
++  // concept. Fixed by piggybacking it on the NEXT tool response of ANY kind
++  // (sendToolResponse is the single shared funnel every tool call already
++  // goes through, see below) -- zero new live-session mechanism, zero risk of
++  // interrupting speech, since it rides an outgoing response that was already
++  // about to be sent. See docs/AGENT_GUIDE.md landmine #4 and DECISIONS.md
++  // D-2026-09-26-4.
++  let pendingPlanGuidance: string | null = null;
++  // Queued-at timestamp for the pending guidance above, so we can log real
++  // added-latency numbers (T19 acceptance criterion: p50/p95 added voice
++  // latency) the next time this runs against live Gemini Live -- this
++  // sandbox has no reachable Gemini Live endpoint (confirmed via
++  // `npm run test:live` -> ECONNREFUSED even on unmodified code), so these
++  // numbers cannot be fabricated here. Run a live session on a machine with
++  // real Gemini Live access and grep server logs for "[T19 latency]" to
++  // collect a sample, then compute p50/p95 and append the result to
++  // DECISIONS.md D-2026-09-26-4 per docs/BUILD_PLAN.md T19's acceptance
++  // criterion.
++  let pendingPlanGuidanceQueuedAt: number | null = null;
+ 
+   async function handleAssessChildReasoning(call: any) {
+     const args = call.args || {};
+@@ -1218,6 +1263,26 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
+         questionKey: String(args.questionAsked || conceptId),
+       });
+       deltaState = delta.state;
++      if (delta.instruction) {
++        // Queue it for the tutor -- delivered on the next tool response,
++        // whichever tool fires next (see sendToolResponse below).
++        pendingPlanGuidance = delta.instruction;
++        pendingPlanGuidanceQueuedAt = Date.now();
++      }
++      // T22 -- PARK_AND_ESCALATE reached the tutor's guidance above (T19),
++      // but a parent/teacher can't see the tutor's voice. Persist it as a
++      // durable, queryable event so Parent Portal can surface it. See
++      // docs/AGENT_GUIDE.md landmine #4 and DECISIONS.md D-2026-09-26-4.
++      if (delta.escalate && studentId) {
++        recordEscalation({
++          studentId,
++          subjectId,
++          conceptId,
++          conceptLabel: conceptStateHere?.label,
++          retryCount: deltaState.retryCountByConcept[conceptId] || 0,
++          sessionId: sessionIdParam,
++        }).catch((err) => console.error('[T22 recordEscalation]', err));
++      }
+       if (clientWs.readyState === WebSocket.OPEN) {
+         clientWs.send(JSON.stringify({
+           type: 'plan_update',
+@@ -1253,8 +1318,24 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
+ 
+   function sendToolResponse(call: any, response: Record<string, unknown>) {
+     try {
++      let finalResponse = response;
++      if (pendingPlanGuidance) {
++        // Merge onto whatever this call was already going to say, rather than
++        // overwriting it -- e.g. assess_child_reasoning's own per-turn
++        // { instruction } and this plan-level guidance can both matter.
++        const existing = typeof finalResponse.instruction === 'string' ? finalResponse.instruction : '';
++        finalResponse = {
++          ...finalResponse,
++          instruction: existing ? `${existing} ${pendingPlanGuidance}` : pendingPlanGuidance,
++        };
++        const addedLatencyMs = pendingPlanGuidanceQueuedAt !== null ? Date.now() - pendingPlanGuidanceQueuedAt : null;
++        console.log(`[T19 guidance-injection] delivered queued plan guidance on tool "${call.name}"'s response (queued-to-delivered latency: ${addedLatencyMs}ms): "${pendingPlanGuidance}"`);
++        console.log(`[T19 latency] ${addedLatencyMs}`);
++        pendingPlanGuidance = null;
++        pendingPlanGuidanceQueuedAt = null;
++      }
+       if (liveSession) {
+-        liveSession.sendToolResponse({ functionResponses: [{ id: call.id, name: call.name, response }] });
++        liveSession.sendToolResponse({ functionResponses: [{ id: call.id, name: call.name, response: finalResponse }] });
+       }
+     } catch (respErr) {
+       console.error('[Gemini Live] Error sending tool response:', respErr);
+@@ -1556,6 +1637,21 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
+         console.error('[Gemini Live] Error closing session:', closeErr);
+       }
+     }
++    // T14 -- session-end Profiler (docs/LEARNER_MODEL.md §5.2). Fire-and-
++    // forget: the client is already gone, there is nothing to respond to,
++    // and this must never block or delay the WS teardown above. A real
++    // learner (has studentId+subjectId, i.e. not a guest session) with a
++    // real API key is required; guests and misconfigured servers skip
++    // silently rather than erroring into an empty console.
++    if (studentId && subjectId && apiKey) {
++      const sessionStartedAt = activeSession?.sessionStarted || wsConnectedAt;
++      runProfiler({
++        studentId, subjectId,
++        sessionId: sessionIdParam || `adhoc_${studentId}_${wsConnectedAt}`,
++        sessionStartedAt,
++        apiKey,
++      }).catch((err) => console.error('[Profiler] runProfiler threw:', err));
++    }
+   });
+ });
+ 
+diff --git a/src/App.tsx b/src/App.tsx
+index bda4143..616c376 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -30,6 +30,7 @@ import {
+   CurriculumConceptUI,
+ } from './types';
+ import { LoginScreen, StudentProfile } from './components/LoginScreen';
++import { Onboarding } from './components/Onboarding';
+ import { SubjectSelector } from './components/SubjectSelector';
+ import { ParentPortal } from './components/ParentPortal';
+ import {
+@@ -68,7 +69,7 @@ const PRESENTER: PresenterMedia = {
+ 
+ export const App: React.FC = () => {
+   // ─── Navigation / screen state ───────────────────────────────
+-  type AppScreen = 'login' | 'subject-select' | 'tutor' | 'parent-portal';
++  type AppScreen = 'login' | 'onboarding' | 'subject-select' | 'tutor' | 'parent-portal';
+   const [screen, setScreen] = useState<AppScreen>('login');
+   const [loggedInStudent, setLoggedInStudent] = useState<StudentProfile | null>(null);
+ 
+@@ -1043,7 +1044,10 @@ export const App: React.FC = () => {
+   const handleLogin = (profile: StudentProfile) => {
+     setLoggedInStudent(profile);
+     setGrade(profile.grade);
+-    setScreen('subject-select');
++    // Only new/incomplete learners see onboarding — a returning learner who
++    // already finished it (learner.onboarding?.completedAt is set) goes
++    // straight to subject-select.
++    setScreen(profile.onboarding?.completedAt ? 'subject-select' : 'onboarding');
+   };
+ 
+   const handleSubjectConceptSelect = async (
+@@ -1104,6 +1108,15 @@ export const App: React.FC = () => {
+     );
+   }
+ 
++  if (screen === 'onboarding' && loggedInStudent) {
++    return (
++      <Onboarding
++        student={loggedInStudent}
++        onDone={() => setScreen('subject-select')}
++      />
++    );
++  }
++
+   if (screen === 'parent-portal') {
+     return (
+       <>
+diff --git a/src/adaptive/claimValidator.ts b/src/adaptive/claimValidator.ts
+new file mode 100644
+index 0000000..a059e61
+--- /dev/null
++++ b/src/adaptive/claimValidator.ts
+@@ -0,0 +1,202 @@
++// ─────────────────────────────────────────────────────────────────
++// Claim Validator (T14) — the deterministic gate every Profiler-proposed
++// LearnerClaim must pass before it is written to a learner's profile.
++// docs/LEARNER_MODEL.md §5.2:
++//   - every evidenceRef must exist and belong to this learner (this session)
++//   - scope required
++//   - banned-label lexicon check (e.g. "visual learner", "lazy", "ADHD")
++//   - confidence <= f(evidence count): 1 event -> max 0.4; 2 -> 0.6; 3+ -> 0.85
++//   - reject claims that contradict a learner_stated/parent_stated claim;
++//     mark those `disputed`
++//
++// This is intentionally the ONLY place claim confidence is computed and the
++// ONLY place a claim can be rejected -- the Profiler (profiler.ts) proposes,
++// this decides. Keeping judgment out of the LLM call is the whole point:
++// the project's own core principle is "do not represent fixed psychological
++// labels unless supported by evidence," and a banned-label lexicon check is
++// useless if it lives inside the same model call it's supposed to police.
++// ─────────────────────────────────────────────────────────────────
++import { ClaimKind, LearnerClaim } from './learnerModel';
++
++/** What the Profiler proposes, before validation. No confidence field --
++ * the validator computes that from evidence count, never trusts the model's. */
++export interface ProposedClaim {
++  kind: ClaimKind;
++  statement: string;
++  childFriendly?: string;
++  scope: { subjectId?: string; conceptType?: string; conceptId?: string };
++  evidenceRefs: string[];
++}
++
++export interface ClaimValidationContext {
++  studentId: string;
++  /** eventIds that actually belong to this learner's session being profiled --
++   * an evidenceRef outside this set fails the ownership check. Scoped to the
++   * session being profiled (not the learner's whole history) because that is
++   * the only evidence the Profiler call actually saw; a wider allow-list
++   * would let a hallucinated eventId from a different session slip through
++   * unnoticed. */
++  ownedEventIds: Set<string>;
++  existingClaims: LearnerClaim[];
++}
++
++export interface RejectedClaim {
++  claim: ProposedClaim;
++  reason: string;
++}
++
++export interface ValidationResult {
++  accepted: LearnerClaim[];
++  rejected: RejectedClaim[];
++}
++
++// Deliberately conservative and pattern-based, not exhaustive -- this is a
++// safety net, not the sole protection (the persona/prompt layer is the
++// first line of defense against generating these in the first place, per
++// docs/TUTOR_PERSONA.md and this project's "do not represent these as fixed
++// psychological labels" instruction). Matched case-insensitively as whole
++// phrases against statement + childFriendly text.
++const BANNED_LABEL_PATTERNS: RegExp[] = [
++  /\bvisual learner\b/i, /\bauditory learner\b/i, /\bkinesthetic learner\b/i,
++  /\breading[- ]?writing learner\b/i,
++  /\blazy\b/i, /\bstupid\b/i, /\bdumb\b/i, /\bslow learner\b/i, /\bnot smart\b/i,
++  /\bgifted\b/i, /\bunintelligent\b/i,
++  /\bADHD\b/i, /\bautis(m|tic)\b/i, /\bdyslexi[ac]\b/i, /\bdyscalculi[ac]\b/i,
++  /\bdisorder\b/i, /\bdisability\b/i, /\bspecial needs\b/i,
++];
++
++function violatesBannedLexicon(claim: ProposedClaim): string | null {
++  const text = `${claim.statement} ${claim.childFriendly || ''}`;
++  for (const pattern of BANNED_LABEL_PATTERNS) {
++    if (pattern.test(text)) return `contains banned label pattern: ${pattern}`;
++  }
++  return null;
++}
++
++/** docs/LEARNER_MODEL.md §6.3: confidence = min(cap(n), base) x decay(age).
++ * At creation, age = 0 so decay(age) = 1. The spec does not say where `base`
++ * comes from independently of the evidence-count cap -- REASONABLE INFERENCE
++ * (not a verified spec detail): since the validator, not the Profiler, is
++ * the sole owner of confidence (the Profiler proposes no confidence value
++ * at all -- see ProposedClaim), `base` is treated as 1.0 (full trust up to
++ * whatever the evidence count allows), so confidence at creation reduces to
++ * cap(n). Decay over time (§7.1) is applied elsewhere, at read/plan-compile
++ * time, not here. */
++export function capForEvidenceCount(n: number): number {
++  if (n <= 0) return 0;
++  if (n === 1) return 0.4;
++  if (n === 2) return 0.6;
++  return 0.85;
++}
++
++/** Same scope + kind = the same underlying claim for merge/contradiction
++ * purposes. Deliberately coarse (not text-similarity based) -- text
++ * similarity would need another model call, which is exactly the kind of
++ * judgment this deterministic gate exists to avoid. */
++function sameSlot(a: { kind: ClaimKind; scope: ProposedClaim['scope'] }, b: { kind: ClaimKind; scope: ProposedClaim['scope'] }): boolean {
++  return a.kind === b.kind
++    && (a.scope.conceptId || null) === (b.scope.conceptId || null)
++    && (a.scope.conceptType || null) === (b.scope.conceptType || null)
++    && (a.scope.subjectId || null) === (b.scope.subjectId || null);
++}
++
++export function validateClaims(
++  proposed: ProposedClaim[],
++  ctx: ClaimValidationContext,
++): ValidationResult {
++  const accepted: LearnerClaim[] = [];
++  const rejected: RejectedClaim[] = [];
++  const now = Date.now();
++
++  const statedClaims = ctx.existingClaims.filter(
++    (c) => (c.source === 'learner_stated' || c.source === 'parent_stated') && c.status === 'active',
++  );
++
++  for (const claim of proposed) {
++    // 1. Scope required.
++    if (!claim.scope || (!claim.scope.subjectId && !claim.scope.conceptType && !claim.scope.conceptId)) {
++      rejected.push({ claim, reason: 'missing scope (subjectId/conceptType/conceptId all empty)' });
++      continue;
++    }
++
++    // 2. Every evidenceRef must exist and belong to this learner's session.
++    const refs = Array.from(new Set((claim.evidenceRefs || []).filter(Boolean)));
++    const unowned = refs.filter((r) => !ctx.ownedEventIds.has(r));
++    if (refs.length === 0) {
++      rejected.push({ claim, reason: 'no evidenceRefs supplied' });
++      continue;
++    }
++    if (unowned.length > 0) {
++      rejected.push({ claim, reason: `evidenceRefs not found in this learner's session: ${unowned.join(', ')}` });
++      continue;
++    }
++
++    // 3. Banned-label lexicon.
++    const lexiconHit = violatesBannedLexicon(claim);
++    if (lexiconHit) {
++      rejected.push({ claim, reason: `banned-label lexicon: ${lexiconHit}` });
++      continue;
++    }
++
++    // 4. Reject if it contradicts a learner_stated/parent_stated claim in the
++    //    same slot (same kind + scope). Deliberately conservative: ANY
++    //    stated claim in the same slot wins over a profiler claim, rather
++    //    than attempting semantic contradiction detection (which would need
++    //    another model call -- exactly what this deterministic gate exists
++    //    to avoid). This can over-reject (a profiler claim that would have
++    //    AGREED with the stated one is also blocked), which is the safer
++    //    failure direction for a claim about a child.
++    const contradicts = statedClaims.find((sc) => sameSlot(sc, claim));
++    if (contradicts) {
++      rejected.push({ claim, reason: `contradicts existing ${contradicts.source} claim ${contradicts.claimId}` });
++      continue;
++    }
++
++    // 5. Confidence from evidence count only -- never from the model.
++    const confidence = capForEvidenceCount(refs.length);
++
++    accepted.push({
++      claimId: `claim_${claim.kind}_${now}_${Math.random().toString(36).slice(2, 8)}`,
++      kind: claim.kind,
++      statement: claim.statement,
++      childFriendly: claim.childFriendly,
++      scope: claim.scope,
++      confidence,
++      evidenceRefs: refs,
++      source: 'profiler',
++      status: 'active',
++      createdAt: now,
++      lastConfirmedAt: now,
++    });
++  }
++
++  return { accepted, rejected };
++}
++
++/**
++ * Merge newly-validated claims into a learner's existing claim list.
++ * Same slot (kind + scope) + source 'profiler' -> update in place (bump
++ * evidenceRefs, confidence, lastConfirmedAt) rather than duplicate.
++ * Otherwise -> append as a new claim.
++ */
++export function mergeClaims(existing: LearnerClaim[], accepted: LearnerClaim[]): LearnerClaim[] {
++  const result = [...existing];
++  for (const claim of accepted) {
++    const idx = result.findIndex((c) => c.source === 'profiler' && c.status === 'active' && sameSlot(c, claim));
++    if (idx >= 0) {
++      const prior = result[idx];
++      const mergedRefs = Array.from(new Set([...prior.evidenceRefs, ...claim.evidenceRefs]));
++      result[idx] = {
++        ...prior,
++        statement: claim.statement,
++        childFriendly: claim.childFriendly,
++        evidenceRefs: mergedRefs,
++        confidence: capForEvidenceCount(mergedRefs.length),
++        lastConfirmedAt: claim.lastConfirmedAt,
++      };
++    } else {
++      result.push(claim);
++    }
++  }
++  return result;
++}
+diff --git a/src/adaptive/learnerModel.ts b/src/adaptive/learnerModel.ts
+index c121249..62be75b 100644
+--- a/src/adaptive/learnerModel.ts
++++ b/src/adaptive/learnerModel.ts
+@@ -81,6 +81,29 @@ export interface SubjectProgress {
+   lastSession: number;
+ }
+ 
++// T22 (FR-20/PARK_AND_ESCALATE) — a durable record of the plan compiler's
++// PARK_AND_ESCALATE move (src/plan/delta.ts: retries >= plan.limits.retryCap).
++// Previously `delta.escalate`/`delta.parkConcept` were computed and then
++// discarded (see docs/AGENT_GUIDE.md landmine #4) -- nothing persisted the
++// event and Parent Portal had no way to show it. This is intentionally NOT
++// a LearnerClaim (docs/LEARNER_MODEL.md §3's Gemini-authored, validated
++// claim pipeline) -- it's a deterministic, rule-triggered event straight
++// from the plan compiler, no LLM judgment involved, so it's recorded and
++// surfaced directly rather than going through T14's Profiler/claimValidator.
++export interface EscalationEvent {
++  id: string;
++  subjectId: string;
++  conceptId: string;
++  conceptLabel?: string;
++  reason: 'retry_cap_reached';
++  retryCount: number;
++  timestamp: number;
++  sessionId?: string;
++  resolved: boolean;
++  resolvedAt?: number;
++  resolvedNote?: string;
++}
++
+ export interface LearnerProfile {
+   studentId: string;
+   name: string;
+@@ -97,6 +120,7 @@ export interface LearnerProfile {
+   affect?: AffectState;
+   claims?: LearnerClaim[];
+   sessionSummaries?: SessionSummary[];
++  escalations?: EscalationEvent[];
+ }
+ 
+ // ─── Active Session (in-memory only) ───────────────────────────
+diff --git a/src/adaptive/learnerStore.ts b/src/adaptive/learnerStore.ts
+index d3f9fae..151466b 100644
+--- a/src/adaptive/learnerStore.ts
++++ b/src/adaptive/learnerStore.ts
+@@ -8,7 +8,7 @@
+ import {
+   LearnerProfile, ConceptState, TeachingStrategy, MasteryLevel,
+   AdaptiveSessionState, AssessmentResult, QuizAttempt,
+-  EvidenceEvent, ErrorClass, Confidence3, MisconceptionRecord,
++  EvidenceEvent, ErrorClass, Confidence3, MisconceptionRecord, EscalationEvent,
+ } from './learnerModel';
+ import { getRepo } from './repo';
+ import { updateMastery, BKTObservation, MASTERY_THRESHOLD } from './bkt';
+@@ -200,6 +200,77 @@ export async function recordConfusionSignal(
+   };
+ }
+ 
++// ─────────────────────────────────────────────────────────────────
++// T22 (FR-20) — durable persistence for the plan compiler's PARK_AND_ESCALATE
++// move. See EscalationEvent's comment in learnerModel.ts and
++// docs/AGENT_GUIDE.md landmine #4 for why this exists: `delta.escalate` was
++// computed by compilePlanDelta() every time a concept's retry cap was hit,
++// but nothing ever wrote it down -- it was recorded nowhere, so there was no
++// durable record for a parent/teacher to see and no way to know later how
++// often, or on which concepts, a learner was getting stuck badly enough to
++// need a human. Called from server.ts's WS handler at the same
++// compilePlanDelta() call site that discovered the gap.
++// ─────────────────────────────────────────────────────────────────
++export interface RecordEscalationInput {
++  studentId: string;
++  subjectId: string;
++  conceptId: string;
++  conceptLabel?: string;
++  retryCount: number;
++  sessionId?: string;
++}
++
++export async function recordEscalation(
++  input: RecordEscalationInput
++): Promise<EscalationEvent | null> {
++  const repo = getRepo();
++  const learner = await repo.getProfile(input.studentId);
++  if (!learner) return null;
++
++  const event: EscalationEvent = {
++    id: `esc_${input.conceptId}_${Date.now()}`,
++    subjectId: input.subjectId,
++    conceptId: input.conceptId,
++    conceptLabel: input.conceptLabel,
++    reason: 'retry_cap_reached',
++    retryCount: input.retryCount,
++    timestamp: Date.now(),
++    sessionId: input.sessionId,
++    resolved: false,
++  };
++
++  learner.escalations = learner.escalations || [];
++  learner.escalations.push(event);
++  // Cap like every other unbounded-append list in this store (notes,
++  // globalInsights) -- a hackathon demo learner shouldn't grow this forever.
++  if (learner.escalations.length > 50) learner.escalations = learner.escalations.slice(-50);
++
++  learner.updatedAt = Date.now();
++  await repo.saveProfile(learner);
++  return event;
++}
++
++export async function resolveEscalation(
++  studentId: string,
++  escalationId: string,
++  note?: string,
++): Promise<EscalationEvent | null> {
++  const repo = getRepo();
++  const learner = await repo.getProfile(studentId);
++  if (!learner || !learner.escalations) return null;
++
++  const event = learner.escalations.find((e) => e.id === escalationId);
++  if (!event) return null;
++
++  event.resolved = true;
++  event.resolvedAt = Date.now();
++  if (note) event.resolvedNote = note;
++
++  learner.updatedAt = Date.now();
++  await repo.saveProfile(learner);
++  return event;
++}
++
+ /**
+  * T21 (FR-22) — the learner disputes a misconception ledger entry from the
+  * learner card ("That's not right"). We don't have a separate claim/dispute
+diff --git a/src/adaptive/profiler.ts b/src/adaptive/profiler.ts
+new file mode 100644
+index 0000000..0dcf7bd
+--- /dev/null
++++ b/src/adaptive/profiler.ts
+@@ -0,0 +1,261 @@
++// ─────────────────────────────────────────────────────────────────
++// Profiler (T14) — the slow loop from docs/LEARNER_MODEL.md §5.2, run at
++// session end/disconnect. Where the fast loop (recordReasoningEvidence,
++// compilePlanDelta) reacts to ONE exchange in under 3s, the Profiler looks
++// back over a WHOLE session with a stronger model and proposes durable,
++// cross-exchange claims (docs/LEARNER_MODEL.md §3's LearnerClaim) plus a
++// human-readable SessionSummary -- e.g. "still relies on counting on
++// fingers for two-digit addition" or "responds well to worked examples on
++// this concept type," not just a single answer's classification.
++//
++// Every proposed claim is deterministic-gated by claimValidator.ts before
++// it touches the learner's profile -- the Profiler NEVER writes directly.
++// See claimValidator.ts's header for why judgment stays out of the model
++// call entirely.
++// ─────────────────────────────────────────────────────────────────
++import { generateJSON } from '../ai/gateway';
++import { getRepo } from './repo';
++import {
++  ClaimKind, EvidenceEvent, LadderLevel, LearnerClaim, SessionSummary,
++} from './learnerModel';
++import { ProposedClaim, validateClaims, mergeClaims } from './claimValidator';
++
++const VALID_KINDS: ClaimKind[] = ['strength', 'gap', 'strategy', 'engagement', 'preference', 'pattern'];
++
++export interface RunProfilerInput {
++  studentId: string;
++  subjectId: string;
++  sessionId: string;
++  sessionStartedAt: number;
++  apiKey: string;
++}
++
++export interface RunProfilerResult {
++  summary: SessionSummary;
++  claimsAccepted: number;
++  claimsRejected: number;
++  rejectionReasons: string[];
++}
++
++function buildDeterministicSummaryFacts(events: EvidenceEvent[]) {
++  const conceptsTouched = Array.from(new Set(events.map((e) => e.conceptId)));
++  const movesUsed: Record<string, number> = {};
++  const representationsUsed: Record<string, number> = {};
++  // Ladder moves: for each concept, the lowest -> highest ladderLevel seen
++  // in this session's events (in chronological order, as listEvents returns
++  // them for the file repo; Firestore orders by timestamp too).
++  const ladderMoves: SessionSummary['ladderMoves'] = [];
++  const firstLadderByConcept = new Map<string, LadderLevel>();
++  const lastLadderByConcept = new Map<string, LadderLevel>();
++
++  for (const e of events) {
++    movesUsed[e.moveUsed] = (movesUsed[e.moveUsed] || 0) + 1;
++    representationsUsed[e.representationUsed] = (representationsUsed[e.representationUsed] || 0) + 1;
++    if (!firstLadderByConcept.has(e.conceptId)) firstLadderByConcept.set(e.conceptId, e.ladderLevel);
++    lastLadderByConcept.set(e.conceptId, e.ladderLevel);
++  }
++  for (const conceptId of conceptsTouched) {
++    const from = firstLadderByConcept.get(conceptId)!;
++    const to = lastLadderByConcept.get(conceptId)!;
++    if (from !== to) ladderMoves.push({ conceptId, from, to });
++  }
++
++  // Misconceptions changed: best-effort from candidateMisconceptionIds
++  // appearing/disappearing across the session's events for a concept --
++  // the authoritative ledger status lives on ConceptState.misconceptionLedger,
++  // which the Profiler prompt also receives, but that's per-concept current
++  // state, not "what changed in this session," so this is reconstructed here.
++  const misconceptionsChanged: SessionSummary['misconceptionsChanged'] = [];
++  const seenBefore = new Set<string>();
++  for (const e of events) {
++    for (const id of e.candidateMisconceptionIds || []) {
++      if (!seenBefore.has(id)) {
++        misconceptionsChanged.push({ id, from: 'none', to: 'suspected' });
++        seenBefore.add(id);
++      }
++    }
++  }
++
++  return { conceptsTouched, movesUsed, representationsUsed, ladderMoves, misconceptionsChanged };
++}
++
++function buildProfilerPrompt(args: {
++  events: EvidenceEvent[];
++  existingClaims: LearnerClaim[];
++  onboardingInterests: string[];
++  ledgerSnippets: string[];
++}): string {
++  const eventLines = args.events.map((e, i) => (
++    `${i + 1}. [${e.conceptId}] Q: "${e.questionAsked}" A: "${e.childAnswer}" `
++    + `Reasoning: "${e.childReasoning}" -> ${e.classification} (${e.understandingDepth}, `
++    + `ladder L${e.ladderLevel}, strategy=${e.representationUsed}, move=${e.moveUsed}, `
++    + `errorClass=${e.errorClass}) [eventId=${e.eventId}]`
++  )).join('\n');
++
++  const claimLines = args.existingClaims.length
++    ? args.existingClaims.map((c) => `- (${c.source}, ${c.status}) [${c.kind}] ${c.statement}`).join('\n')
++    : '(none yet)';
++
++  return `You are the session-end Profiler for an adaptive tutoring system. Read this session's
++exchanges and propose claims about durable, evidence-supported patterns -- NOT a re-statement
++of any single answer. Every claim must be traceable to specific exchanges.
++
++CRITICAL RULES:
++- Never propose a fixed psychological label (e.g. "visual learner", "ADHD", "gifted", "lazy").
++  Ask instead: "which teaching strategies appear to help THIS child understand THIS type of
++  concept?" -- a claim about what worked/didn't, not what the child inherently IS.
++- Every claim needs evidenceEventIds drawn ONLY from the eventIds listed below.
++- Do not repeat an existing claim verbatim; propose an update or narrower claim only if this
++  session adds genuinely new evidence.
++- Do not fabricate: if nothing durable emerged this session, return an empty claims array --
++  that is a valid and expected outcome, not a failure.
++
++THIS SESSION'S EXCHANGES (chronological):
++${eventLines || '(no exchanges recorded)'}
++
++LEARNER'S EXISTING CLAIMS:
++${claimLines}
++
++LEARNER'S STATED INTERESTS (for context only, do not propose a claim just to mention these):
++${args.onboardingInterests.join(', ') || '(none recorded)'}
++
++RELEVANT MISCONCEPTION LEDGER CONTEXT:
++${args.ledgerSnippets.join('\n') || '(none)'}
++
++Return ONLY valid JSON, no markdown fences:
++{
++  "narrative": "2-4 plain-language sentences a parent/teacher could read, grounded only in what happened this session",
++  "claims": [
++    {
++      "kind": "strength|gap|strategy|engagement|preference|pattern",
++      "statement": "plain language, scoped, no labels",
++      "childFriendly": "second-person version for the learner card, or null",
++      "scope": { "subjectId": "...", "conceptType": "... or null", "conceptId": "... or null" },
++      "evidenceEventIds": ["eventId1", "eventId2"]
++    }
++  ]
++}`;
++}
++
++/**
++ * Run the Profiler for one finished session. Fire-and-forget from the
++ * caller's perspective (server.ts calls this on WS close / session end and
++ * does not await a response to the client, since the session is already
++ * over) -- but every step here is awaited internally so errors are caught
++ * and logged, never silently lost.
++ *
++ * Returns null (not an error) when there is nothing to profile -- an empty
++ * or near-empty session should not produce a claim from thin air.
++ */
++export async function runProfiler(input: RunProfilerInput): Promise<RunProfilerResult | null> {
++  const repo = getRepo();
++  const learner = await repo.getProfile(input.studentId);
++  if (!learner) {
++    console.warn(`[Profiler] no profile for ${input.studentId} -- skipping`);
++    return null;
++  }
++
++  const events = (await repo.listEvents(input.studentId, {
++    subjectId: input.subjectId,
++    sessionId: input.sessionId,
++  })) as EvidenceEvent[];
++
++  if (events.length === 0) {
++    console.log(`[Profiler] session ${input.sessionId} had no recorded exchanges -- skipping`);
++    return null;
++  }
++
++  const facts = buildDeterministicSummaryFacts(events);
++  const existingClaims = learner.claims || [];
++  const ledgerSnippets = Object.values(learner.subjects?.[input.subjectId]?.conceptStates || {})
++    .flatMap((cs) => (cs.misconceptionLedger || []).map((m) => `- [${cs.conceptId}] ${m.text} (${m.status}, ${m.observations}x)`));
++
++  let proposed: ProposedClaim[] = [];
++  let narrative = '';
++  try {
++    const { data } = await generateJSON<{ narrative?: string; claims?: any[] }>({
++      role: 'strong',
++      call: 'profiler.summarizeSession',
++      apiKey: input.apiKey,
++      prompt: buildProfilerPrompt({
++        events,
++        existingClaims,
++        onboardingInterests: learner.onboarding?.interests || [],
++        ledgerSnippets,
++      }),
++      timeoutMs: 20000, // session-end, not conversational -- no voice-latency budget to protect
++    });
++
++    narrative = typeof data.narrative === 'string' ? data.narrative : '';
++    proposed = Array.isArray(data.claims)
++      ? data.claims
++          .filter((c) => c && VALID_KINDS.includes(c.kind))
++          .map((c): ProposedClaim => ({
++            kind: c.kind,
++            statement: String(c.statement || '').slice(0, 500),
++            childFriendly: c.childFriendly ? String(c.childFriendly).slice(0, 300) : undefined,
++            scope: {
++              subjectId: c.scope?.subjectId || undefined,
++              conceptType: c.scope?.conceptType || undefined,
++              conceptId: c.scope?.conceptId || undefined,
++            },
++            evidenceRefs: Array.isArray(c.evidenceEventIds) ? c.evidenceEventIds.filter((id: any) => typeof id === 'string') : [],
++          }))
++      : [];
++  } catch (err: any) {
++    // Gemini gateway failure (all candidates failed, or bad JSON) must not
++    // lose the session's deterministic summary -- fall back to a plain,
++    // fact-only narrative and zero proposed claims, rather than throwing
++    // and losing everything.
++    console.error(`[Profiler] generateJSON failed for session ${input.sessionId}:`, err?.message || err);
++    narrative = `Session covered ${facts.conceptsTouched.length} concept(s): ${facts.conceptsTouched.join(', ') || 'none'}. `
++      + `(Automated narrative unavailable this session — model call failed.)`;
++  }
++
++  const validation = validateClaims(proposed, {
++    studentId: input.studentId,
++    ownedEventIds: new Set(events.map((e) => e.eventId)),
++    existingClaims,
++  });
++
++  if (validation.rejected.length > 0) {
++    console.log(`[Profiler] ${validation.rejected.length} proposed claim(s) rejected for ${input.studentId}:`,
++      validation.rejected.map((r) => r.reason));
++  }
++
++  const summary: SessionSummary = {
++    sessionId: input.sessionId,
++    startedAt: input.sessionStartedAt,
++    endedAt: Date.now(),
++    conceptsTouched: facts.conceptsTouched,
++    ladderMoves: facts.ladderMoves,
++    misconceptionsChanged: facts.misconceptionsChanged,
++    movesUsed: facts.movesUsed,
++    representationsUsed: facts.representationsUsed,
++    narrative,
++    planVersion: events[events.length - 1]?.planVersion || 'unknown',
++  };
++
++  // Re-read + merge under the profile's latest state (best-effort; this repo
++  // layer has no transactions, same caveat as every other read-modify-write
++  // in learnerStore.ts).
++  const fresh = await repo.getProfile(input.studentId);
++  if (fresh) {
++    fresh.claims = mergeClaims(fresh.claims || [], validation.accepted);
++    fresh.sessionSummaries = [...(fresh.sessionSummaries || []), summary].slice(-30);
++    fresh.updatedAt = Date.now();
++    await repo.saveProfile(fresh);
++  }
++  await repo.saveSessionSummary(input.studentId, input.sessionId, summary);
++
++  console.log(`[Profiler] session ${input.sessionId} for ${input.studentId}: `
++    + `${validation.accepted.length} claim(s) accepted, ${validation.rejected.length} rejected, `
++    + `${events.length} event(s) profiled`);
++
++  return {
++    summary,
++    claimsAccepted: validation.accepted.length,
++    claimsRejected: validation.rejected.length,
++    rejectionReasons: validation.rejected.map((r) => r.reason),
++  };
++}
+diff --git a/src/adaptive/repo/file.ts b/src/adaptive/repo/file.ts
+index 87c51fe..1905f10 100644
+--- a/src/adaptive/repo/file.ts
++++ b/src/adaptive/repo/file.ts
+@@ -106,6 +106,7 @@ export class FileLearnerRepository implements LearnerRepository {
+   async listEvents(studentId: string, filter: EventFilter = {}): Promise<(LearningEvidence & { eventId: string })[]> {
+     let events = readJson<(LearningEvidence & { eventId: string })[]>(eventsFile(studentId), []);
+     if (filter.conceptId) events = events.filter((e) => e.conceptId === filter.conceptId);
++    if (filter.sessionId) events = events.filter((e: any) => e.sessionId === filter.sessionId);
+     if (filter.limit) events = events.slice(-filter.limit);
+     return events;
+   }
+diff --git a/src/adaptive/repo/firestore.ts b/src/adaptive/repo/firestore.ts
+index a271a8f..554509d 100644
+--- a/src/adaptive/repo/firestore.ts
++++ b/src/adaptive/repo/firestore.ts
+@@ -48,6 +48,7 @@ export class FirestoreLearnerRepository implements LearnerRepository {
+   async listEvents(studentId: string, filter: EventFilter = {}): Promise<(LearningEvidence & { eventId: string })[]> {
+     let q: FirebaseFirestore.Query = db().collection('learners').doc(studentId).collection('events');
+     if (filter.conceptId) q = q.where('conceptId', '==', filter.conceptId);
++    if (filter.sessionId) q = q.where('sessionId', '==', filter.sessionId);
+     q = q.orderBy('timestamp', 'asc');
+     if (filter.limit) q = q.limitToLast(filter.limit);
+     const snap = await q.get();
+diff --git a/src/adaptive/repo/types.ts b/src/adaptive/repo/types.ts
+index 5fc6f5e..c9d0bbb 100644
+--- a/src/adaptive/repo/types.ts
++++ b/src/adaptive/repo/types.ts
+@@ -17,6 +17,8 @@ import { LearnerProfile, LearningEvidence } from '../learnerModel';
+ export interface EventFilter {
+   subjectId?: string;
+   conceptId?: string;
++  /** T14 (Profiler) — "this session's events" per docs/LEARNER_MODEL.md §5.2. */
++  sessionId?: string;
+   limit?: number;
+ }
+ 
+diff --git a/src/components/LoginScreen.tsx b/src/components/LoginScreen.tsx
+index 9d3722c..01de35f 100644
+--- a/src/components/LoginScreen.tsx
++++ b/src/components/LoginScreen.tsx
+@@ -37,6 +37,14 @@ export interface StudentProfile {
+   updatedAt: number;
+   subjects: Record<string, SubjectSummary>;
+   globalInsights: string[];
++  onboarding?: {
++    interests: string[];
++    subjectFeelings: Record<string, 'love' | 'ok' | 'worried' | 'skip'>;
++    accessibility: { audioFirst?: boolean; largeText?: boolean; captions?: boolean };
++    languagePrefs?: { primary: string; alsoUnderstands?: string[] };
++    completedAt?: number;
++  };
++  ageBand?: '5-7' | '8-12' | '13-17' | 'adult';
+ }
+ 
+ interface LoginScreenProps {
+diff --git a/src/components/Onboarding.tsx b/src/components/Onboarding.tsx
+new file mode 100644
+index 0000000..501f099
+--- /dev/null
++++ b/src/components/Onboarding.tsx
+@@ -0,0 +1,226 @@
++import React, { useState, useEffect } from 'react';
++import { Sparkles, ArrowRight, Check } from 'lucide-react';
++import { authFetch } from '../firebase/auth';
++import { ageBandFromGrade } from '../persona/ageBands';
++import type { StudentProfile } from './LoginScreen';
++
++type Feeling = 'love' | 'ok' | 'worried' | 'skip';
++
++interface CurriculumOption {
++  subjectId: string;
++  label: string;
++}
++
++interface OnboardingProps {
++  student: StudentProfile;
++  onDone: () => void;
++}
++
++const INTEREST_OPTIONS = [
++  { id: 'sports', label: 'Sports', emoji: '⚽' },
++  { id: 'gaming', label: 'Gaming', emoji: '🎮' },
++  { id: 'art', label: 'Art', emoji: '🎨' },
++  { id: 'music', label: 'Music', emoji: '🎵' },
++  { id: 'animals', label: 'Animals', emoji: '🐾' },
++  { id: 'space', label: 'Space', emoji: '🚀' },
++  { id: 'cooking', label: 'Cooking', emoji: '🍳' },
++];
++
++const FEELING_OPTIONS: Array<{ id: Feeling; label: string; emoji: string }> = [
++  { id: 'love', label: 'Love it', emoji: '😄' },
++  { id: 'ok', label: "It's ok", emoji: '🙂' },
++  { id: 'worried', label: 'A bit worried', emoji: '😟' },
++  { id: 'skip', label: 'Skip', emoji: '⏭️' },
++];
++
++const LANGUAGE_OPTIONS = ['English', 'Mandarin', 'Malay', 'Tamil', 'Other'];
++
++/**
++ * Short, skippable, ≤6-tap onboarding shown once for a new learner right
++ * after profile creation (BUILD_PLAN.md T13). Age band is derived from the
++ * grade already collected at signup (ageBandFromGrade) — never asked here.
++ */
++export const Onboarding: React.FC<OnboardingProps> = ({ student, onDone }) => {
++  const [step, setStep] = useState(0);
++  const [interests, setInterests] = useState<string[]>([]);
++  const [subjects, setSubjects] = useState<CurriculumOption[]>([]);
++  const [subjectFeelings, setSubjectFeelings] = useState<Record<string, Feeling>>({});
++  const [audioFirst, setAudioFirst] = useState(false);
++  const [largeText, setLargeText] = useState(false);
++  const [captions, setCaptions] = useState(false);
++  const [primaryLanguage, setPrimaryLanguage] = useState('');
++  const [saving, setSaving] = useState(false);
++
++  useEffect(() => {
++    fetch('/api/curricula')
++      .then(r => r.json())
++      .then(j => setSubjects((j.curricula || []).map((c: any) => ({ subjectId: c.subjectId, label: c.label }))))
++      .catch(() => setSubjects([]));
++  }, []);
++
++  const toggleInterest = (id: string) => {
++    setInterests(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
++  };
++
++  const finish = async () => {
++    setSaving(true);
++    const ageBand = ageBandFromGrade(student.grade);
++    try {
++      await authFetch(`/api/learners/${student.studentId}/onboarding`, {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({
++          interests,
++          subjectFeelings,
++          accessibility: { audioFirst, largeText, captions },
++          languagePrefs: primaryLanguage ? { primary: primaryLanguage } : undefined,
++          ageBand,
++        }),
++      });
++    } catch (e) {
++      // Best-effort — never block the learner from getting to the lesson.
++      console.warn('[Onboarding] could not save onboarding', e);
++    } finally {
++      setSaving(false);
++      onDone();
++    }
++  };
++
++  const STEPS = ['interests', 'feelings', 'access', 'language'] as const;
++  const total = STEPS.length;
++  const current = STEPS[step];
++
++  const next = () => {
++    if (step < total - 1) setStep(step + 1);
++    else finish();
++  };
++
++  return (
++    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center px-4 py-8">
++      <div className="relative z-10 w-full max-w-md">
++        <div className="text-center mb-6">
++          <div className="w-14 h-14 mx-auto bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-900/50 mb-3">
++            <Sparkles className="w-8 h-8 text-white" />
++          </div>
++          <h1 className="text-2xl font-bold text-white tracking-tight">Hi {student.name}!</h1>
++          <p className="text-slate-400 text-sm mt-1">A few quick questions so Dr. Marcus can teach you better. Skip anything you like.</p>
++        </div>
++
++        {/* progress dots */}
++        <div className="flex items-center justify-center gap-2 mb-6">
++          {STEPS.map((s, i) => (
++            <div key={s} className={`h-1.5 rounded-full transition-all ${i === step ? 'w-8 bg-indigo-400' : i < step ? 'w-4 bg-indigo-600' : 'w-4 bg-white/10'}`} />
++          ))}
++        </div>
++
++        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 min-h-[260px]">
++          {current === 'interests' && (
++            <>
++              <h3 className="text-white font-semibold mb-1">What do you like?</h3>
++              <p className="text-slate-400 text-xs mb-4">We'll use these to make examples more fun.</p>
++              <div className="grid grid-cols-2 gap-2">
++                {INTEREST_OPTIONS.map(opt => {
++                  const selected = interests.includes(opt.id);
++                  return (
++                    <button key={opt.id} onClick={() => toggleInterest(opt.id)}
++                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all border ${
++                        selected
++                          ? 'bg-indigo-600/30 border-indigo-500 text-white'
++                          : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-indigo-500/50'
++                      }`}>
++                      <span>{opt.emoji}</span> {opt.label}
++                      {selected && <Check className="w-3.5 h-3.5 ml-auto text-indigo-300" />}
++                    </button>
++                  );
++                })}
++              </div>
++            </>
++          )}
++
++          {current === 'feelings' && (
++            <>
++              <h3 className="text-white font-semibold mb-1">How do you feel about your subjects?</h3>
++              <p className="text-slate-400 text-xs mb-4">There's no wrong answer here.</p>
++              <div className="space-y-3">
++                {(subjects.length ? subjects : [{ subjectId: 'pythagoras', label: "Pythagoras' Theorem" }]).map(sub => (
++                  <div key={sub.subjectId}>
++                    <p className="text-slate-300 text-sm font-medium mb-1.5">{sub.label}</p>
++                    <div className="flex gap-1.5">
++                      {FEELING_OPTIONS.map(f => (
++                        <button key={f.id}
++                          onClick={() => setSubjectFeelings(prev => ({ ...prev, [sub.subjectId]: f.id }))}
++                          className={`flex-1 flex flex-col items-center gap-0.5 rounded-lg py-2 text-[11px] font-medium border transition-all ${
++                            subjectFeelings[sub.subjectId] === f.id
++                              ? 'bg-indigo-600/30 border-indigo-500 text-white'
++                              : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:border-indigo-500/50'
++                          }`}>
++                          <span className="text-base">{f.emoji}</span> {f.label}
++                        </button>
++                      ))}
++                    </div>
++                  </div>
++                ))}
++              </div>
++            </>
++          )}
++
++          {current === 'access' && (
++            <>
++              <h3 className="text-white font-semibold mb-1">Anything that helps you learn?</h3>
++              <p className="text-slate-400 text-xs mb-4">Turn any of these on — you can change them later.</p>
++              <div className="space-y-2.5">
++                {[
++                  { key: 'audioFirst', label: 'Read things out loud', value: audioFirst, set: setAudioFirst },
++                  { key: 'largeText', label: 'Bigger text', value: largeText, set: setLargeText },
++                  { key: 'captions', label: 'Captions for audio', value: captions, set: setCaptions },
++                ].map(row => (
++                  <button key={row.key} onClick={() => row.set(!row.value)}
++                    className={`w-full flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium border transition-all ${
++                      row.value ? 'bg-indigo-600/30 border-indigo-500 text-white' : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-indigo-500/50'
++                    }`}>
++                    {row.label}
++                    <div className={`w-9 h-5 rounded-full transition-colors relative ${row.value ? 'bg-indigo-500' : 'bg-slate-700'}`}>
++                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${row.value ? 'translate-x-4' : 'translate-x-0.5'}`} />
++                    </div>
++                  </button>
++                ))}
++              </div>
++            </>
++          )}
++
++          {current === 'language' && (
++            <>
++              <h3 className="text-white font-semibold mb-1">What language do you know best?</h3>
++              <p className="text-slate-400 text-xs mb-4">Optional — helps us explain things clearly.</p>
++              <div className="grid grid-cols-2 gap-2">
++                {LANGUAGE_OPTIONS.map(lang => (
++                  <button key={lang} onClick={() => setPrimaryLanguage(lang === primaryLanguage ? '' : lang)}
++                    className={`rounded-xl px-3 py-2.5 text-sm font-medium border transition-all ${
++                      primaryLanguage === lang ? 'bg-indigo-600/30 border-indigo-500 text-white' : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:border-indigo-500/50'
++                    }`}>
++                    {lang}
++                  </button>
++                ))}
++              </div>
++            </>
++          )}
++        </div>
++
++        <div className="flex gap-2 mt-4">
++          <button onClick={finish} disabled={saving}
++            className="flex-1 border border-slate-700 text-slate-400 hover:text-white py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50">
++            Skip {step < total - 1 ? 'all' : ''}
++          </button>
++          <button onClick={next} disabled={saving}
++            className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-2">
++            {saving
++              ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
++              : step < total - 1
++                ? <>Next <ArrowRight className="w-4 h-4" /></>
++                : <>Let's go! <Sparkles className="w-4 h-4" /></>}
++          </button>
++        </div>
++      </div>
++    </div>
++  );
++};
+diff --git a/src/components/ParentPortal.tsx b/src/components/ParentPortal.tsx
+index bee1da2..cbdc9f5 100644
+--- a/src/components/ParentPortal.tsx
++++ b/src/components/ParentPortal.tsx
+@@ -2,11 +2,27 @@ import React, { useState, useEffect } from 'react';
+ import {
+   ArrowLeft, Brain, Clock, Star, BookOpen, AlertTriangle, TrendingUp,
+   ChevronDown, ChevronRight, CheckCircle2, Circle, BarChart3, User, Lightbulb,
+-  Milestone, ShieldOff, History, Loader2,
++  Milestone, ShieldOff, History, Loader2, Siren,
+ } from 'lucide-react';
+ import { authFetch } from '../firebase/auth';
+ import type { StudentProfile, ConceptSummary, SubjectSummary } from './LoginScreen';
+ 
++// T22 (FR-20) — a durable PARK_AND_ESCALATE record (docs/AGENT_GUIDE.md
++// landmine #4). Mirrors src/adaptive/learnerModel.ts's EscalationEvent.
++interface EscalationEvent {
++  id: string;
++  subjectId: string;
++  conceptId: string;
++  conceptLabel?: string;
++  reason: string;
++  retryCount: number;
++  timestamp: number;
++  sessionId?: string;
++  resolved: boolean;
++  resolvedAt?: number;
++  resolvedNote?: string;
++}
++
+ // T21/T22 — richer ledger entry (status + observation count), not just the
+ // flat confirmedMisconceptions[] string list the rest of this file predates.
+ interface LedgerEntry {
+@@ -64,6 +80,7 @@ interface SubjectData extends SubjectSummary {
+ interface FullLearner extends StudentProfile {
+   subjects: Record<string, SubjectData>;
+   globalInsights: string[];
++  escalations?: EscalationEvent[];
+ }
+ 
+ const MASTERY_COLOR: Record<string, string> = {
+@@ -121,6 +138,8 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
+   const [replayEvents, setReplayEvents] = useState<Record<string, EvidenceEvent[]>>({});
+   const [replayLoading, setReplayLoading] = useState<Set<string>>(new Set());
+   const [replayOpenFor, setReplayOpenFor] = useState<string | null>(null);
++  // T22 — PARK_AND_ESCALATE events (docs/AGENT_GUIDE.md landmine #4).
++  const [resolvingEscalation, setResolvingEscalation] = useState<Set<string>>(new Set());
+ 
+   useEffect(() => {
+     authFetch('/api/learners')
+@@ -173,6 +192,33 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
+     }
+   };
+ 
++  // T22 — unresolved PARK_AND_ESCALATE events for a learner, most recent first.
++  const unresolvedEscalations = (learner: FullLearner): EscalationEvent[] =>
++    (learner.escalations || []).filter(e => !e.resolved).sort((a, b) => b.timestamp - a.timestamp);
++
++  const markEscalationResolved = async (studentId: string, escalationId: string) => {
++    setResolvingEscalation(prev => new Set(prev).add(escalationId));
++    try {
++      await authFetch(`/api/learners/${encodeURIComponent(studentId)}/escalations/${encodeURIComponent(escalationId)}/resolve`, {
++        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
++      });
++      setLearners(prev => prev.map(l => l.studentId !== studentId ? l : {
++        ...l,
++        escalations: (l.escalations || []).map(e => e.id === escalationId
++          ? { ...e, resolved: true, resolvedAt: Date.now() } : e),
++      }));
++      setSelected(prev => prev && prev.studentId === studentId ? {
++        ...prev,
++        escalations: (prev.escalations || []).map(e => e.id === escalationId
++          ? { ...e, resolved: true, resolvedAt: Date.now() } : e),
++      } : prev);
++    } catch (err) {
++      console.error('[ParentPortal] resolve escalation failed', err);
++    } finally {
++      setResolvingEscalation(prev => { const s = new Set(prev); s.delete(escalationId); return s; });
++    }
++  };
++
+   const overallMastery = (learner: FullLearner) => {
+     const all = Object.values(learner.subjects).flatMap((sub: SubjectData) => Object.values(sub.conceptStates) as ConceptState[]);
+     if (!all.length) return 0;
+@@ -245,10 +291,15 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
+                         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getAvatarColor(l.name)} flex items-center justify-center text-white font-bold text-sm`}>
+                           {initials(l.name)}
+                         </div>
+-                        <div>
++                        <div className="flex-1 min-w-0">
+                           <p className="text-white font-semibold">{l.name}</p>
+                           <p className="text-slate-400 text-xs">{l.grade}</p>
+                         </div>
++                        {unresolvedEscalations(l).length > 0 && (
++                          <span className="flex-shrink-0 inline-flex items-center gap-1 bg-rose-500/20 text-rose-300 text-xs font-semibold px-2 py-1 rounded-lg">
++                            <Siren className="w-3 h-3" /> {unresolvedEscalations(l).length}
++                          </span>
++                        )}
+                       </div>
+                       <div className="grid grid-cols-3 gap-2 text-center">
+                         <div className="bg-white/5 rounded-xl p-2">
+@@ -274,6 +325,45 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
+           {/* ─── Selected learner detail ─── */}
+           {selected && (
+             <>
++              {/* T22 (FR-20) — PARK_AND_ESCALATE events needing a human. This is the
++                  Parent Portal gap the T19 investigation surfaced: the tutor was
++                  told to park a concept and escalate, but nothing durable ever
++                  reached a parent/teacher. docs/AGENT_GUIDE.md landmine #4. */}
++              {unresolvedEscalations(selected).length > 0 && (
++                <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4">
++                  <h3 className="text-rose-300 text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-2">
++                    <Siren className="w-4 h-4" /> Needs Your Attention
++                  </h3>
++                  <div className="space-y-2">
++                    {unresolvedEscalations(selected).map((esc) => {
++                      const subLabel = selected.subjects[esc.subjectId]?.subjectLabel || esc.subjectId;
++                      const isResolving = resolvingEscalation.has(esc.id);
++                      return (
++                        <div key={esc.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-start gap-3">
++                          <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
++                          <div className="flex-1 min-w-0">
++                            <p className="text-white text-sm font-medium">
++                              {esc.conceptLabel || esc.conceptId} <span className="text-slate-500 font-normal">· {subLabel}</span>
++                            </p>
++                            <p className="text-slate-400 text-xs mt-0.5">
++                              Retry cap reached after {esc.retryCount} attempts — the tutor paused this concept and told {selected.name} it would come back to it. {relativeTime(esc.timestamp)}.
++                            </p>
++                          </div>
++                          <button
++                            onClick={() => markEscalationResolved(selected.studentId, esc.id)}
++                            disabled={isResolving}
++                            className="flex-shrink-0 text-xs font-medium bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
++                          >
++                            {isResolving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
++                            Mark reviewed
++                          </button>
++                        </div>
++                      );
++                    })}
++                  </div>
++                </div>
++              )}
++
+               {/* Subject tabs */}
+               {Object.keys(selected.subjects).length > 1 && (
+                 <div className="flex gap-2 flex-wrap">
+diff --git a/tests/smoke/claim-validator.mjs b/tests/smoke/claim-validator.mjs
+new file mode 100644
+index 0000000..281b9bd
+--- /dev/null
++++ b/tests/smoke/claim-validator.mjs
+@@ -0,0 +1,69 @@
++// Smoke test (not part of npm test yet, same convention as plan-and-store.mjs)
++// for T14's claimValidator.ts — pure-function assertions, no network, no
++// throwaway data dir needed. Written 2026-09-26 alongside profiler.ts/
++// claimValidator.ts (D-2026-09-26-6); run manually with:
++//   npx tsx tests/smoke/claim-validator.mjs
++import { validateClaims, capForEvidenceCount, mergeClaims } from '../../src/adaptive/claimValidator.ts';
++
++let failed = false;
++function assertEq(actual, expected, label) {
++  const a = JSON.stringify(actual), e = JSON.stringify(expected);
++  if (a !== e) { console.error(`FAIL ${label}: got ${a}, want ${e}`); failed = true; }
++  else console.log(`ok ${label}`);
++}
++
++assertEq(capForEvidenceCount(0), 0, 'cap(0)');
++assertEq(capForEvidenceCount(1), 0.4, 'cap(1)');
++assertEq(capForEvidenceCount(2), 0.6, 'cap(2)');
++assertEq(capForEvidenceCount(3), 0.85, 'cap(3)');
++assertEq(capForEvidenceCount(10), 0.85, 'cap(10)');
++
++const ctx = { studentId: 's1', ownedEventIds: new Set(['e1', 'e2', 'e3']), existingClaims: [] };
++
++let r = validateClaims([{ kind: 'gap', statement: 'x', scope: {}, evidenceRefs: ['e1'] }], ctx);
++assertEq(r.accepted.length, 0, 'missing scope rejected (accepted count)');
++assertEq(r.rejected.length, 1, 'missing scope rejected (rejected count)');
++
++r = validateClaims([{ kind: 'gap', statement: 'x', scope: { conceptId: 'c1' }, evidenceRefs: ['e1', 'e99'] }], ctx);
++assertEq(r.accepted.length, 0, 'unowned evidenceRef rejected');
++
++r = validateClaims([{ kind: 'pattern', statement: 'This child is a visual learner', scope: { conceptId: 'c1' }, evidenceRefs: ['e1'] }], ctx);
++assertEq(r.accepted.length, 0, 'banned lexicon rejected (visual learner)');
++r = validateClaims([{ kind: 'pattern', statement: 'Struggles because of ADHD', scope: { conceptId: 'c1' }, evidenceRefs: ['e1'] }], ctx);
++assertEq(r.accepted.length, 0, 'banned lexicon rejected (ADHD)');
++
++r = validateClaims([{ kind: 'strategy', statement: 'Responds well to worked examples for ratio problems', scope: { conceptType: 'algebra.ratio' }, evidenceRefs: ['e1'] }], ctx);
++assertEq(r.accepted.length, 1, 'valid claim accepted (count)');
++assertEq(r.accepted[0]?.confidence, 0.4, 'valid claim confidence = cap(1)');
++assertEq(r.accepted[0]?.source, 'profiler', 'valid claim source = profiler');
++
++r = validateClaims([{ kind: 'strategy', statement: 'Consistently strong with visual diagrams for geometry proofs', scope: { conceptType: 'geometry.proof' }, evidenceRefs: ['e1', 'e2', 'e3'] }], ctx);
++assertEq(r.accepted[0]?.confidence, 0.85, 'confidence = cap(3)');
++
++const ctxWithStated = {
++  studentId: 's1', ownedEventIds: new Set(['e1']),
++  existingClaims: [{
++    claimId: 'c_stated', kind: 'preference', statement: 'Prefers text explanations, not diagrams',
++    scope: { conceptType: 'geometry.proof' }, confidence: 1, evidenceRefs: [], source: 'learner_stated',
++    status: 'active', createdAt: 0, lastConfirmedAt: 0,
++  }],
++};
++r = validateClaims([{ kind: 'preference', statement: 'Prefers diagrams', scope: { conceptType: 'geometry.proof' }, evidenceRefs: ['e1'] }], ctxWithStated);
++assertEq(r.accepted.length, 0, 'contradicts learner_stated claim -> rejected');
++assertEq(r.rejected[0]?.reason.includes('learner_stated'), true, 'rejection reason mentions learner_stated');
++
++const existing = [{
++  claimId: 'c_old', kind: 'strategy', statement: 'old statement', scope: { conceptType: 'x' },
++  confidence: 0.4, evidenceRefs: ['e1'], source: 'profiler', status: 'active', createdAt: 0, lastConfirmedAt: 0,
++}];
++const merged = mergeClaims(existing, [{
++  claimId: 'c_new', kind: 'strategy', statement: 'new statement', scope: { conceptType: 'x' },
++  confidence: 0.6, evidenceRefs: ['e2'], source: 'profiler', status: 'active', createdAt: 1, lastConfirmedAt: 1,
++}]);
++assertEq(merged.length, 1, 'mergeClaims does not duplicate same-slot profiler claim');
++assertEq(merged[0].statement, 'new statement', 'mergeClaims updates statement');
++assertEq([...merged[0].evidenceRefs].sort(), ['e1', 'e2'], 'mergeClaims unions evidenceRefs');
++assertEq(merged[0].confidence, 0.6, 'mergeClaims recomputes confidence from merged evidence count');
++
++if (failed) { console.error('\nSOME TESTS FAILED'); process.exit(1); }
++console.log('\nALL claim-validator.mjs TESTS PASSED');
+diff --git a/tests/smoke/profiler.mjs b/tests/smoke/profiler.mjs
+new file mode 100644
+index 0000000..0336795
+--- /dev/null
++++ b/tests/smoke/profiler.mjs
+@@ -0,0 +1,73 @@
++// Smoke test (not part of npm test yet, same convention as plan-and-store.mjs)
++// for T14's profiler.ts, against a real throwaway file-repo data dir. Written
++// 2026-09-26 alongside claim-validator.mjs (D-2026-09-26-6). Uses a fake API
++// key deliberately -- this exercises the deterministic-fallback path (real
++// SessionSummary facts computed independent of the model call, plain
++// fallback narrative substituted), the only path testable without live
++// Gemini access. Run manually with:
++//   npx tsx tests/smoke/profiler.mjs
++import fs from 'node:fs';
++import os from 'node:os';
++import path from 'node:path';
++
++const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pt-profiler-smoke-'));
++process.env.LEARNER_DATA_DIR = tmp;
++process.env.USE_FIRESTORE_LEARNERS = 'false';
++
++const { getOrCreateLearner, ensureSubject, ensureConceptState, recordReasoningEvidence } =
++  await import('../../src/adaptive/learnerStore.ts');
++const { getRepo } = await import('../../src/adaptive/repo/index.ts');
++const { runProfiler } = await import('../../src/adaptive/profiler.ts');
++
++let failed = false;
++function check(cond, label) {
++  if (!cond) { console.error(`FAIL: ${label}`); failed = true; }
++  else console.log(`ok ${label}`);
++}
++
++const studentId = 'test_profiler_student';
++const subjectId = 'math';
++const conceptId = 'fractions_basic';
++const sessionId = 'sess_test_1';
++
++await getOrCreateLearner(studentId, 'Test Student', 'Grade 6');
++await ensureSubject(studentId, subjectId, 'Math', subjectId, 'test-curriculum');
++await ensureConceptState(studentId, subjectId, conceptId, 'Basic Fractions');
++
++await recordReasoningEvidence({
++  studentId, subjectId, conceptId,
++  promptType: 'check', questionAsked: 'What is 1/2 + 1/4?', childAnswer: '2/6',
++  childReasoning: 'I added the tops and the bottoms', classification: 'wrong_answer',
++  understandingDepth: 'incorrect', candidateMisconceptions: [{ id: 'fractions_basic::m1', text: 'adds numerators and denominators separately' }],
++  confidence: 'high', strategyInUse: 'direct_explanation', sessionId, moveUsed: 'ELICIT_REASONING', source: 'voice',
++});
++await recordReasoningEvidence({
++  studentId, subjectId, conceptId,
++  promptType: 'check', questionAsked: 'Try 1/2 + 1/4 again with a common denominator.', childAnswer: '3/4',
++  childReasoning: 'I converted 1/2 to 2/4 then added the tops', classification: 'clear_reasoning',
++  understandingDepth: 'applied', candidateMisconceptions: [],
++  confidence: 'high', strategyInUse: 'worked_example', sessionId, moveUsed: 'ELICIT_REASONING', source: 'voice',
++});
++
++const result = await runProfiler({
++  studentId, subjectId, sessionId, sessionStartedAt: Date.now() - 60000, apiKey: 'fake-key-for-test',
++});
++
++check(result !== null, 'runProfiler returned a result for a session with real events');
++check(result?.summary.conceptsTouched.join(',') === conceptId, 'conceptsTouched correct');
++check((result?.summary.ladderMoves.length || 0) >= 1, 'expected a ladder move (incorrect -> applied)');
++check(!!result?.summary.narrative?.includes('fractions_basic'), 'fallback narrative names the concept');
++
++const fresh = await getRepo().getProfile(studentId);
++check(fresh?.sessionSummaries?.length === 1, 'sessionSummaries persisted on profile');
++check(fresh?.sessionSummaries?.[0]?.sessionId === sessionId, 'correct session summary persisted');
++
++const emptyStudentId = 'empty_session_student';
++await getOrCreateLearner(emptyStudentId, 'Empty', 'Grade 5');
++const emptyResult = await runProfiler({ studentId: emptyStudentId, subjectId, sessionId: 'sess_empty', sessionStartedAt: Date.now(), apiKey: 'fake' });
++check(emptyResult === null, 'a session with zero events is skipped (returns null), not fabricated');
++
++fs.rmSync(tmp, { recursive: true, force: true });
++
++if (failed) { console.error('\nSOME TESTS FAILED'); process.exit(1); }
++console.log('\nALL profiler.mjs SMOKE CHECKS PASSED');

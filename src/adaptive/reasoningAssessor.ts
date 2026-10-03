@@ -49,10 +49,24 @@ export interface MisconceptionEntry {
 }
 
 /**
- * Closed vocabulary for a concept. Ids are stable and derived from position,
- * so they survive rewording of the description text.
+ * Closed vocabulary for a concept.
+ *
+ * Curriculum-library concepts (docs/CURRICULUM.md §4) carry an explicit,
+ * stable id on each misconceptionDetail, assigned once at ingest — the
+ * catalogue id is then `${concept.id}::${detail.id}`, which survives any
+ * re-ordering of the list and is what the seeded demo data and the live
+ * ledger both use (fixed 2026-09-26: seed ids like "ssa-congruence" never
+ * matched the live positional ids, so a live repeat of a seeded misconception
+ * opened a second ledger entry instead of adding an observation).
+ *
+ * Older data without detail ids falls back to positional ids
+ * (`${concept.id}::m1`, …), exactly as before.
  */
 export function misconceptionCatalog(concept: CurriculumConcept): MisconceptionEntry[] {
+  const details = concept.misconceptionDetails || [];
+  if (details.length && details.every((d) => d.id)) {
+    return details.map((d) => ({ id: `${concept.id}::${d.id}`, text: d.belief }));
+  }
   return concept.commonMisconceptions.map((text, i) => ({
     id: `${concept.id}::m${i + 1}`,
     text,
@@ -92,6 +106,31 @@ export interface ReasoningInput {
   expectedAnswer?: string;
   currentStrategy: TeachingStrategy;
   apiKey: string;
+  /** Course context (docs/CURRICULUM.md §7) — optional so older callers and
+   * the test harness keep working; when absent the prompt stays generic. */
+  subjectLabel?: string;
+  gradeLevel?: number;
+  subjectMode?: 'well_structured' | 'interpretive' | 'skill';
+}
+
+/** The "correct answer trap" test, phrased for the subject mode. */
+function correctAnswerTrap(mode: ReasoningInput['subjectMode']): string {
+  if (mode === 'interpretive') {
+    return `A correct-sounding conclusion is NOT evidence of understanding. Ask yourself explicitly:
+"Is this claim actually supported by evidence and reasoning the child gave, or did they
+repeat a conclusion they have heard?" If the reasoning would not hold up for a different
+source or case, it is misconception_behind_correct, even though the conclusion sounds right.`;
+  }
+  if (mode === 'skill') {
+    return `A correct form is NOT evidence of understanding. Ask yourself explicitly:
+"Would the child produce the right form again in a different sentence or context, or did
+they recognise/copy it?" If the rule they describe would fail elsewhere, it is
+misconception_behind_correct, even though this answer was right.`;
+  }
+  return `A correct final answer is NOT evidence of understanding. Ask yourself explicitly:
+"Would this exact method still produce the right answer if the numbers, the orientation
+or the context of the problem changed?" If no, it is misconception_behind_correct,
+even though the child was right. This is the single most important judgement you make.`;
 }
 
 function buildPrompt(input: ReasoningInput): string {
@@ -102,7 +141,9 @@ function buildPrompt(input: ReasoningInput): string {
   const alreadyConfirmed = conceptState?.confirmedMisconceptions.join('; ') || 'none';
   const ineffective = conceptState?.ineffectiveStrategies.join(', ') || 'none';
 
-  return `You are a diagnostic assessor for a 13-year-old's mathematics tutor. You are NOT the tutor. You do not talk to the child. You analyse one exchange and return JSON.
+  const age = input.gradeLevel ? `${input.gradeLevel + 5}-year-old` : '13-year-old';
+  const subject = input.subjectLabel ? input.subjectLabel.toLowerCase() : 'mathematics';
+  return `You are a diagnostic assessor for a ${age}'s ${subject} tutor. You are NOT the tutor. You do not talk to the child. You analyse one exchange and return JSON.
 
 CONCEPT: ${concept.label} (difficulty ${concept.difficultyLevel}/5)
 KEY FACTS:
@@ -131,10 +172,7 @@ CLASSIFY into exactly one of:
   "no_reasoning_given"           the child gave an answer with no method at all
 
 CRITICAL INSTRUCTION — THE CORRECT ANSWER TRAP:
-A correct final answer is NOT evidence of understanding. Ask yourself explicitly:
-"Would this exact method still produce the right answer if the numbers or the
-orientation of the triangle changed?" If no, it is misconception_behind_correct,
-even though the child was right. This is the single most important judgement you make.
+${correctAnswerTrap(input.subjectMode)}
 
 FALSE-POSITIVE DISCIPLINE:
 Do not select a misconception id from one ambiguous utterance. If the reasoning is
@@ -146,7 +184,7 @@ PROBE DESIGN:
 When shouldProbe is true, write ONE short spoken question that DISCRIMINATES between
 the candidate misconceptions — a question the child answers differently depending on
 which error they hold. Never a question that reveals the answer. Never more than one
-sentence. Age 13 vocabulary.
+sentence. Vocabulary for a ${age}.
 
 Return ONLY valid JSON, no markdown fences:
 {
@@ -322,7 +360,7 @@ export interface DeadlineResult {
 }
 
 export async function assessReasoningWithDeadline(
-  input: ReasoningInput, budgetMs = 2500,
+  input: ReasoningInput, budgetMs = 6500,
 ): Promise<DeadlineResult> {
   const t0 = Date.now();
   const full = assessReasoning(input);
@@ -346,9 +384,8 @@ function transferMove(input: ReasoningInput): ReasoningAssessment {
     probeQuestion: undefined,
     probeRationale: 'Assessment still running; a transfer item discriminates a sound method from a broken one on its own.',
     nextStrategy: input.currentStrategy,
-    tutorGuidance:
-      'Thank them in a few words for explaining. Then ask them to use exactly the same method on a slightly ' +
-      'different example you pick (different numbers, or the triangle turned around) and tell you what it gives. ' +
-      'Do NOT say whether their first answer was right. When they answer, call assess_child_reasoning with promptType "transfer".',
+    tutorGuidance: (input.childReasoning && input.childReasoning.trim().length > 3)
+      ? 'Use their own words: name the one step in their thinking that goes off track, then explain the idea a different way with a short worked example, and only then ask a fresh check question. Do NOT just ask again with different numbers.'
+      : 'Ask warmly how they got that ("Walk me through how you got that") and wait. Do NOT give new numbers and do NOT ask a new question until you understand their thinking, then explain the idea a different way.',
   };
 }

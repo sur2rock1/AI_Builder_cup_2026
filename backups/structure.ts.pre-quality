@@ -1,0 +1,729 @@
+// ─────────────────────────────────────────────────────────────────
+// Curriculum structure — the deterministic half of ingestion
+// (docs/CURRICULUM.md §4). No network, no model calls: every function
+// here takes what Gemini proposed and decides, by fixed rules, what is
+// allowed into a published course. This is the same "LLM proposes,
+// deterministic code disposes" split the learner model uses for the
+// Profiler/Claim Validator (docs/AGENT_GUIDE.md landmine #5).
+//
+//   mergeExtractions()      chunk extractions  → draft chapters + concepts
+//   applyStructure()        model's graph/types → validated DAG + conceptTypes
+//   applyVerification()     model's review      → verified/corrected/rejected concepts
+//   buildScopeMaps()        syllabus/textbook   → scope maps with provenance
+//   finaliseCourse()        everything          → CurriculumSubject
+// ─────────────────────────────────────────────────────────────────
+import type {
+  CurriculumConcept, CurriculumSubject, ChapterScopeMap, MisconceptionDetail,
+  PrerequisiteDetail, LadderItem, RepresentationIdea, SyllabusTopic,
+  CurriculumSource, VerificationReport, SubjectModeId, TeachingStrategy,
+} from '../adaptive/learnerModel';
+import { chapterKey, conceptId as makeConceptId, misconceptionKey, slug } from './catalog';
+
+// ─── Extraction shapes (what the model returns per PDF chunk) ────
+
+export interface ExtractedWorkedExample { problem: string; solution?: string; answer?: string }
+export interface ExtractedMisconception { belief: string; triggerPattern?: string; probeQuestion: string; correctionHint: string }
+export interface ExtractedPrerequisite { label: string; reason?: string; checkQuestion?: string }
+
+export interface ExtractedConcept {
+  label: string;
+  order?: number;
+  difficultyLevel?: number;
+  pages?: [number, number];
+  keyFacts?: string[];
+  workedExamples?: Array<ExtractedWorkedExample | string>;
+  misconceptions?: ExtractedMisconception[];
+  prerequisites?: ExtractedPrerequisite[];
+}
+
+export interface ExtractedChapter {
+  number?: number | null;
+  title: string;
+  /** Learning objectives the BOOK states for this chapter (not inferred). */
+  statedObjectives?: string[];
+  /** Topics the BOOK explicitly says are excluded / not required. */
+  statedExclusions?: string[];
+  /** Topics the BOOK marks as extension / optional / challenge. */
+  statedExtensions?: string[];
+  concepts: ExtractedConcept[];
+}
+
+export interface ChunkRef { sourceId: string; sourceOrder: number; fromPage: number; toPage: number }
+export interface TextbookExtraction { chunk: ChunkRef; chapters: ExtractedChapter[] }
+
+// ─── Draft (merged, not yet structured/verified) ─────────────────
+
+export interface DraftChapter {
+  chapterId: string;
+  number: number | null;
+  title: string;
+  label: string;               // "Chapter 9: Congruence and Similarity Tests"
+  sourceId: string;
+  sourceOrder: number;
+  firstPage: number;
+  statedObjectives: string[];
+  statedExclusions: string[];
+  statedExtensions: string[];
+}
+
+export interface DraftConcept {
+  id: string;
+  label: string;
+  chapterId: string;
+  orderInChapter: number;
+  firstSeen: number;
+  difficultyLevel: 1 | 2 | 3 | 4 | 5;
+  keyFacts: string[];
+  workedExamples: ExtractedWorkedExample[];
+  misconceptions: ExtractedMisconception[];
+  extractedPrerequisites: ExtractedPrerequisite[];
+  sourceId: string;
+  pages?: [number, number];
+}
+
+export interface Draft {
+  courseId: string;
+  chapters: DraftChapter[];
+  concepts: DraftConcept[];
+}
+
+const norm = (s: string) => String(s || '').toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+
+function uniqStrings(list: unknown[], max: number, maxLen = 400): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of list) {
+    if (typeof raw !== 'string') continue;
+    const s = raw.trim().slice(0, maxLen);
+    const k = norm(s);
+    if (!s || !k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(s);
+  }
+  return out.slice(0, max);
+}
+
+function uniqBy<T>(list: T[], key: (t: T) => string, max: number): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of list) {
+    const k = norm(key(item));
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(item);
+  }
+  return out.slice(0, max);
+}
+
+function toWorked(x: ExtractedWorkedExample | string): ExtractedWorkedExample | null {
+  if (typeof x === 'string') return x.trim() ? { problem: x.trim() } : null;
+  if (x && typeof x.problem === 'string' && x.problem.trim()) {
+    return { problem: x.problem.trim(), solution: x.solution?.trim() || undefined, answer: x.answer?.trim() || undefined };
+  }
+  return null;
+}
+
+function validMisconception(m: any): m is ExtractedMisconception {
+  return m && typeof m.belief === 'string' && m.belief.trim()
+    && typeof m.probeQuestion === 'string' && m.probeQuestion.trim()
+    && typeof m.correctionHint === 'string' && m.correctionHint.trim();
+}
+
+const clampDifficulty = (n: unknown): 1 | 2 | 3 | 4 | 5 =>
+  Math.min(5, Math.max(1, Math.round(Number(n) || 2))) as 1 | 2 | 3 | 4 | 5;
+
+/**
+ * Merge per-chunk extractions into one draft. Chapters that straddle a chunk
+ * boundary are merged by (source, chapter number | title); concepts within a
+ * chapter are merged by normalised label. Concept ids come from
+ * catalog.conceptId(course, chapterKey, label) — never from file names.
+ */
+export function mergeExtractions(courseId: string, parts: TextbookExtraction[]): Draft {
+  const chapters = new Map<string, DraftChapter>();
+  const concepts = new Map<string, DraftConcept>();
+  let seq = 0;
+
+  const ordered = [...parts].sort((a, b) =>
+    a.chunk.sourceOrder - b.chunk.sourceOrder || a.chunk.fromPage - b.chunk.fromPage);
+
+  for (const part of ordered) {
+    for (const ch of part.chapters || []) {
+      if (!ch || typeof ch.title !== 'string' || !ch.title.trim() || !Array.isArray(ch.concepts)) continue;
+      const number = typeof ch.number === 'number' && Number.isFinite(ch.number) ? ch.number : null;
+      const mergeKey = `${part.chunk.sourceId}::${number ?? norm(ch.title)}`;
+      let chapter = chapters.get(mergeKey);
+      if (!chapter) {
+        const title = ch.title.trim();
+        chapter = {
+          chapterId: chapterKey(number, title),
+          number, title,
+          label: number != null ? `Chapter ${number}: ${title}` : title,
+          sourceId: part.chunk.sourceId,
+          sourceOrder: part.chunk.sourceOrder,
+          firstPage: part.chunk.fromPage,
+          statedObjectives: [], statedExclusions: [], statedExtensions: [],
+        };
+        chapters.set(mergeKey, chapter);
+      }
+      chapter.statedObjectives = uniqStrings([...chapter.statedObjectives, ...(ch.statedObjectives || [])], 15);
+      chapter.statedExclusions = uniqStrings([...chapter.statedExclusions, ...(ch.statedExclusions || [])], 10);
+      chapter.statedExtensions = uniqStrings([...chapter.statedExtensions, ...(ch.statedExtensions || [])], 10);
+
+      for (const c of ch.concepts) {
+        if (!c || typeof c.label !== 'string' || !c.label.trim()) continue;
+        const id = makeConceptId(courseId, chapter.chapterId, c.label.trim());
+        const worked = (c.workedExamples || []).map(toWorked).filter((w): w is ExtractedWorkedExample => !!w);
+        const misc = (c.misconceptions || []).filter(validMisconception);
+        const prereqs = (c.prerequisites || []).filter((p) => p && typeof p.label === 'string' && p.label.trim());
+        const prev = concepts.get(id);
+        if (!prev) {
+          concepts.set(id, {
+            id, label: c.label.trim(), chapterId: chapter.chapterId,
+            orderInChapter: Number(c.order) || 99, firstSeen: seq++,
+            difficultyLevel: clampDifficulty(c.difficultyLevel),
+            keyFacts: uniqStrings(c.keyFacts || [], 8),
+            workedExamples: uniqBy(worked, (w) => w.problem, 4),
+            misconceptions: uniqBy(misc, (m) => m.belief, 5),
+            extractedPrerequisites: uniqBy(prereqs, (p) => p.label, 6),
+            sourceId: part.chunk.sourceId,
+            pages: Array.isArray(c.pages) && c.pages.length === 2 ? [Number(c.pages[0]), Number(c.pages[1])] : undefined,
+          });
+        } else {
+          prev.keyFacts = uniqStrings([...prev.keyFacts, ...(c.keyFacts || [])], 8);
+          prev.workedExamples = uniqBy([...prev.workedExamples, ...worked], (w) => w.problem, 4);
+          prev.misconceptions = uniqBy([...prev.misconceptions, ...misc], (m) => m.belief, 5);
+          prev.extractedPrerequisites = uniqBy([...prev.extractedPrerequisites, ...prereqs], (p) => p.label, 6);
+        }
+      }
+    }
+  }
+
+  // A concept with no key facts cannot be taught or diagnosed against — drop it.
+  const kept = [...concepts.values()].filter((c) => c.keyFacts.length > 0);
+  return { courseId, chapters: [...chapters.values()], concepts: kept };
+}
+
+// ─── Chapter limit (demo / cost control, D-2026-09-26-9) ─────────
+
+/** Order-of-appearance key for a chapter in the uploaded book(s). */
+export function chapterAppearanceKey(sourceId: string, number: number | null | undefined, title: string): string {
+  return `${sourceId}::${typeof number === 'number' ? number : norm(title)}`;
+}
+
+/**
+ * Keep only the first `limit` chapters of this upload (in book order: source
+ * order, then first page). `limit` undefined/0 = keep everything. Counted over
+ * the BOOK's chapters, including ones already in the course — so re-uploading
+ * the same book with a higher limit adds the next chapters and leaves the
+ * published ones untouched (their concepts are skipped as existing).
+ */
+export function limitChapters(draft: Draft, limit: number | undefined): { draft: Draft; kept: string[]; dropped: string[] } {
+  if (!limit || limit <= 0) return { draft, kept: draft.chapters.map((c) => c.label), dropped: [] };
+  const ordered = [...draft.chapters].sort((a, b) => a.sourceOrder - b.sourceOrder || a.firstPage - b.firstPage);
+  const keep = ordered.slice(0, limit);
+  const keepIds = new Set(keep.map((c) => c.chapterId));
+  return {
+    draft: {
+      courseId: draft.courseId,
+      chapters: draft.chapters.filter((c) => keepIds.has(c.chapterId)),
+      concepts: draft.concepts.filter((c) => keepIds.has(c.chapterId)),
+    },
+    kept: keep.map((c) => c.label),
+    dropped: ordered.slice(limit).map((c) => c.label),
+  };
+}
+
+/**
+ * True once the extracted chunks (in page order, a contiguous prefix of the
+ * book) have shown MORE than `limit` distinct chapters — i.e. chapter `limit`
+ * has ended because the next one has started, so the remaining pages need
+ * not be read at all.
+ */
+export function chapterLimitReached(prefix: TextbookExtraction[], limit: number): boolean {
+  const seen = new Set<string>();
+  for (const part of prefix) {
+    for (const ch of part.chapters || []) {
+      if (!ch || typeof ch.title !== 'string' || !ch.title.trim() || !Array.isArray(ch.concepts) || !ch.concepts.length) continue;
+      seen.add(chapterAppearanceKey(part.chunk.sourceId, ch.number, ch.title));
+      if (seen.size > limit) return true;
+    }
+  }
+  return false;
+}
+
+// ─── Teaching order ──────────────────────────────────────────────
+
+/** Global teaching order: chapter number, then source order, then position in chapter. */
+export function orderConcepts<T extends { chapterId?: string; orderInChapter?: number; typicalTeachingOrder?: number }>(
+  concepts: T[],
+  chapterInfo: Map<string, { number: number | null; sourceOrder: number; firstPage: number }>,
+  firstSeen: (c: T) => number,
+): T[] {
+  return [...concepts].sort((a, b) => {
+    const ca = chapterInfo.get(a.chapterId || '');
+    const cb = chapterInfo.get(b.chapterId || '');
+    const na = ca?.number ?? 1e6, nb = cb?.number ?? 1e6;
+    if (na !== nb) return na - nb;
+    const sa = ca?.sourceOrder ?? 1e6, sb = cb?.sourceOrder ?? 1e6;
+    if (sa !== sb) return sa - sb;
+    const pa = ca?.firstPage ?? 1e6, pb = cb?.firstPage ?? 1e6;
+    if (pa !== pb) return pa - pb;
+    const oa = a.orderInChapter ?? 99, ob = b.orderInChapter ?? 99;
+    if (oa !== ob) return oa - ob;
+    return firstSeen(a) - firstSeen(b);
+  });
+}
+
+// ─── Structure pass (graph + concept types + subject mode) ───────
+
+export interface StructureProposal {
+  subjectMode?: string;
+  conceptTypes?: Array<{ id: string; description?: string }>;
+  concepts?: Array<{
+    conceptId: string;
+    conceptType?: string;
+    prerequisites?: Array<{ conceptId: string; reason?: string; matchesExtracted?: string }>;
+    externalPrerequisites?: string[];
+  }>;
+  chapterScope?: Array<{ chapterId: string; syllabusRefs?: string[]; gradeNote?: string }>;
+}
+
+export interface StructureResult {
+  subjectMode: SubjectModeId;
+  conceptTypes: Record<string, string>;
+  /** conceptId → conceptType */
+  types: Map<string, string>;
+  /** conceptId → internal prerequisite details (conceptId set) */
+  internal: Map<string, Array<{ conceptId: string; reason: string; matchesExtracted?: string }>>;
+  /** conceptId → labels of extracted prerequisites that are outside this course */
+  external: Map<string, Set<string>>;
+  chapterScope: Map<string, { syllabusRefs: string[]; gradeNote?: string }>;
+  edgesDropped: number;
+  issues: string[];
+}
+
+const MODES: SubjectModeId[] = ['well_structured', 'interpretive', 'skill'];
+export const MAX_INTERNAL_PREREQS = 4;
+
+/**
+ * Validate the model's proposed structure. Rules (all deterministic):
+ *  - subjectMode must be one of the three modes, else the caller's fallback.
+ *  - conceptType ids are slugged; a concept's type must be a declared type,
+ *    else 'general'. Concepts that ALREADY have a type (published earlier)
+ *    keep it — learner strategy history is keyed on it.
+ *  - a prerequisite edge is kept only if both ends exist, it is not a self
+ *    edge, and the prerequisite is taught EARLIER in the global order. That
+ *    single rule guarantees an acyclic graph. At most MAX_INTERNAL_PREREQS
+ *    direct prerequisites per concept.
+ *  - external prerequisites must be labels the extractor actually found.
+ */
+export function applyStructure(
+  proposal: StructureProposal | null | undefined,
+  ctx: {
+    fallbackMode: SubjectModeId;
+    orderIndex: Map<string, number>;              // conceptId → global teaching position
+    extractedPrereqLabels: Map<string, string[]>; // conceptId → extracted labels
+    fixedTypes: Map<string, string>;              // conceptId → already-published type
+    chapterIds: Set<string>;
+    syllabusRefs: Set<string>;
+  },
+): StructureResult {
+  const issues: string[] = [];
+  const p = proposal || {};
+  const subjectMode = MODES.includes(p.subjectMode as SubjectModeId) ? (p.subjectMode as SubjectModeId) : ctx.fallbackMode;
+  if (p.subjectMode && subjectMode !== p.subjectMode) issues.push(`Unknown subject mode "${p.subjectMode}" — used ${subjectMode}.`);
+
+  const conceptTypes: Record<string, string> = {};
+  for (const t of p.conceptTypes || []) {
+    const id = slug(t?.id || '', 40);
+    if (id) conceptTypes[id] = String(t?.description || '').slice(0, 200);
+  }
+  for (const t of ctx.fixedTypes.values()) if (!(t in conceptTypes)) conceptTypes[t] = conceptTypes[t] || '';
+
+  const types = new Map<string, string>();
+  const internal = new Map<string, Array<{ conceptId: string; reason: string; matchesExtracted?: string }>>();
+  const external = new Map<string, Set<string>>();
+  let edgesDropped = 0;
+
+  const byId = new Map((p.concepts || []).filter((c) => c && typeof c.conceptId === 'string').map((c) => [c.conceptId, c]));
+  for (const [cid, pos] of ctx.orderIndex) {
+    const c = byId.get(cid);
+    const fixed = ctx.fixedTypes.get(cid);
+    const proposed = slug(c?.conceptType || '', 40);
+    const type = fixed || (proposed && proposed in conceptTypes ? proposed : 'general');
+    if (!fixed && proposed && !(proposed in conceptTypes)) issues.push(`Undeclared concept type "${proposed}" on ${cid} — used "general".`);
+    types.set(cid, type);
+
+    const edges: Array<{ conceptId: string; reason: string; matchesExtracted?: string }> = [];
+    for (const e of c?.prerequisites || []) {
+      const target = e?.conceptId;
+      const tpos = target ? ctx.orderIndex.get(target) : undefined;
+      if (!target || tpos === undefined || target === cid || tpos >= pos) { edgesDropped++; continue; }
+      if (edges.some((x) => x.conceptId === target)) continue;
+      if (edges.length >= MAX_INTERNAL_PREREQS) { edgesDropped++; continue; }
+      edges.push({ conceptId: target, reason: String(e.reason || '').slice(0, 300), matchesExtracted: e.matchesExtracted });
+    }
+    internal.set(cid, edges);
+
+    const known = new Map((ctx.extractedPrereqLabels.get(cid) || []).map((l) => [norm(l), l]));
+    const ext = new Set<string>();
+    for (const label of c?.externalPrerequisites || []) {
+      const hit = known.get(norm(label));
+      if (hit) ext.add(hit);
+    }
+    external.set(cid, ext);
+  }
+  if (types.size && types.size !== byId.size) {
+    const missing = [...ctx.orderIndex.keys()].filter((id) => !byId.has(id)).length;
+    if (missing) issues.push(`Structure pass returned nothing for ${missing} concept(s) — they got type "general" and no in-course prerequisites.`);
+  }
+
+  const chapterScope = new Map<string, { syllabusRefs: string[]; gradeNote?: string }>();
+  for (const s of p.chapterScope || []) {
+    if (!s || !ctx.chapterIds.has(s.chapterId)) continue;
+    const refs = (s.syllabusRefs || []).filter((r) => ctx.syllabusRefs.has(norm(r)));
+    chapterScope.set(s.chapterId, { syllabusRefs: refs, gradeNote: s.gradeNote ? String(s.gradeNote).slice(0, 300) : undefined });
+  }
+
+  return { subjectMode, conceptTypes, types, internal, external, chapterScope, edgesDropped, issues };
+}
+
+// ─── Verification pass (the automated review) ────────────────────
+
+export interface VerificationProposal {
+  concepts?: Array<{
+    conceptId: string;
+    verdict?: 'ok' | 'corrected' | 'reject';
+    rejectReason?: string;
+    keyFacts?: string[];
+    workedExamples?: Array<ExtractedWorkedExample & { status?: 'verified' | 'corrected' | 'wrong_unfixable' }>;
+    misconceptions?: Array<ExtractedMisconception & { id?: string }>;
+    ladder?: Array<{ level: number; prompt: string; lookFor: string }>;
+    representations?: Array<{ strategy: string; idea: string }>;
+    notes?: string[];
+  }>;
+}
+
+export const TEACHING_STRATEGIES: TeachingStrategy[] = [
+  'direct_explanation', 'worked_example', 'visual_diagram', 'real_world_analogy',
+  'socratic_questioning', 'step_by_step', 'story_context', 'interactive_simulation',
+  'peer_comparison', 'prerequisite_review',
+];
+
+export interface VerifiedContent {
+  keyFacts: string[];
+  workedExamples: string[];
+  misconceptionDetails: MisconceptionDetail[];
+  ladderItems: LadderItem[];
+  representationIdeas: RepresentationIdea[];
+  verification?: { status: 'verified' | 'corrected'; notes: string[] };
+}
+
+export interface VerificationTally {
+  checked: number; corrected: number; rejected: number;
+  examplesCorrected: number; examplesDropped: number; issues: string[];
+}
+
+export const emptyTally = (): VerificationTally => ({ checked: 0, corrected: 0, rejected: 0, examplesCorrected: 0, examplesDropped: 0, issues: [] });
+
+export function formatWorkedExample(w: ExtractedWorkedExample): string {
+  const parts = [w.problem.trim()];
+  if (w.solution) parts.push(w.solution.trim());
+  if (w.answer && !(w.solution || '').includes(w.answer)) parts.push(`Answer: ${w.answer.trim()}`);
+  return parts.join(' → ');
+}
+
+/** Give each misconception a stable id, unique within the concept. */
+export function withMisconceptionIds(list: Array<ExtractedMisconception & { id?: string }>): MisconceptionDetail[] {
+  const used = new Set<string>();
+  const out: MisconceptionDetail[] = [];
+  for (const m of list) {
+    if (!validMisconception(m)) continue;
+    let id = misconceptionKey(m.id || m.belief);
+    let n = 2;
+    while (used.has(id)) id = `${misconceptionKey(m.id || m.belief)}-${n++}`;
+    used.add(id);
+    out.push({
+      id, belief: m.belief.trim(), triggerPattern: m.triggerPattern?.trim() || undefined,
+      probeQuestion: m.probeQuestion.trim(), correctionHint: m.correctionHint.trim(),
+    });
+  }
+  return out.slice(0, 5);
+}
+
+/**
+ * Apply the model's review of one concept. Returns null when the concept is
+ * rejected (the tally records why). When `review` is missing (the verification
+ * call for this chapter failed after retries), the concept is still published
+ * but WITHOUT its worked examples — those are the riskiest unverified content
+ * (a wrong worked example was the concrete defect that motivated this pass).
+ */
+export function applyVerification(
+  draft: DraftConcept,
+  review: NonNullable<VerificationProposal['concepts']>[number] | undefined,
+  tally: VerificationTally,
+): VerifiedContent | null {
+  tally.checked++;
+  if (!review) {
+    tally.examplesDropped += draft.workedExamples.length;
+    tally.issues.push(`"${draft.label}": not verified (review call failed) — published without worked examples.`);
+    return {
+      keyFacts: draft.keyFacts,
+      workedExamples: [],
+      misconceptionDetails: withMisconceptionIds(draft.misconceptions),
+      ladderItems: [],
+      representationIdeas: [],
+    };
+  }
+  if (review.verdict === 'reject') {
+    tally.rejected++;
+    tally.issues.push(`"${draft.label}": rejected — ${String(review.rejectReason || 'no reason given').slice(0, 200)}`);
+    return null;
+  }
+
+  const keyFacts = uniqStrings(review.keyFacts?.length ? review.keyFacts : draft.keyFacts, 8);
+  if (!keyFacts.length) {
+    tally.rejected++;
+    tally.issues.push(`"${draft.label}": rejected — no usable key facts after review.`);
+    return null;
+  }
+
+  const examples: string[] = [];
+  const reviewed = review.workedExamples || [];
+  for (const w of reviewed) {
+    const we = toWorked(w as any);
+    if (!we) continue;
+    if (w.status === 'wrong_unfixable') { tally.examplesDropped++; continue; }
+    if (w.status === 'corrected') tally.examplesCorrected++;
+    examples.push(formatWorkedExample(we));
+  }
+  // Examples the reviewer silently omitted are treated as dropped, not kept unverified.
+  const omitted = Math.max(0, draft.workedExamples.length - reviewed.length);
+  tally.examplesDropped += omitted;
+
+  const misconceptionDetails = withMisconceptionIds(
+    review.misconceptions?.length ? review.misconceptions : draft.misconceptions,
+  );
+
+  const ladderItems: LadderItem[] = [];
+  for (const l of review.ladder || []) {
+    const level = Math.round(Number(l?.level));
+    if (level < 1 || level > 4 || typeof l?.prompt !== 'string' || !l.prompt.trim()) continue;
+    ladderItems.push({ level: level as LadderItem['level'], prompt: l.prompt.trim(), lookFor: String(l.lookFor || '').trim() });
+  }
+  ladderItems.sort((a, b) => a.level - b.level);
+  const missingLevels = [1, 2, 3, 4].filter((lv) => !ladderItems.some((l) => l.level === lv));
+  if (missingLevels.length) tally.issues.push(`"${draft.label}": no ladder item for level(s) ${missingLevels.join(', ')}.`);
+
+  const representationIdeas: RepresentationIdea[] = [];
+  for (const r of review.representations || []) {
+    if (!TEACHING_STRATEGIES.includes(r?.strategy as TeachingStrategy) || !r.idea?.trim()) continue;
+    if (representationIdeas.some((x) => x.strategy === r.strategy)) continue;
+    representationIdeas.push({ strategy: r.strategy as TeachingStrategy, idea: r.idea.trim().slice(0, 400) });
+  }
+
+  const corrected = review.verdict === 'corrected' || reviewed.some((w) => w.status === 'corrected');
+  if (corrected) tally.corrected++;
+  return {
+    keyFacts, workedExamples: examples.slice(0, 4), misconceptionDetails,
+    ladderItems: ladderItems.slice(0, 8), representationIdeas: representationIdeas.slice(0, 5),
+    verification: { status: corrected ? 'corrected' : 'verified', notes: uniqStrings(review.notes || [], 5, 300) },
+  };
+}
+
+// ─── Scope maps ──────────────────────────────────────────────────
+
+/** Scope with provenance. Syllabus text wins when the chapter was mapped to
+ * syllabus topics; otherwise only what the textbook itself states. Nothing
+ * model-invented is ever written into outOfScope. */
+export function buildScopeMaps(
+  chapters: DraftChapter[],
+  conceptLabelsByChapter: Map<string, string[]>,
+  syllabus: SyllabusTopic[] | undefined,
+  chapterScope: Map<string, { syllabusRefs: string[]; gradeNote?: string }>,
+): ChapterScopeMap[] {
+  const topicByRef = new Map<string, SyllabusTopic>();
+  for (const t of syllabus || []) {
+    topicByRef.set(norm(t.title), t);
+    if (t.code) topicByRef.set(norm(t.code), t);
+  }
+  const out: ChapterScopeMap[] = [];
+  for (const ch of chapters) {
+    const mapped = chapterScope.get(ch.chapterId);
+    const topics = (mapped?.syllabusRefs || []).map((r) => topicByRef.get(norm(r))).filter((t): t is SyllabusTopic => !!t);
+    if (topics.length) {
+      out.push({
+        chapterTitle: ch.label,
+        inScope: uniqStrings(topics.flatMap((t) => t.objectives), 25),
+        advanced: uniqStrings(topics.flatMap((t) => t.extension), 15),
+        outOfScope: uniqStrings(topics.flatMap((t) => t.excluded), 15),
+        gradeNote: mapped?.gradeNote,
+        source: 'syllabus',
+        syllabusRefs: topics.map((t) => (t.code ? `${t.code} ${t.title}` : t.title)),
+      });
+    } else {
+      out.push({
+        chapterTitle: ch.label,
+        inScope: ch.statedObjectives.length ? ch.statedObjectives : (conceptLabelsByChapter.get(ch.chapterId) || []),
+        advanced: ch.statedExtensions,
+        outOfScope: ch.statedExclusions,
+        source: 'textbook',
+      });
+    }
+  }
+  return out;
+}
+
+// ─── Final assembly ──────────────────────────────────────────────
+
+export interface FinaliseInput {
+  existing: CurriculumSubject | null;
+  courseId: string;
+  board: string;
+  gradeLevel: number;
+  gradeLabel: string;
+  subject: string;
+  draft: Draft;
+  structure: StructureResult;
+  verified: Map<string, VerifiedContent>;
+  scopeMaps: ChapterScopeMap[];
+  syllabus?: SyllabusTopic[];
+  newSources: CurriculumSource[];
+  report: VerificationReport;
+}
+
+/**
+ * Build the published course. Existing concepts (from an earlier upload into
+ * the same board/grade/subject) are kept exactly as they were — ids,
+ * misconception ids and conceptType are load-bearing for learner history —
+ * except that new in-course prerequisite edges may be ADDED to them and the
+ * global teaching order is recomputed.
+ */
+export function finaliseCourse(inp: FinaliseInput): CurriculumSubject {
+  const existingConcepts = inp.existing?.concepts || [];
+  const existingIds = new Set(existingConcepts.map((c) => c.id));
+  const draftById = new Map(inp.draft.concepts.map((c) => [c.id, c]));
+
+  const chapterInfo = new Map<string, { number: number | null; sourceOrder: number; firstPage: number }>();
+  for (const c of existingConcepts) {
+    if (c.chapterId && !chapterInfo.has(c.chapterId)) {
+      chapterInfo.set(c.chapterId, { number: c.chapterNumber ?? null, sourceOrder: -1, firstPage: 0 });
+    }
+  }
+  for (const ch of inp.draft.chapters) {
+    if (!chapterInfo.has(ch.chapterId)) chapterInfo.set(ch.chapterId, { number: ch.number, sourceOrder: ch.sourceOrder, firstPage: ch.firstPage });
+  }
+  const chapterById = new Map(inp.draft.chapters.map((ch) => [ch.chapterId, ch]));
+
+  const newConcepts: CurriculumConcept[] = [];
+  for (const d of inp.draft.concepts) {
+    if (existingIds.has(d.id)) continue;
+    const v = inp.verified.get(d.id);
+    if (!v) continue; // rejected
+    const ch = chapterById.get(d.chapterId)!;
+    newConcepts.push({
+      id: d.id,
+      label: d.label,
+      subjectId: inp.courseId,
+      prerequisites: [],
+      prerequisiteDetails: [],
+      commonMisconceptions: v.misconceptionDetails.map((m) => m.belief),
+      misconceptionDetails: v.misconceptionDetails,
+      keyFacts: v.keyFacts,
+      workedExamples: v.workedExamples,
+      difficultyLevel: d.difficultyLevel,
+      typicalTeachingOrder: 0,
+      chapter: ch.label,
+      book: inp.newSources.find((s) => s.id === d.sourceId)?.title,
+      conceptType: inp.structure.types.get(d.id) || 'general',
+      chapterId: d.chapterId,
+      chapterNumber: ch.number,
+      orderInChapter: d.orderInChapter,
+      ladderItems: v.ladderItems,
+      representationIdeas: v.representationIdeas,
+      sourceRef: { sourceId: d.sourceId, pages: d.pages },
+      verification: v.verification,
+    });
+  }
+
+  const all: CurriculumConcept[] = [...existingConcepts.map((c) => ({ ...c })), ...newConcepts];
+  const firstSeenIdx = new Map(all.map((c, i) => [c.id, i]));
+  const ordered = orderConcepts(all, chapterInfo, (c) => firstSeenIdx.get(c.id) ?? 0);
+  ordered.forEach((c, i) => { c.typicalTeachingOrder = i + 1; });
+  const present = new Map(ordered.map((c) => [c.id, c]));
+  const position = new Map(ordered.map((c) => [c.id, c.typicalTeachingOrder]));
+
+  // Prerequisite graph: validated edges from the structure pass, only between
+  // concepts that survived verification, still strictly earlier in order.
+  for (const c of ordered) {
+    const edges = inp.structure.internal.get(c.id);
+    const d = draftById.get(c.id);
+    const isNew = !existingIds.has(c.id);
+    if (!edges && !isNew) continue;
+
+    const prereqIds = new Set(c.prerequisites || []);
+    const details: PrerequisiteDetail[] = [...(c.prerequisiteDetails || [])];
+    for (const e of edges || []) {
+      const target = present.get(e.conceptId);
+      if (!target || (position.get(e.conceptId)! >= c.typicalTeachingOrder) || prereqIds.has(e.conceptId)) continue;
+      if (prereqIds.size >= MAX_INTERNAL_PREREQS) break;
+      prereqIds.add(e.conceptId);
+      const matched = d?.extractedPrerequisites.find((p) => e.matchesExtracted && norm(p.label) === norm(e.matchesExtracted));
+      const check = matched?.checkQuestion
+        || target.ladderItems?.find((l) => l.level === 1)?.prompt
+        || `In your own words, what do you remember about ${target.label.toLowerCase()}?`;
+      details.push({
+        label: target.label,
+        reason: e.reason || matched?.reason || `${c.label} builds on ${target.label}.`,
+        checkQuestion: check,
+        conceptId: target.id,
+      });
+    }
+    if (isNew && d) {
+      for (const label of inp.structure.external.get(c.id) || []) {
+        const p = d.extractedPrerequisites.find((x) => x.label === label);
+        if (!p?.checkQuestion || details.some((x) => norm(x.label) === norm(label))) continue;
+        details.push({ label: p.label, reason: p.reason || `Needed for ${c.label}.`, checkQuestion: p.checkQuestion });
+      }
+    }
+    c.prerequisites = [...prereqIds];
+    c.prerequisiteDetails = details.slice(0, 6);
+  }
+
+  // Scope maps: keep existing, add new chapters'.
+  const scopeMaps: ChapterScopeMap[] = [...(inp.existing?.scopeMaps || [])];
+  const haveScope = new Set(scopeMaps.map((s) => norm(s.chapterTitle)));
+  for (const s of inp.scopeMaps) if (!haveScope.has(norm(s.chapterTitle))) scopeMaps.push(s);
+
+  const conceptTypes = { ...(inp.existing?.conceptTypes || {}) };
+  const usedTypes = new Set(ordered.map((c) => c.conceptType).filter(Boolean) as string[]);
+  for (const [k, v] of Object.entries(inp.structure.conceptTypes)) if (usedTypes.has(k) && !(k in conceptTypes)) conceptTypes[k] = v;
+  if (usedTypes.has('general') && !('general' in conceptTypes)) conceptTypes.general = 'Concepts not assigned to a more specific family.';
+
+  const sources = [...(inp.existing?.sources || [])];
+  for (const s of inp.newSources) {
+    const i = sources.findIndex((x) => x.id === s.id && x.kind === s.kind);
+    if (i >= 0) sources[i] = s; else sources.push(s);
+  }
+
+  const syllabus = inp.syllabus?.length ? inp.syllabus : inp.existing?.syllabus;
+
+  return {
+    id: inp.courseId,
+    label: inp.subject,
+    subject: inp.subject,
+    board: inp.board,
+    gradeLevel: inp.gradeLevel,
+    grade: inp.gradeLabel,
+    source: sources.map((s) => s.title).join(' + '),
+    sources,
+    subjectMode: inp.existing?.subjectMode || inp.structure.subjectMode,
+    conceptTypes,
+    concepts: ordered,
+    prerequisiteMap: Object.fromEntries(ordered.map((c) => [c.id, c.prerequisites])),
+    scopeMaps: scopeMaps.length ? scopeMaps : undefined,
+    syllabus,
+    verification: inp.report,
+    updatedAt: Date.now(),
+  };
+}

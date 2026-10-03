@@ -1,12 +1,168 @@
 {
   "_comment": "Maps source path globs to the docs that should be updated in the same commit when they change. Used by scripts/check-docs-sync.mjs. Add new rules here rather than hard-coding them in the script.",
   "rules": [
-    { "sourceGlobs": ["src/persona/**", "src/live/liveConfig.ts"], "docs": ["docs/TUTOR_PERSONA.md", "docs/ARCHITECTURE.md"] },
-    { "sourceGlobs": ["src/adaptive/learnerModel.ts", "src/adaptive/learnerStore.ts", "src/adaptive/strategyProfile.ts", "src/adaptive/bkt.ts", "src/adaptive/ladder.ts", "src/adaptive/reasoningAssessor.ts"], "docs": ["docs/LEARNER_MODEL.md"] },
-    { "sourceGlobs": ["src/plan/**"], "docs": ["docs/TEACHING_PLAN.md"] },
-    { "sourceGlobs": ["src/adaptive/repo/**"], "docs": ["docs/ARCHITECTURE.md"] },
-    { "sourceGlobs": ["server.ts"], "docs": ["docs/ARCHITECTURE.md"] },
-    { "sourceGlobs": ["src/components/ParentPortal.tsx"], "docs": ["docs/AGENT_GUIDE.md"] },
-    { "sourceGlobs": ["docs/CODE_DOC_MAP.json"], "docs": [] }
+    {
+      "sourceGlobs": [
+        "src/persona/**",
+        "src/live/liveConfig.ts"
+      ],
+      "docs": [
+        "docs/TUTOR_PERSONA.md",
+        "docs/ARCHITECTURE.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/adaptive/learnerModel.ts",
+        "src/adaptive/learnerStore.ts",
+        "src/adaptive/strategyProfile.ts",
+        "src/adaptive/bkt.ts",
+        "src/adaptive/ladder.ts",
+        "src/adaptive/reasoningAssessor.ts",
+        "src/adaptive/profiler.ts",
+        "src/adaptive/claimValidator.ts"
+      ],
+      "docs": [
+        "docs/LEARNER_MODEL.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/plan/**"
+      ],
+      "docs": [
+        "docs/TEACHING_PLAN.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/adaptive/repo/**"
+      ],
+      "docs": [
+        "docs/ARCHITECTURE.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/ai/gateway.ts"
+      ],
+      "docs": [
+        "docs/ARCHITECTURE.md",
+        "docs/AGENT_GUIDE.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "server.ts"
+      ],
+      "docs": [
+        "docs/ARCHITECTURE.md",
+        "docs/AGENT_GUIDE.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/components/ParentPortal.tsx"
+      ],
+      "docs": [
+        "docs/AGENT_GUIDE.md",
+        "docs/TRACEABILITY.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/components/Onboarding.tsx"
+      ],
+      "docs": [
+        "docs/TRACEABILITY.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/curriculum/**",
+        "server/middleware/requireAdmin.ts",
+        "scripts/seed-demo-learners.ts",
+        "scripts/pregenerate-assets.ts"
+      ],
+      "docs": [
+        "docs/CURRICULUM.md",
+        "docs/ARCHITECTURE.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/components/AdminLibrary.tsx",
+        "src/components/CurriculumUpload.tsx",
+        "src/components/SubjectSelector.tsx",
+        "src/components/LoginScreen.tsx"
+      ],
+      "docs": [
+        "docs/CURRICULUM.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/visual/**",
+        "src/components/BoardVisualView.tsx",
+        "src/components/Board3DView.tsx",
+        "scripts/preview-visuals.tsx",
+        "tests/smoke/board-visual*.mjs"
+      ],
+      "docs": [
+        "docs/BOARD_VISUALS.md",
+        "docs/ARCHITECTURE.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/quality/**",
+        "src/curriculum/lessonGen.ts",
+        "src/curriculum/lessonPrompt.ts",
+        "src/curriculum/photoGen.ts",
+        "src/curriculum/serve.ts",
+        "scripts/upgrade-pregen.ts",
+        "scripts/review-pregen.ts",
+        "tests/smoke/quality.mjs",
+        "tests/smoke/lesson-gen.mjs",
+        "tests/smoke/photo-gen.mjs",
+        "tests/smoke/quiz-evidence.mjs",
+        "tests/smoke/ladder-pair.mjs",
+        "tests/smoke/serve.mjs"
+      ],
+      "docs": [
+        "docs/CH1_FIX_PLAN.md",
+        "docs/ARCHITECTURE.md",
+        "docs/AGENT_GUIDE.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/adaptive/assessmentEngine.ts"
+      ],
+      "docs": [
+        "docs/LEARNER_MODEL.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "docs/CODE_DOC_MAP.json"
+      ],
+      "docs": []
+    },
+    {
+      "sourceGlobs": [
+        "src/curriculum/contentSpec.ts",
+        "src/curriculum/designBackfill.ts",
+        "src/curriculum/designRules.ts",
+        "src/visual/specJobs.ts",
+        "scripts/backfill-design.ts",
+        "scripts/content-spec.ts"
+      ],
+      "docs": [
+        "docs/BOARD_VISUALS.md",
+        "docs/CURRICULUM.md",
+        "DECISIONS.md"
+      ]
+    }
   ]
 }

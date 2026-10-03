@@ -1,3 +1,5 @@
+import type { BoardVisual, BoardVisual3D } from './visual/types';
+
 export type GradeLevel =
   | 'Elementary (Grade 3-5)'
   | 'Middle School (Grade 6-8)'
@@ -62,12 +64,22 @@ export interface InteractiveExplorerData {
   outcomeFormulaString?: string;
 }
 
+/** What the child says about HOW they chose, asked before the answer is revealed. */
+export interface QuizReasoning {
+  how?: 'worked_out' | 'remembered' | 'guessed' | 'unsure';
+  text?: string;
+}
+
 export interface DynamicQuizData {
   question: string;
   options: string[];
   correctIndex: number;
   explanation: string;
   hint?: string;
+  /** Which parallel L3 item this is; sent back with the answer. */
+  itemId?: string;
+  /** Marker: options were put in seeded order (src/quality/quizTools.ts). */
+  order?: 'shuffled';
 }
 
 export type BlackboardTab = '2d' | '3d' | 'photo' | 'chalkboard' | 'explorer' | 'quiz';
@@ -88,6 +100,8 @@ export interface PhotoVisualData {
   imageUrl?: string;
   caption: string;
   promptUsed: string;
+  /** Always true for a generated image — the UI labels it as an AI-generated illustration. */
+  aiGenerated?: boolean;
   annotations?: Array<{
     label: string;
     description: string;
@@ -102,7 +116,13 @@ export interface DynamicLessonData {
   subject: string;
   tagline: string;
   overview: string;
+  /** Legacy node-and-arrow diagram. Only drawn when there is no `visual` (lessons generated before board pictures). */
   diagram: DynamicDiagramData;
+  /** The board picture for the Shape view — composed per concept from the brick vocabulary (docs/BOARD_VISUALS.md). */
+  visual?: BoardVisual | null;
+  /** A 3D board picture, only present when the generator judged depth genuinely helps this idea. */
+  visual3d?: BoardVisual3D | null;
+  /** Legacy fixed-template 3D scene; only used when there is no `visual` (older lessons). */
   scene3d?: Scene3DData;
   photoVisual?: PhotoVisualData;
   chalkNotes: ChalkboardNotesData;
@@ -116,6 +136,8 @@ export interface BlackboardState {
   lessonData: DynamicLessonData | null;
   isLoading: boolean;
   isGeneratingPhoto?: boolean;
+  /** Set when a requested picture could not be verified — shown instead of a stock image. */
+  photoNotice?: string | null;
   highlightedNodeId: string | null;
   interactiveValues: Record<string, number>;
   selectedQuizOption: number | null;

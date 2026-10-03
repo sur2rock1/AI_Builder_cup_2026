@@ -1,0 +1,181 @@
+// ─────────────────────────────────────────────────────────────────
+// Generating board pictures (server / pregen only — uses the model gateway).
+//
+//   prompt ─► model ─► sanitize + fact-check ─┬─ clean ─────────────► picture
+//                                             └─ problems ─► repair ─► sanitize + fact-check
+//                                                              (once)   └─ still false? strip the false labels
+//
+// Every call goes through src/ai/gateway.ts, so it is logged, timed and
+// falls back across model candidates like every other model call.
+// ─────────────────────────────────────────────────────────────────
+import { generateJSON } from '../ai/gateway';
+import { misconceptionKey } from '../curriculum/catalog';
+import { buildVisualPrompt, buildRepairPrompt, VisualConceptContext, VisualRequest } from './prompt';
+import {
+  sanitizeBoardVisual, repairableIssues, stripUnverifiedClaims, SanitizeResult, VisualIssue,
+} from './sanitize';
+import { AnyBoardVisual, VISUAL_KEYS } from './types';
+
+export interface GenerateVisualOptions {
+  apiKey: string;
+  timeoutMs?: number;
+  /** Retries on 429/503 per model (batch jobs set this; live calls don't). */
+  transientRetries?: number;
+  /** Suffix for the gateway log label, e.g. "main", "contrast". */
+  label?: string;
+}
+
+export interface GenerateVisualResult {
+  visual: AnyBoardVisual | null;
+  /** What was fixed or removed on the way (all non-blocking by now). */
+  issues: VisualIssue[];
+  attempts: number;
+  model?: string;
+  /** For 3D: the model judged a 3D view not useful, and why. */
+  skipped?: string;
+  error?: string;
+}
+
+const count = (issues: VisualIssue[], sev: VisualIssue['severity']) => issues.filter((i) => i.severity === sev).length;
+
+/** Prefer a usable picture; among usable ones, fewer false claims, then fewer warnings. */
+function better(a: SanitizeResult<AnyBoardVisual> | null, b: SanitizeResult<AnyBoardVisual> | null) {
+  if (!a?.visual) return b;
+  if (!b?.visual) return a;
+  const ea = count(a.issues, 'error'), eb = count(b.issues, 'error');
+  if (ea !== eb) return ea < eb ? a : b;
+  return count(a.issues, 'warn') <= count(b.issues, 'warn') ? a : b;
+}
+
+function stamp(visual: AnyBoardVisual, req: VisualRequest): AnyBoardVisual {
+  switch (req.purpose) {
+    case 'teach': return { ...visual, purpose: 'teach', focus: req.focus || visual.focus };
+    case 'contrast': return { ...visual, purpose: 'contrast', misconceptionId: req.misconception.id, focus: req.misconception.belief };
+    case 'apply': return { ...visual, purpose: 'apply', focus: req.item.prompt };
+    case 'space': return { ...visual, purpose: 'teach' };
+  }
+}
+
+export async function generateBoardVisual(
+  ctx: VisualConceptContext,
+  req: VisualRequest,
+  opts: GenerateVisualOptions,
+): Promise<GenerateVisualResult> {
+  const dim: '2d' | '3d' = req.purpose === 'space' ? '3d' : '2d';
+  const call = `visual.${opts.label ?? req.purpose}`;
+  let prompt = buildVisualPrompt(ctx, req);
+  let best: SanitizeResult<AnyBoardVisual> | null = null;
+  let model: string | undefined;
+  let attempts = 0;
+  let lastError: string | undefined;
+
+  while (attempts < 2) {
+    attempts++;
+    let data: any;
+    let raw = '';
+    try {
+      const r = await generateJSON({
+        role: 'strong',
+        call: attempts === 1 ? call : `${call}.repair`,
+        apiKey: opts.apiKey,
+        prompt,
+        timeoutMs: opts.timeoutMs ?? 45_000,
+        transientRetries: opts.transientRetries ?? 0,
+      });
+      data = r.data; raw = r.raw; model = r.model;
+    } catch (err: any) {
+      lastError = String(err?.message || err);
+      break; // keep whatever the first attempt produced
+    }
+
+    if (dim === '3d') {
+      if (attempts === 1 && data && data.useful === false) {
+        return { visual: null, issues: [], attempts, model, skipped: String(data.reason || 'a 3D view would not help this idea').slice(0, 200) };
+      }
+      if (data?.visual && !Array.isArray(data.elements)) data = data.visual;
+    }
+
+    const result = sanitizeBoardVisual(data, dim);
+    best = better(best, result);
+    const blocking = repairableIssues(result.issues);
+    if (result.visual && !blocking.length) { best = result; break; }
+    if (attempts >= 2) break;
+
+    const previous = result.visual ? JSON.stringify(result.visual) : raw.slice(0, 12_000);
+    const toFix = blocking.length ? blocking : result.issues;
+    console.warn(`[visual] ${call}: ${toFix.length} problem(s) found — asking the model to repair:\n  ${toFix.map((i) => i.message).join('\n  ')}`);
+    prompt = buildRepairPrompt(previous, toFix, dim);
+  }
+
+  if (!best?.visual) {
+    return { visual: null, issues: best?.issues ?? [], attempts, model, error: lastError || 'no usable picture' };
+  }
+  const { visual, stripped } = stripUnverifiedClaims(best.visual, best.issues);
+  const issues = [...best.issues.filter((i) => i.severity !== 'error'), ...stripped];
+  if (stripped.length) console.warn(`[visual] ${call}: removed ${stripped.length} label(s) the checker could not verify`);
+  console.log(`[visual] ${call}: "${visual.title}" — ${visual.elements.length} bricks, ${visual.steps.length} steps, ${attempts} attempt(s), ${issues.length} fix(es)`);
+  return { visual: stamp(visual, req), issues, attempts, model };
+}
+
+export interface LessonVisualsOptions extends GenerateVisualOptions {
+  include3D?: boolean;
+  maxContrasts?: number;
+  /** Pause between calls (batch rate-limit courtesy). */
+  pauseMs?: number;
+  /** Skip keys that already exist (e.g. a re-run after a partial failure). */
+  existing?: Record<string, AnyBoardVisual>;
+  /** Keys the model already declined (e.g. "3d": "the idea is flat") — not asked again. */
+  declined?: Record<string, string>;
+}
+
+export interface LessonVisualsReport {
+  key: string;
+  ok: boolean;
+  attempts: number;
+  fixes: number;
+  skipped?: string;
+  error?: string;
+}
+
+/**
+ * Every picture a concept needs for the tutor's lesson arc:
+ *   main           — the teaching picture (TEACH CHUNK)
+ *   contrast:<id>  — one per known misconception (REMEDIATE → CONTRAST_CASE)
+ *   apply          — the ladder's application item, situation only (APPLY)
+ *   3d             — only when the model judges depth genuinely helps
+ */
+export async function generateLessonVisuals(
+  ctx: VisualConceptContext,
+  opts: LessonVisualsOptions,
+): Promise<{ visuals: Record<string, AnyBoardVisual>; declined: Record<string, string>; report: LessonVisualsReport[] }> {
+  const visuals: Record<string, AnyBoardVisual> = { ...(opts.existing || {}) };
+  const declined: Record<string, string> = { ...(opts.declined || {}) };
+  const report: LessonVisualsReport[] = [];
+  const jobs: Array<{ key: string; req: VisualRequest; label: string }> = [
+    { key: VISUAL_KEYS.main, req: { purpose: 'teach' }, label: 'main' },
+  ];
+  for (const m of ctx.misconceptions.slice(0, opts.maxContrasts ?? 3)) {
+    const id = m.id || misconceptionKey(m.belief);
+    jobs.push({ key: VISUAL_KEYS.contrast(id), req: { purpose: 'contrast', misconception: { ...m, id } }, label: 'contrast' });
+  }
+  const applyItem = ctx.ladderItems.find((l) => l.level === 3) || ctx.ladderItems.find((l) => l.level === 4);
+  if (applyItem) jobs.push({ key: VISUAL_KEYS.apply, req: { purpose: 'apply', item: applyItem }, label: 'apply' });
+  if (opts.include3D !== false) jobs.push({ key: VISUAL_KEYS.space, req: { purpose: 'space' }, label: '3d' });
+
+  for (const [i, job] of jobs.entries()) {
+    if (opts.existing?.[job.key]) {
+      report.push({ key: job.key, ok: true, attempts: 0, fixes: 0, skipped: 'already generated' });
+      continue;
+    }
+    if (declined[job.key]) {
+      report.push({ key: job.key, ok: true, attempts: 0, fixes: 0, skipped: declined[job.key] });
+      continue;
+    }
+    if (i > 0 && opts.pauseMs) await new Promise((r) => setTimeout(r, opts.pauseMs));
+    const r = await generateBoardVisual(ctx, job.req, { ...opts, label: job.label });
+    if (r.visual) visuals[job.key] = r.visual;
+    if (r.skipped) declined[job.key] = r.skipped;
+    report.push({ key: job.key, ok: !!r.visual || !!r.skipped, attempts: r.attempts, fixes: r.issues.length, skipped: r.skipped, error: r.error });
+  }
+  return { visuals, declined, report };
+}

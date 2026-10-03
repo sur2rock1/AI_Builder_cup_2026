@@ -5,7 +5,7 @@ import { assessReasoningWithDeadline } from './.build/assessor.bundle.mjs'; impo
 globalThis.STUB = { calls: [], models: { 'gemini-3.6-flash': { delay: 5000 } } };
 let t = Date.now(); let r = await assessReasoningWithDeadline(input, 600);
 ok(r.timedOut && Date.now() - t < 900, `slow model answered at deadline (${Date.now() - t}ms, timedOut=${r.timedOut})`);
-ok(/same method/i.test(r.assessment.tutorGuidance) && r.assessment.candidateMisconceptionIds.length === 0,
+ok(/different way|Walk me through/i.test(r.assessment.tutorGuidance) && r.assessment.candidateMisconceptionIds.length === 0,
    'deadline reply is a transfer move and asserts NO misconception');
 const full = await r.full;
 ok(full.classification === 'misconception_behind_correct', 'full diagnosis still arrives afterwards');

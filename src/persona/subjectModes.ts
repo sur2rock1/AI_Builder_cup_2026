@@ -25,12 +25,28 @@ export const SUBJECT_MODE_SPEC: Record<SubjectMode, SubjectModeSpec> = {
   },
 };
 
-/** Best-effort classifier from a curriculum subject label — refine per-subject as more are added. */
+/** Ladder level names per mode (docs/TUTOR_PERSONA.md §5 and §12.2). Used by
+ * curriculum ingestion to author ladder items in the same terms the tutor uses. */
+export const LADDER_LEVEL_NAMES: Record<SubjectMode, [string, string, string, string]> = {
+  well_structured: ['Recall / recognise', 'Explain why in own words', 'Apply to a similar unseen problem (near)', 'Transfer to a new context or representation (far)'],
+  interpretive: ['Identify a claim', 'Explain a position', 'Build an argument with evidence', 'Apply it to a new source'],
+  skill: ['Recognise', 'Produce with support', 'Produce unaided', 'Use in context'],
+};
+
+/** Best-effort classifier from a curriculum subject label — refine per-subject as more are added.
+ * Word-boundary matches (fixed 2026-09-26): the old substring test sent
+ * "Earth Science" to interpretive because it contains "art". */
 export function subjectModeForSubject(subjectId: string, subjectLabel?: string): SubjectMode {
-  const s = `${subjectId} ${subjectLabel || ''}`.toLowerCase();
-  if (/(essay|history|literature|ethics|design|art|social studies)/.test(s)) return 'interpretive';
-  if (/(language|spelling|vocabulary|music)/.test(s)) return 'skill';
+  const s = `${subjectId} ${subjectLabel || ''}`.toLowerCase().replace(/[^a-z]+/g, ' ');
+  if (/\b(essay|history|literature|ethics|design|art|arts|social studies|civics|philosophy)\b/.test(s)) return 'interpretive';
+  if (/\b(language|languages|spelling|vocabulary|music|french|spanish|german|hindi|mandarin|chinese|malay|tamil)\b/.test(s)) return 'skill';
   return 'well_structured';
+}
+
+/** Mode for a curriculum: the mode assigned at ingest when present, else the label heuristic. */
+export function subjectModeForCurriculum(c: { id: string; label?: string; subjectMode?: string } | null | undefined): SubjectMode {
+  if (c?.subjectMode === 'well_structured' || c?.subjectMode === 'interpretive' || c?.subjectMode === 'skill') return c.subjectMode;
+  return subjectModeForSubject(c?.id || '', c?.label);
 }
 
 export function renderSubjectModeSurface(mode: SubjectMode): string {

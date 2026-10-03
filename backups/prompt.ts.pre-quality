@@ -1,0 +1,275 @@
+// ─────────────────────────────────────────────────────────────────
+// Prompts that turn a curriculum concept into board pictures, written
+// to match how the tutor teaches (docs/TUTOR_PERSONA.md):
+//
+//   §4 session arc — teach ONE idea, then check; build before testing
+//   §7 representations — the board shows only what is being said;
+//      one step per board bullet; choose from the authored ideas
+//   §8 errors — a misconception gets a CONTRAST CASE, not a correction
+//   §10 language — the error belongs to the rule, never the learner
+//   §15 integrity — an application picture never gives the answer
+//
+// The model is given the concept's own authored material (key facts,
+// the worked examples verified at ingest, misconceptions with their
+// probes, the evidence ladder and representation ideas) and a small
+// drawing vocabulary. It decides what to draw; src/visual/sanitize.ts
+// then fact-checks what it drew.
+// ─────────────────────────────────────────────────────────────────
+import type { CurriculumConcept, CurriculumSubject } from '../adaptive/learnerModel';
+import { REPRESENTATION_DESCRIPTIONS, DEFAULT_REPRESENTATION_ORDER } from '../persona/representations';
+import { gradeLevelFromLabel } from '../curriculum/catalog';
+import { VISUAL_LIMITS } from './types';
+import type { VisualIssue } from './sanitize';
+
+export type SubjectModeId = 'well_structured' | 'interpretive' | 'skill';
+
+export interface MisconceptionInput {
+  id?: string;
+  belief: string;
+  triggerPattern?: string;
+  probeQuestion?: string;
+  correctionHint?: string;
+}
+
+export interface VisualConceptContext {
+  topic: string;
+  grade: string;
+  subjectLabel?: string;
+  subjectMode?: SubjectModeId;
+  chapter?: string;
+  keyFacts: string[];
+  /** Worked examples checked by the ingest review (docs/CURRICULUM.md §4). */
+  workedExamples: string[];
+  misconceptions: MisconceptionInput[];
+  ladderItems: Array<{ level: number; prompt: string; lookFor: string }>;
+  representationIdeas: Array<{ strategy: string; idea: string }>;
+  prerequisites?: string[];
+}
+
+export type VisualRequest =
+  | { purpose: 'teach'; focus?: string }
+  | { purpose: 'contrast'; misconception: MisconceptionInput }
+  | { purpose: 'apply'; item: { level: number; prompt: string; lookFor: string } }
+  | { purpose: 'space' };
+
+/** Build the prompt context from a curriculum concept (server / pregen). */
+export function conceptContext(
+  concept: CurriculumConcept,
+  course?: Pick<CurriculumSubject, 'label' | 'grade' | 'subjectMode'> | null,
+  gradeOverride?: string,
+): VisualConceptContext {
+  const misconceptions: MisconceptionInput[] = concept.misconceptionDetails?.length
+    ? concept.misconceptionDetails.map((m) => ({
+        id: m.id, belief: m.belief, triggerPattern: m.triggerPattern,
+        probeQuestion: m.probeQuestion, correctionHint: m.correctionHint,
+      }))
+    : (concept.commonMisconceptions || []).map((belief) => ({ belief }));
+  return {
+    topic: concept.label,
+    grade: gradeOverride || course?.grade || 'Grade 8',
+    subjectLabel: course?.label,
+    subjectMode: (course?.subjectMode as SubjectModeId | undefined) ?? 'well_structured',
+    chapter: concept.chapter,
+    keyFacts: concept.keyFacts || [],
+    workedExamples: concept.workedExamples || [],
+    misconceptions,
+    ladderItems: (concept.ladderItems || []).map((l) => ({ level: l.level, prompt: l.prompt, lookFor: l.lookFor })),
+    representationIdeas: (concept.representationIdeas || []).map((r) => ({ strategy: r.strategy, idea: r.idea })),
+    prerequisites: (concept.prerequisiteDetails || []).map((p) => p.label),
+  };
+}
+
+/** Minimal context for an ad-hoc topic that is not in any course. */
+export function adHocContext(topic: string, grade: string): VisualConceptContext {
+  return { topic, grade, keyFacts: [], workedExamples: [], misconceptions: [], ladderItems: [], representationIdeas: [] };
+}
+
+function ageFor(grade: string): string {
+  const level = gradeLevelFromLabel(grade);
+  return level !== undefined ? `${level + 5}-year-old` : 'secondary-school';
+}
+
+const list = (items: string[], empty: string) => (items.length ? items.map((s, i) => `  ${i + 1}. ${s}`).join('\n') : `  ${empty}`);
+
+// ─── the drawing vocabulary (shared by every 2D prompt) ──────────
+
+const VOCABULARY_2D = `THE DRAWING VOCABULARY — compose the picture from these bricks. There are no templates:
+choose whatever combination shows THIS idea best.
+
+FRAME (pick one)
+  "plane"  real maths coordinates, y points UP, drawn with real axes and numbers:
+           {"kind":"plane","x":[xmin,xmax],"y":[ymin,ymax],"axes":"both","grid":true,"equalScale":true,"xLabel":"x","yLabel":"y"}
+           graphs, coordinates, geometry, vectors. Number line or timeline: "axes":"x" (y is ignored, put things at y = 0).
+           equalScale true = 1 unit on x is as long as 1 unit on y (needed for true shapes and angles).
+  "canvas" free layout space, x 0..100 left→right, y 0..60 top→bottom: {"kind":"canvas"}
+           processes, cycles, cause and effect, labelled parts of an object, algebra working line by line, comparisons.
+
+BRICKS — every brick has a unique short "id"; optional "name" (how you would SAY it aloud, e.g. "the vertical line"),
+"label" (text drawn beside it, max 4 words or one formula) and "color" (ink | muted | emerald | amber | sky | violet | rose | teal).
+  point     {"kind":"point","at":[x,y],"style":"solid"}                  "open" = hollow (e.g. a point NOT included)
+  segment   {"kind":"segment","from":[x,y],"to":[x,y],"arrow":"none","dashed":false}   arrow: none|end|start|both
+  line      {"kind":"line","through":[[x1,y1],[x2,y2]]}                  infinite straight line — plane only
+  ray       {"kind":"ray","from":[x,y],"through":[x,y]}                  starts at "from", runs off the board — plane only
+  polygon   {"kind":"polygon","points":[[x,y],[x,y],[x,y]],"fill":true}  shapes, shaded regions
+  polyline  {"kind":"polyline","points":[[x,y],...],"arrow":"end"}       paths, zig-zags, curved-ish routes
+  circle    {"kind":"circle","center":[x,y],"r":2,"fill":false}          add "ry" for an ellipse
+  angle     {"kind":"angle","vertex":[x,y],"from":[x,y],"to":[x,y],"right":true}   angle mark; "right":true draws the square — plane only
+  function  {"kind":"function","expr":"2x + 1","domain":[-3,3]}          the curve y = expr (x, + - * / ^, sqrt, sin, cos, tan, abs, log, ln, exp, pi) — plane only
+  text      {"kind":"text","at":[x,y],"text":"3x + 6 = 12","size":"md","math":true}   size: sm|md|lg|xl
+  box       {"kind":"box","at":[x,y],"text":"Evaporation","sub":"water → vapour"}      centred on "at" — canvas only
+  connector {"kind":"connector","from":"<brick id>","to":"<brick id>","label":"heat","arrow":"end","bend":0.3}   joins two bricks by their edges
+  table     {"kind":"table","rows":[["x","y"],["0","1"],["1","3"]],"placement":"right"}   at most one; drawn beside the picture`;
+
+const VOCABULARY_3D = `THE 3D VOCABULARY — frame {"kind":"space","x":[min,max],"y":[min,max],"z":[min,max],"axes":true}.
+x points right, y points UP, z points toward the viewer. Every brick has "id", optional "name", "label", "color"
+(ink | muted | emerald | amber | sky | violet | rose | teal).
+  point     {"kind":"point","at":[x,y,z]}
+  segment   {"kind":"segment","from":[x,y,z],"to":[x,y,z],"arrow":"end","dashed":false}
+  polygon   {"kind":"polygon","points":[[x,y,z],...],"fill":true}         a flat face, plane region or cross-section
+  sphere    {"kind":"sphere","center":[x,y,z],"r":1,"wireframe":false}
+  cuboid    {"kind":"cuboid","center":[x,y,z],"size":[w,h,d],"wireframe":false}
+  cylinder  {"kind":"cylinder","from":[x,y,z],"to":[x,y,z],"r":1,"rTop":1}  rTop 0 = cone
+  label     {"kind":"label","at":[x,y,z],"text":"height = 5 cm"}`;
+
+const STEPS_SPEC = `STEPS — the picture is a teaching sequence, revealed by the tutor as it speaks.
+"steps":[{"id":"s1","name":"<2-5 words the tutor will say to reveal it; unique>","caption":"<one sentence the learner reads, max 18 words>",
+          "show":["ids that appear at this step"],"focus":["ids to spotlight now"],"phase":"hook|teach|contrast|check|apply"}]
+  • 3 to ${VISUAL_LIMITS.maxSteps - 1} steps. ONE idea per step. Each step adds only what its caption talks about —
+    the board shows only what is being said, never everything at once.
+  • Step 1 anchors the learner (the axes, the object, the situation); the idea is then built up piece by piece.
+  • A brick appears in exactly one step's "show" (it then stays). Bricks in no step are always visible — use that
+    only for quiet scaffolding (e.g. nothing, or a faint reference line).`;
+
+const TRUTH_RULES = `TRUTH AND CLARITY RULES (an automatic checker enforces these; a false label is deleted before a child sees it)
+  • Every label must be exactly true for what is drawn: a label "(2, -2)" only on a point AT [2,-2];
+    "x = 2" only on a line whose points all have x = 2; "y = 2x + 1" only on that exact line or curve;
+    a right-angle mark only where the angle really is 90°; lengths like "5 cm" only where the drawn length is 5 on the axes.
+  • When you draw an example, reuse the NUMBERS from the verified worked examples below if they fit — they were checked.
+  • Coordinates you mention in captions must be on the board.
+  • Keep text short: labels are words or formulas, captions are one sentence. No paragraphs on the board.
+  • Leave room: no two labelled things closer than ~1 unit on a plane or ~10 units on the canvas, so labels never collide.
+    Choose plane ranges with a margin around everything important.
+  • Colour carries meaning: one colour per idea, the same colour for everything belonging to it; ink = neutral, muted = scaffolding.
+  • At most ${VISUAL_LIMITS.maxElements - 8} bricks. Prefer fewer, clearer bricks.`;
+
+function languageRules(age: string) {
+  return `LANGUAGE (the tutor's own rules): captions and labels are for a ${age}. Warm, plain words.
+  Never "wrong", "incorrect", "mistake" or "silly". A mix-up is "a rule worth testing" or "a common mix-up" — the error
+  belongs to the rule, never the learner. Never compare learners.`;
+}
+
+function conceptBlock(ctx: VisualConceptContext) {
+  const order = DEFAULT_REPRESENTATION_ORDER[ctx.subjectMode ?? 'well_structured'];
+  const repDescriptions = order.map((r) => `  ${r}: ${REPRESENTATION_DESCRIPTIONS[r]}`).join('\n');
+  return `CONCEPT: "${ctx.topic}"${ctx.chapter ? ` (${ctx.chapter})` : ''}
+LEARNER: ${ctx.grade}${ctx.subjectLabel ? `, ${ctx.subjectLabel}` : ''}
+
+KEY FACTS the learner must come to understand:
+${list(ctx.keyFacts, '(none given — use the standard facts for this concept at this grade)')}
+
+VERIFIED WORKED EXAMPLES (numbers checked at ingest — reuse them):
+${list(ctx.workedExamples, '(none — choose simple whole numbers and double-check them)')}
+
+KNOWN MISCONCEPTIONS for this concept:
+${list(ctx.misconceptions.map((m) => `${m.id ? `[${m.id}] ` : ''}${m.belief}${m.correctionHint ? ` — correction: ${m.correctionHint}` : ''}`), '(none recorded)')}
+
+REPRESENTATION IDEAS the curriculum authored for this concept (realise one of these when it fits):
+${list(ctx.representationIdeas.map((r) => `${r.strategy}: ${r.idea}`), '(none — choose the clearest representation yourself)')}
+
+The tutor's representation catalogue, in this subject's default order:
+${repDescriptions}`;
+}
+
+const OUTPUT_2D = `Return ONLY this JSON (no markdown):
+{"dim":"2d","title":"<short title>","purpose":"<teach|contrast|apply>","representation":"<one representation id from the catalogue>",
+ "why":"<one sentence: what this picture lets the learner SEE that words alone would not>",
+ "frame":{...},"elements":[...],"steps":[...],"checkQuestion":"<one question the tutor can ask pointing at the finished picture>"}`;
+
+/** The main generation prompt for one picture. */
+export function buildVisualPrompt(ctx: VisualConceptContext, req: VisualRequest): string {
+  const age = ageFor(ctx.grade);
+  const header = `You design the picture a patient, expert tutor builds on the board while teaching a ${age}.
+The tutor teaches ONE idea at a time, shows before it tells, then checks understanding. Your picture must do real
+teaching work — make the idea VISIBLE so the learner can see why it is true — not decorate the lesson.`;
+
+  if (req.purpose === 'space') {
+    return `${header}
+
+${conceptBlock(ctx)}
+
+TASK: decide whether a 3D model would genuinely help the learner understand THIS concept — for example solids,
+surfaces, volume, 3D coordinates, rotation, orbits, molecules, layered structures. If the idea is really flat (a 2D graph,
+a number line, an equation, a 2D shape, a process), a 3D view adds nothing and distracts: say so.
+
+${VOCABULARY_3D}
+
+${STEPS_SPEC}
+
+${TRUTH_RULES}
+
+${languageRules(age)}
+
+Return ONLY JSON, one of:
+{"useful": false, "reason": "<one sentence>"}
+{"useful": true, "reason": "<one sentence>", "visual": {"dim":"3d","title":"...","purpose":"teach","representation":"visual_diagram",
+  "why":"...","frame":{"kind":"space",...},"elements":[...],"steps":[...],"checkQuestion":"..."}}`;
+  }
+
+  let task: string;
+  if (req.purpose === 'teach') {
+    task = req.focus && req.focus.trim().toLowerCase() !== ctx.topic.trim().toLowerCase()
+      ? `TASK: draw the picture for this part of the lesson: "${req.focus}". Stay within this concept and grade.`
+      : `TASK: draw the MAIN teaching picture for this concept — the one the tutor builds while first explaining it.
+  • It must make the key facts visible. If a known misconception exists, the finished picture should contain the
+    evidence that quietly contradicts it (without calling anything wrong) — the tutor will point at it.
+  • Realise the best-fitting authored representation idea above when there is one.`;
+  } else if (req.purpose === 'contrast') {
+    const m = req.misconception;
+    task = `TASK: draw a CONTRAST CASE. The tutor shows this picture when the learner seems to believe:
+    "${m.belief}"${m.triggerPattern ? `\n  (it shows up as: ${m.triggerPattern})` : ''}${m.probeQuestion ? `\n  The tutor's probe question: "${m.probeQuestion}"` : ''}${m.correctionHint ? `\n  What should become clear: ${m.correctionHint}` : ''}
+  Build it in this order:
+    1. set up a situation where the rule can be tested (phase "teach");
+    2. apply the learner's rule and let the picture show where it breaks — a visible clash, not a verdict (phase "contrast");
+    3. show the rule that does work, doing the job in the same picture (phase "teach");
+    4. end on a step whose caption asks the learner to explain the difference (phase "check").
+  Captions test the rule ("Let's test this rule"), never judge the learner. Set "purpose":"contrast".`;
+  } else {
+    task = `TASK: draw an APPLICATION picture. The learner has been taught the idea and will now apply it to:
+    "${req.item.prompt}"
+  Draw the SITUATION of this problem — only the information the problem gives — so the learner can reason from it.
+  NEVER draw, label or caption the answer (${req.item.lookFor ? 'the learner must work it out themselves' : 'the learner works it out'}).
+  The final step (phase "apply") asks the question in the caption. Set "purpose":"apply".`;
+  }
+
+  return `${header}
+
+${conceptBlock(ctx)}
+
+${task}
+
+${VOCABULARY_2D}
+
+${STEPS_SPEC}
+
+${TRUTH_RULES}
+
+${languageRules(age)}
+
+${OUTPUT_2D}`;
+}
+
+/** Second attempt: hand the checker's findings back to the model. */
+export function buildRepairPrompt(previousJson: string, issues: VisualIssue[], dim: '2d' | '3d'): string {
+  const problems = issues.map((i) => `  - ${i.message}`).join('\n');
+  return `You drew this board picture for a school lesson:
+${previousJson}
+
+An automatic checker compared every label with what is actually drawn and found:
+${problems}
+
+Fix each problem — change the geometry or change the label so every stated fact is exactly true — and keep
+everything else (the steps, the teaching order, the ids) the same.
+${dim === '3d' ? VOCABULARY_3D : VOCABULARY_2D}
+
+Return ONLY the corrected JSON in exactly the same format${dim === '3d' ? ' (the visual object itself, with "dim":"3d")' : ''}.`;
+}

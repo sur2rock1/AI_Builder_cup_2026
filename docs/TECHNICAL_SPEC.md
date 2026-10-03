@@ -1,6 +1,6 @@
 # Technical Specification — Adaptive AI Tutor
 
-_Status: v1.0 · 2026-09-24 · Repo: `pythagoras-tutor`_
+_Status: v1.1 · 2026-09-30 (§3, §6, §10 extended with the content quality layer — D-2026-09-30-1…4) · Repo: `pythagoras-tutor`_
 
 ## 1. Current state (as-is audit, 2026-09-24)
 
@@ -69,6 +69,11 @@ logging) · persona (`src/persona`) · plan (`src/plan`) · learner model (`src/
 | Session orchestrator | `server/session/orchestrator.ts` | Start: load → compile → compose → connect. Per exchange: diagnose → record → delta → push. End: profile → summarise → schedule | New (extracted from `server.ts`) |
 | Text tutor endpoint | `server/routes/tutor.ts` | `POST /api/tutor/turn` | New |
 | UI | `LearnerCard.tsx`, `TutorReasoningPanel.tsx`, `Onboarding.tsx`; extend `ParentPortal.tsx`, `LearnerProfilePanel.tsx` | Views | New / changed |
+| Content quality layer (2026-09-30) | `src/quality/{types,language,quizTools,leakLint,visualText,visualLint,lessonLint,model,critic,recordLint,upgrade}.ts` | Deterministic lints (persona language, quiz shuffle/lint, answer-leak, picture structure + layout) and the independent critic; `JsonModel` seam so every loop runs offline in tests | New (docs/BOARD_VISUALS.md §5b) |
+| Lesson text generator | `src/curriculum/{lessonPrompt,lessonGen}.ts` | One prompt + gated loop (draft → lint → critic incl. blind quiz solve → repair → ship or withhold) for pregen **and** live `/api/generate-lesson` | New |
+| Photo generator | `src/curriculum/photoGen.ts` | Lesson-specific scene plan → image → vision review → verified-only, AI-labelled | New |
+| Serve rules | `src/curriculum/serve.ts` | What a browser may see: no tutor-only fields, only verified photos, sanitised reasoning | New |
+| Quiz evidence guard | `src/adaptive/assessmentEngine.ts` (`capForEvidence`) | No child-written reasoning → recognition at most; "guessed" never scored as understanding | Changed |
 
 ## 4. APIs
 
@@ -82,7 +87,7 @@ logging) · persona (`src/persona`) · plan (`src/plan`) · learner model (`src/
 | GET | `/api/learners/:id/events?conceptId=` | Evidence replay |
 | POST | `/api/session/start` | Compile the plan; returns `{sessionId, plan}` (existing, extended) |
 | POST | `/api/session/:id/end` | Trigger the Profiler (existing, extended) |
-| POST | `/api/tutor/turn` | Text-channel turn: `{sessionId, learnerText, confidence?}` → `{tutorText, board?, move, reasoning}` |
+| POST | `/api/tutor/turn` | Text-channel turn (T08, built 2026-09-28): `{sessionId, learnerText}` → `{sessionId, turn, tutorText, move, diagnosis, planUpdate}`. First call for a session omits `learnerText` and gets the opening/kickoff line back. No `board` field — this channel has no board. No `confidence` field yet — FR-14 (confidence capture) is not built on either channel. `diagnosis`/`move` are populated only on turns where the model actually calls `assess_child_reasoning` (`null` otherwise, same as the voice WS's `learner_update_v2`) |
 | WS | `/ws/live?sessionId=…` | Voice; the server resolves learner/plan from `sessionId` (**not** from client-sent topic/grade) |
 | WS msg | `learner_update`, `plan_update`, `tutor_reasoning` | Server → client pushes |
 
@@ -123,7 +128,14 @@ validator → repo.saveProfile + saveSession → review scheduling.
 | Tutor (text) | Fast model | Same composed prompt + history | `{tutorText, move, board?}` | Same | Retry once; canned "let me think" + retry | EV-03 |
 | Diagnostician | Fast model | Question, answer, reasoning, closed catalogue, concept facts, recent ledger | `{classification, understandingDepth, errorClass, candidateMisconceptionIds, confidence, reasoningSummary, probeQuestion?}` | Interpreting free-text reasoning; rules cannot | Deadline → conservative "needs_clarification" (existing behaviour); never asserts a misconception on failure | EV-01 |
 | Profiler | Stronger model | Session events, active claims, onboarding | `{claims[], retire[], narrative}` | Summarising patterns across evidence into scoped plain language | Skip → retry at next session; model state is still correct without it | Claim-validator rejection rate; human spot-check |
-| Content generation (visuals, examples, transfer items) | Existing image/lesson paths | Concept + interests + representation | Visual / item | Generating a new representation on demand | Pre-generated assets for the demo concept | Manual review |
+| Content generation — lesson text (2026-09-30) | Strong model via gateway (`lesson.text`, `.repair`) | Concept's key facts, verified examples, misconceptions, ladder pair (form A shown so form B differs), prerequisites | `{tagline, overview, chalkNotes, quiz{options, correctIndex, explanation, hint, lookFor, optionNotes}, suggestedQuestions[3], diagnostics[]}` | Writing a *new-situation* quiz whose distractors are real misconceptions, in the child's register | Lints + critic → repair (3 attempts pregen / 2 live) → **withhold** on unresolved error; live falls back to the plain template and says so | `tests/smoke/lesson-gen.mjs` (scripted model); real-model catch rate **unmeasured** |
+| Content generation — board pictures (2026-09-30) | Strong model (`visual.plan/main/focus/contrast/apply/3d`) | Concept material + drawing vocabulary + persona/truth rules | Brick + step JSON | Composing the picture that makes *this* idea visible, one idea per picture | Sanitizer fact-check → lints → critic → repair → **quarantine** | `tests/smoke/quality.mjs`, `board-visual.mjs`; real-model convergence rate **unmeasured** |
+| Independent critic (2026-09-30) | `review` role (`MODEL_REVIEW`) | Artefact + the curriculum's key facts (never the drafting prompt); for quizzes, the question **without the key** | `{issues[{severity, code, where, message, fix}], keyFactsCovered[]}`; blind quiz solve `{solvedIndex, alsoDefensible[]}` | Fact/label/drawing contradictions (e.g. 46→92 chromosomes) that deterministic checks cannot see | A failed critic call ⇒ `criticRan:false` recorded; artefact never presented as reviewed | Scripted-model tests only; false-negative/positive rate **unmeasured** |
+| Photo review (2026-09-30) | `review` role, inline image (vision) | Generated image + intended scene + key facts | `{showsConcept, caption, issues[]}` | Detecting garbled text/numbers, wrong anatomy, irrelevance in an AI image | Reviewer unavailable ⇒ **no photo**; two rejections ⇒ no photo | `tests/smoke/photo-gen.mjs` (scripted); not yet run on real images |
+| Ladder coverage check (2026-09-30) | `review` role | Key facts + worked examples + ladder items | `{items[{index, answerable, missing}]}` | Judging "can this be answered from what was taught" | Reported to `record.quality.untaughtLadderItems`; never auto-fixed | — |
+| Curriculum extraction (2026-09-26) | Strong model via gateway, PDF part (Files API) | One ≤60-page textbook or syllabus chunk + board/grade/subject | `{chapters[…concepts…]}` / `{topics[]}` | Reading arbitrary textbooks and syllabi into structured concepts | Per-chunk retry; unreadable chunk → warning, rest continues | `tests/smoke/curriculum-ingest.mjs` (stubbed); real-PDF run pending |
+| Curriculum structure (2026-09-26) | Strong model via gateway | Whole course outline (ids, labels, facts, implied prerequisites, syllabus topics) | `{subjectMode, conceptTypes[], concepts[{conceptType, prerequisites[], externalPrerequisites[]}], chapterScope[]}` | Judging conceptual dependency and "same way of thinking" across a whole book | Deterministic validation (acyclic, ids exist, types declared, published types frozen); failure → no edges, type `general` | same |
+| Curriculum AI review (2026-09-26) | Strong model via gateway | One chapter's draft concepts + subject mode + age band | `{concepts[{verdict, keyFacts, workedExamples[status], misconceptions[id], ladder[L1–L4], representations[]}]}` | Re-working examples and authoring mode-specific ladder items; replaces a human review step (D-2026-09-26-7) | Unfixable examples dropped; failure → concept published without worked examples | Review report stored per course; catch-rate study pending |
 
 ## 7. Observability
 Structured JSON logs per AI call (`src/ai/gateway.ts`); per session: `personaVersion`,
@@ -152,3 +164,4 @@ with `/api/**` rewrites (existing). WebSocket direct to Cloud Run (existing work
 | Persona composer | Snapshot per age band × subject mode × channel; hard rules present; plan block present |
 | Diagnostician | Existing offline stub scenarios + EV-01 labelled set (live model, run manually) |
 | End-to-end | Simulated-learner harness through `/api/tutor/turn` (EV-02, EV-03) |
+| Content quality gates (2026-09-30) | `npm run test:gates`: `quality.mjs` (33: language, quiz, leaks, geometry, picture lints, generate→critic→repair→withhold with a scripted model, planner, **regression corpus** of the reviewed defective material), `lesson-gen.mjs` (9), `photo-gen.mjs` (5), `quiz-evidence.mjs` (5), `ladder-pair.mjs` (5), `serve.mjs` (4), plus `board-visual` (33+13) and `curriculum-ingest`. **Not covered:** real-model output quality; browser rendering of regenerated pictures (`npm run review:pregen` + `preview:visuals` after `npm run pregen:ch1`). `npm run verify` = tsc + gates + scorecard. Pre-existing: `tests/live/run.mjs` has 7 failures unrelated to this work (they fail identically on the pre-change `server.ts`). |

@@ -93,7 +93,7 @@ RULES
 - "misconceptions": only if the child's words show a specific faulty idea. Quote their words in "evidence". Keep existing ids when it is the same idea. Status "suspected" unless it already was suspected and the child showed it again ("confirmed"), or the child now clearly reasons correctly about it ("resolved"). Do not invent one from a single unclear reply.
 - "evidence": the child's own words that support your judgement (short quote). Empty string if the child has not said anything substantive yet.
 - "noticed": one friendly sentence a teacher would find useful (e.g. "Added the sides instead of squaring them first").
-- "nextStep": one short line — what would help next (e.g. "Try a triangle with sides 6 and 8", "Revisit what squaring means").
+- "nextStep": one short line — what would help next (e.g. "Try the same idea with a different example", "Revisit the prerequisite idea first").
 - "probeQuestion": optional — one question that would reveal whether the child really understands.
 - If nothing new was learned about the child, keep the previous values.
 

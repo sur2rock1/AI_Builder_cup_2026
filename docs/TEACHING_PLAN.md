@@ -31,7 +31,7 @@ counts.
 | Input | From |
 |---|---|
 | `LearnerProfile` (ageBand, onboarding, conceptStates, strategyProfile, affect, claims, review) | LEARNER_MODEL.md |
-| `CurriculumSubject` (concepts, prerequisites, misconception catalogue, difficulty, conceptType) | `data/curricula.json`, `src/curriculum/*` |
+| `CurriculumSubject` (concepts, prerequisites, misconception catalogue, difficulty, conceptType, subjectMode, ladder items) | the curriculum library — Firestore `curricula` / `data/curricula.json`, built by ingestion (docs/CURRICULUM.md) |
 | Persona config (limits, thresholds, age-band surface, subject mode) | `src/persona/config.ts`, `ageBands.ts`, `subjectModes.ts` |
 | Session context | Requested subject/concept (optional), channel, now() |
 
@@ -95,15 +95,27 @@ export interface TeachingPlan {
 
 ---
 
+## 3a. Content the plan relies on (added 2026-09-30)
+
+The plan assumes the pre-generated concept material has passed the quality gates
+(docs/CH1_FIX_PLAN.md, `src/quality/**`). Two consequences for planning:
+- **Predict-first pictures.** When the plan selects `visual_diagram` / `worked_example`, the picture
+  it points at asks for a prediction before the reveal (TUTOR_PERSONA §7.1). The plan never assumes
+  a picture exists: a concept whose pictures were quarantined is taught with the non-visual moves
+  and the tutor is told there is no board picture.
+- **Quiz = recognition until reasoned.** A quiz answer contributes L1 evidence unless the learner
+  supplied reasoning first (LEARNER_MODEL §5.1a); the plan should follow a click-only answer with
+  the "why" probe rather than treat it as L2.
+
 ## 4. Compile algorithm — `compileTeachingPlan(profile, curriculum, ctx)`
 
 Each step records a `PlanReason { rule, text, evidenceRefs }`.
 
 1. **Review first** (rule `R-REVIEW`): concepts with `review.nextDueAt ≤ now`, ordered by overdue-ness, max 3.
-2. **Target concept** (rule `R-TARGET`): the requested concept if given, else the next concept in teaching order whose `masteryStatus` is `none`/`provisional` and whose prerequisites all have `pKnown ≥ 0.6`. If a prerequisite fails that bar → the prerequisite becomes the target (`R-PREREQ-FIRST`).
-3. **Prerequisite probes** (rule `R-PROBE`): direct prerequisites without `durable` mastery, max `limits.maxPrereqProbes`. Skip any with L3+ evidence in the last 14 days.
+2. **Target concept** (rule `R-TARGET`): the requested concept if given, else the next concept in teaching order whose `masteryStatus` is `none`/`provisional`. If a direct prerequisite has **evidence** (any evidence event or attempt) **and** `pKnown < 0.6` → that prerequisite becomes the target (`R-PREREQ-FIRST`). _Changed 2026-09-26 (D-2026-09-26-8): a prerequisite with no evidence used to count as weak, which — once courses had real prerequisite graphs — would have redirected every new learner away from the concept they chose. No evidence is not evidence of weakness; such prerequisites are probed (step 3)._
+3. **Prerequisite probes** (rule `R-PROBE`): direct in-course prerequisites without `durable` mastery, then prerequisites from an earlier grade / another subject (`prerequisiteDetails` without `conceptId`, listed as `external:<slug>`, probe-only), max `limits.maxPrereqProbes`. The check question is the target's own link to that prerequisite (`prerequisiteDetails[].checkQuestion`), else the prerequisite's L1 ladder item. _(Fixed 2026-09-26: it used to take the prerequisite's own first prerequisite's question.)_ Not yet implemented: skipping prerequisites with L3+ evidence in the last 14 days.
 4. **Watch-list** (rule `R-WATCH`): ledger entries on the target concept with status suspected/confirmed, plus misconceptions confirmed on sibling concepts of the same `conceptType` (often the same underlying wrong rule). Attach the catalogue probe question.
-5. **Representation order** (rule `R-REP`): for the target's `conceptType`, rank representations by the `strategyProfile` Beta mean (demo mode) or a Thompson sample (live mode). Tie-break by subject-mode default. Representations with ≥ 3 uses and mean < 0.3 → `avoidRepresentations` (`R-AVOID`). If there is no data for this conceptType, borrow from the nearest conceptType in the same subject, weighted 0.5.
+5. **Representation order** (rule `R-REP`): for the target's `conceptType` (always via `conceptTypeFor(def, state)` — the course's ingest-time type wins; AGENT_GUIDE landmine #6), rank representations by the `strategyProfile` Beta mean (demo mode) or a Thompson sample (live mode). Tie-break by subject-mode default. Representations with ≥ 3 uses and mean < 0.3 → `avoidRepresentations` (`R-AVOID`). If there is no data for this conceptType, borrow from the nearest conceptType in the same subject, weighted 0.5.
 6. **Scaffold level** (rule `R-SCAFFOLD`): `highestLevel ≤ 1` → full; `2–3` → faded; `≥ 4` → independent.
 7. **Difficulty** (rule `R-DIFF`): base = concept difficulty; +1 if recent success rate > 90% over ≥ 5 items; −1 if < 60%.
 8. **Fast-track** (rule `R-FAST`): eligible if all prerequisites are durable and the target already has L2+ evidence with sound reasoning.
@@ -144,7 +156,7 @@ After each `EvidenceEvent`:
 | Event outcome | Delta |
 |---|---|
 | Failed check with representation X | Mark X tried; next `SWITCH_REPRESENTATION` uses the next item in `representationOrder`; `retryCount++` |
-| `retryCount == retryCap` | Instruction: `PARK_AND_ESCALATE`; schedule review for tomorrow |
+| `retryCount >= retryCap` (a correct answer resets the count) | Instruction: `TEACH_DIRECTLY` — worked parallel example, then one smaller question. Never park/escalate/defer |
 | Misconception newly suspected | Add to the watch-list with its probe; instruction `DISCRIMINATING_PROBE` |
 | Misconception confirmed | Instruction `CONTRAST_CASE`, then a transfer item |
 | L3 on 2 distinct items + pKnown ≥ 0.8 | Instruction: move to `TRANSFER_FAR` or the next concept |
@@ -176,10 +188,12 @@ This is what the parent portal replay and the "Tutor's reasoning" panel display.
 | ID | Given | Expect |
 |---|---|---|
 | TP-01 | Empty profile | Cold-start defaults (§3) |
-| TP-02 | Prerequisite with pKnown 0.4 | Prerequisite becomes the target (`R-PREREQ-FIRST`) |
+| TP-02 | Prerequisite with evidence and pKnown 0.4 | Prerequisite becomes the target (`R-PREREQ-FIRST`) — `tests/smoke/curriculum-ingest.mjs` |
+| TP-02b | Prerequisite with no evidence | Requested concept stays the target; prerequisite is in `prerequisitesToProbe` — `tests/smoke/curriculum-ingest.mjs` |
+| TP-02c | Earlier-grade prerequisite (no `conceptId`) | Appears in `prerequisitesToProbe` as `external:*` with its check question — `tests/smoke/curriculum-ingest.mjs` |
 | TP-03 | strategyProfile: worked_example 4/5, direct 0/3 | worked_example first; direct in avoid |
 | TP-04 | Review due yesterday | Appears in reviewItems |
 | TP-05 | Confirmed misconception on sibling concept | Appears in the target's watch-list |
-| TP-06 | Delta: 3 failed switches | PARK_AND_ESCALATE instruction |
+| TP-06 | Delta: 3 misses without a success | TEACH_DIRECTLY instruction; no park/escalate flag (tests/smoke/plan-delta-never-stops.mjs) |
 | TP-07 | Demo mode | Identical plan for identical input (determinism) |
 | TP-08 | Every plan field with a choice | Has a PlanReason with a rule ID |

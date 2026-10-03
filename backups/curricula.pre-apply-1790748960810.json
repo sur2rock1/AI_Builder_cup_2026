@@ -1,0 +1,2606 @@
+[
+  {
+    "id": "igcse--g8--mathematics",
+    "label": "Mathematics",
+    "subject": "Mathematics",
+    "board": "IGCSE",
+    "gradeLevel": 8,
+    "grade": "Grade 8",
+    "source": "Shinglee 2A Think Mathematics first 3 chapters",
+    "sources": [
+      {
+        "id": "shinglee-2a-think-mathematics-first-3-chapters",
+        "kind": "textbook",
+        "title": "Shinglee 2A Think Mathematics first 3 chapters",
+        "fileName": "Shinglee-2A-Think-Mathematics-first 3 chapters.pdf",
+        "pages": 106,
+        "ingestedAt": 1790502988677
+      }
+    ],
+    "subjectMode": "well_structured",
+    "conceptTypes": {
+      "graphical-representation": "Plotting, interpreting, and solving equations using straight-line graphs on Cartesian coordinate planes",
+      "algebraic-systems": "Manipulating and solving pairs of simultaneous linear equations using algebraic techniques",
+      "inequalities": "Understanding inequality symbols, transformation properties, and visualizing solution sets on number lines",
+      "algebraic-modelling": "Translating contextual word problems into mathematical equations or inequalities and interpreting solutions",
+      "polynomial-expansion": "Expanding algebraic brackets using the distributive law and collecting like terms",
+      "algebraic-factorisation": "Reversing expansion by factoring algebraic and quadratic expressions into products of simpler terms"
+    },
+    "concepts": [
+      {
+        "id": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--equations-of-horizontal-and-vertical-lines",
+        "label": "Equations of Horizontal and Vertical Lines",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [],
+        "prerequisiteDetails": [
+          {
+            "label": "Cartesian Coordinates and Gradient",
+            "reason": "Required to plot points and determine the slope of lines from coordinates.",
+            "checkQuestion": "What are the coordinates of the point where the line y = 4 crosses the y-axis?"
+          }
+        ],
+        "commonMisconceptions": [
+          "A horizontal line has the equation x = c because the line runs parallel to the x-axis.",
+          "The gradient of a vertical line is 0 instead of undefined."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "horizontal-line-named-x",
+            "belief": "A horizontal line has the equation x = c because the line runs parallel to the x-axis.",
+            "triggerPattern": "Writing x = 3 when asked for the equation of a horizontal line passing through (0, 3).",
+            "probeQuestion": "What is the y-coordinate of every point along this horizontal line? Does x stay constant or does y stay constant?",
+            "correctionHint": "Notice that every point on a horizontal line has the same y-value, so the equation that describes all those points is y = constant."
+          },
+          {
+            "id": "vertical-gradient-zero",
+            "belief": "The gradient of a vertical line is 0 instead of undefined.",
+            "triggerPattern": "Confusing zero gradient (horizontal) with dividing by zero (vertical).",
+            "probeQuestion": "If you calculate gradient as (change in y) / (change in x) between two points on a vertical line, what is the value in the denominator?",
+            "correctionHint": "On a vertical line, change in x is 0. Division by zero is undefined, so the gradient is undefined, not 0."
+          }
+        ],
+        "keyFacts": [
+          "The equation of a horizontal line is y = c, where c is a constant, and its gradient is 0.",
+          "The equation of a vertical line is x = a, where a is a constant, and its gradient is undefined.",
+          "A vertical line x = a is not the graph of a linear function because there are infinitely many values of y for one single value of x."
+        ],
+        "workedExamples": [
+          "Write down the equation and the gradient of the straight line passing through the points (3, -5) and (7, -5). → 1. Identify the coordinates: (x_1, y_1) = (3, -5) and (x_2, y_2) = (7, -5).\n2. Calculate gradient m = (y_2 - y_1) / (x_2 - x_1) = (-5 - (-5)) / (7 - 3) = 0 / 4 = 0.\n3. Since the gradient is 0 and every point has y-coordinate -5, the line is horizontal.\n4. Therefore, the equation of the line is y = -5. → Answer: Equation: y = -5, Gradient: 0",
+          "Find the equation and state the gradient of the straight line passing through (-4, 2) and (-4, 9). → 1. Identify the coordinates: (x_1, y_1) = (-4, 2) and (x_2, y_2) = (-4, 9).\n2. Calculate the change in x: x_2 - x_1 = -4 - (-4) = 0.\n3. The gradient is (9 - 2) / 0 = 7 / 0, which is undefined because division by zero is undefined.\n4. Every point on the line has an x-coordinate of -4, so the line is vertical.\n5. Therefore, the equation of the line is x = -4. → Answer: Equation: x = -4, Gradient is undefined"
+        ],
+        "difficultyLevel": 2,
+        "typicalTeachingOrder": 1,
+        "chapter": "Chapter 1: Linear Graphs and Simultaneous Linear Equations",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "graphical-representation",
+        "chapterId": "ch1-linear-graphs-and-simultaneous-l",
+        "chapterNumber": 1,
+        "orderInChapter": 1,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "What is the equation of the horizontal line passing through the point (0, 4)?",
+            "lookFor": "Identifies y = 4 as the equation."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why the gradient of a vertical line is described as undefined rather than zero.",
+            "lookFor": "Explains that gradient is change in y divided by change in x, and for any two points on a vertical line the change in x is 0, making division by zero undefined."
+          },
+          {
+            "level": 3,
+            "prompt": "A line passes through the points (-5, 8) and (-5, -3). State its equation, its gradient, and whether it is parallel to the x-axis or y-axis.",
+            "lookFor": "States equation x = -5, gradient undefined, and parallel to the y-axis.",
+            "id": "L3-A",
+            "hints": [
+              "Look closely at the x-coordinates and y-coordinates of both given points to see which coordinate does not change.",
+              "When the x-coordinate is constant at a value a, the line is vertical with equation x = a; its gradient is undefined because the change in x is zero.",
+              "For points (4, 1) and (4, 7), the x-value is always 4, so its equation is x = 4, gradient is undefined, and the vertical line runs parallel to the y-axis."
+            ]
+          },
+          {
+            "level": 4,
+            "prompt": "A rectangle has vertices at A(1, 2), B(7, 2), C(7, 6), and D(1, 6). Write down the equations of all four boundary lines forming the edges of the rectangle.",
+            "lookFor": "Correctly identifies horizontal lines y = 2 and y = 6, and vertical lines x = 1 and x = 7."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Plot multiple points sharing the same coordinate, e.g. (2, -1), (2, 0), (2, 3), and draw the line x = 2 to visually show that x never changes regardless of height."
+          },
+          {
+            "strategy": "real_world_analogy",
+            "idea": "Walking on flat ground has zero slope (gradient 0, horizontal line). Trying to walk up a sheer vertical cliff wall is impossible / has no definable slope (undefined gradient, vertical line)."
+          },
+          {
+            "strategy": "socratic_questioning",
+            "idea": "Guide learner to compute rise/run for points (2, 5) and (2, 9): 'What is the run? Can we divide 4 by 0? What does mathematics call division by zero?'"
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Added worked examples with complete step-by-step solutions.",
+            "Assigned stable kebab-case IDs to misconceptions.",
+            "Populated complete 4-level ladder and teaching representations."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": false,
+            "why": "Equations of vertical and horizontal lines are abstract coordinate geometry conventions plotted on a Cartesian plane, not concrete physical objects."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "Lines on a Cartesian coordinate plane are inherently two-dimensional, so 3D spatial depth is unnecessary."
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--graphs-of-linear-equations-in-the-form-ax-by-k",
+        "label": "Graphs of Linear Equations in the Form ax + by = k",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [
+          "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--equations-of-horizontal-and-vertical-lines"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Equations of Horizontal and Vertical Lines",
+            "reason": "Understanding basic linear equations on Cartesian axes provides the baseline for graphing general linear equations",
+            "checkQuestion": "What is the equation of the horizontal line passing through the point (0, 4)?",
+            "conceptId": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--equations-of-horizontal-and-vertical-lines"
+          },
+          {
+            "label": "Substituting Values into Algebraic Equations",
+            "reason": "Needed to construct a table of values for plotting a line.",
+            "checkQuestion": "If 3x + y = 7, what is y when x = 2?"
+          }
+        ],
+        "commonMisconceptions": [
+          "Different axis scales mean coordinates must be multiplied by the scale factor before plotting.",
+          "Rearranging ax + by = k to y = mx + c ignores the sign of b when dividing through."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "scale-confusion-plotting",
+            "belief": "Different axis scales mean coordinates must be multiplied by the scale factor before plotting.",
+            "triggerPattern": "Plotting a coordinate value scaled incorrectly when axes have different scales (e.g. 1 cm to 1 unit vs 2 cm to 1 unit).",
+            "probeQuestion": "If 2 cm represents 1 unit on the y-axis, how many centimetres from the origin is the point y = 3?",
+            "correctionHint": "Read the coordinate numbers directly from the marked axis graduations, not the ruler measurement in centimetres."
+          },
+          {
+            "id": "sign-error-rearranging-standard-form",
+            "belief": "Rearranging ax + by = k to y = mx + c ignores the sign of b when dividing through.",
+            "triggerPattern": "Rearranging 2x - 3y = 6 as y = (2/3)x - 2 instead of y = (2/3)x - 2 or making sign errors with negative b.",
+            "probeQuestion": "When dividing both sides of -3y = -2x + 6 by -3, what happens to the signs of both terms on the right?",
+            "correctionHint": "Remember to divide every single term on the right by -3: -2x / (-3) = +2/3 x and 6 / (-3) = -2."
+          }
+        ],
+        "keyFacts": [
+          "Equations of the form ax + by = k can be rewritten in the gradient-intercept form y = mx + c, where m = -a/b and c = k/b.",
+          "A linear equation represents a straight line on the Cartesian plane; calculating at least three points ensures accuracy when plotting.",
+          "A point (p, q) lies on the line if and only if its coordinates satisfy the equation ap + bq = k."
+        ],
+        "workedExamples": [
+          "The variables x and y are connected by the equation 2x - 3y = 2. Some values of x and the corresponding values of y are given in the table: x = -2, y = -2; x = -0.5, y = p; x = 4, y = 2. (a) Calculate the value of p. (b) On a sheet of graph paper, using a scale of 1 cm to represent 1 unit on the x-axis and 2 cm to represent 1 unit on the y-axis, draw the graph of 2x - 3y = 2 for -2 <= x <= 4. (c) The point (1, q) lies on the graph in part (b). Find the value of q. (d) (i) On the same axes in part (b), draw the graph of y = 1. (ii) State the x-coordinate of the point on the graph of 2x - 3y = 2 that has a y-coordinate of 1. → (a) When x = -0.5, substitute into 2x - 3y = 2:\n2(-0.5) - 3p = 2\n-1 - 3p = 2\n-3p = 3\np = -1\n\n(b) Table of points: (-2, -2), (-0.5, -1), (4, 2).\nPlot these points with scale: x-axis 1 cm = 1 unit, y-axis 2 cm = 1 unit, and join them with a straight line across -2 <= x <= 4.\n\n(c) Substitute x = 1 into 2x - 3y = 2:\n2(1) - 3q = 2\n2 - 3q = 2\n-3q = 0 => q = 0.\n\n(d)(i) Draw the horizontal line through y = 1 across the grid.\n(ii) When y = 1 on 2x - 3y = 2:\n2x - 3(1) = 2\n2x = 5 => x = 2.5. → Answer: (a) p = -1, (c) q = 0, (d)(ii) 2.5"
+        ],
+        "difficultyLevel": 2,
+        "typicalTeachingOrder": 2,
+        "chapter": "Chapter 1: Linear Graphs and Simultaneous Linear Equations",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "graphical-representation",
+        "chapterId": "ch1-linear-graphs-and-simultaneous-l",
+        "chapterNumber": 1,
+        "orderInChapter": 2,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "Determine whether the point (3, 1) lies on the line 2x + 5y = 11.",
+            "lookFor": "Substitutes x = 3 and y = 1 into 2(3) + 5(1) = 6 + 5 = 11, confirming it lies on the line."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why generating at least three pairs of coordinates is recommended when plotting a straight line rather than just two.",
+            "lookFor": "Explains that while two points define a straight line, a third point acts as a check for algebraic or calculation errors, because three correct points must be collinear."
+          },
+          {
+            "level": 3,
+            "prompt": "Rearrange the equation 3x - 4y = 12 into the form y = mx + c. State its gradient and the coordinates of the points where it crosses the x-axis and y-axis.",
+            "lookFor": "Rearranges to y = 3/4 x - 3; gradient = 3/4; x-intercept = (4, 0); y-intercept = (0, -3).",
+            "id": "L3-A",
+            "hints": [
+              "Look at isolating the y-term on one side of the equation, and remember that on the axes, one of the coordinates is always 0.",
+              "Rearrange to make y the subject to read off the gradient m and y-intercept (0, c); then substitute y = 0 into the equation to find the x-intercept.",
+              "For 2x - 5y = 10, subtract 2x to get -5y = -2x + 10, divide by -5 to get y = 2/5 x - 2 (gradient 2/5); setting y = 0 gives 2x = 10 so x = 5, crossing at (5, 0) and (0, -2)."
+            ]
+          },
+          {
+            "level": 4,
+            "prompt": "A caterer charges a fixed delivery fee plus a cost per guest, modeled by the equation 15x - y = -50, where x is the number of guests and y is the total cost in dollars. Rearrange this into y = mx + c and interpret the meaning of m and c in this practical context.",
+            "lookFor": "Rewrites as y = 15x + 50; explains that m = 15 is the charge per guest ($15/guest) and c = 50 is the fixed delivery fee ($50)."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "step_by_step",
+            "idea": "Show the three-step method to graph ax + by = k: Step 1: Find the intercepts by setting x=0 then y=0. Step 2: Choose one check point. Step 3: Plot and connect with a straight ruler line."
+          },
+          {
+            "strategy": "peer_comparison",
+            "idea": "Compare Student A (who makes y the subject first: y = -a/b x + k/b) with Student B (who uses intercept method x=0, y=0) to show both yield the same line."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified worked example numbers and steps.",
+            "Added a second misconception with kebab-case IDs.",
+            "Populated complete 4-level ladder and teaching representations."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": false,
+            "why": "Linear equations in the form ax + by = k and their rearrangements are symbolic and graphical algebraic representations."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "Straight-line graphs in two variables belong strictly to flat 2D coordinate geometry."
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-graphically",
+        "label": "Solving Simultaneous Linear Equations Graphically",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [
+          "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--graphs-of-linear-equations-in-the-form-ax-by-k"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Graphs of Linear Equations in the Form ax + by = k",
+            "reason": "Learners must be able to plot straight-line equations accurately to locate their point of intersection",
+            "checkQuestion": "Plot points (0, 0) and (2, 4) and draw the line passing through them. What is its equation?",
+            "conceptId": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--graphs-of-linear-equations-in-the-form-ax-by-k"
+          }
+        ],
+        "commonMisconceptions": [
+          "Every pair of simultaneous linear equations must have exactly one numerical answer.",
+          "Any point near the crossing point on hand-drawn axes is acceptable as an exact solution."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "must-have-single-solution",
+            "belief": "Every pair of simultaneous linear equations must have exactly one numerical answer.",
+            "triggerPattern": "Trying to force an intersection point when lines are parallel or coincident.",
+            "probeQuestion": "Can two parallel lines ever cross each other? What does that mean for their common solutions?",
+            "correctionHint": "Parallel lines never meet, which means there is no pair of values (x, y) that satisfies both equations simultaneously."
+          },
+          {
+            "id": "inaccurate-graph-reading",
+            "belief": "Any point near the crossing point on hand-drawn axes is acceptable as an exact solution.",
+            "triggerPattern": "Estimating an intersection like (2.1, 4.8) when the exact integer intersection is (2, 5) without checking coordinates algebraically.",
+            "probeQuestion": "How can you verify whether the coordinates you read off the graph are the exact algebraic solution?",
+            "correctionHint": "Substitute your estimated coordinates back into both original equations to see if they make both equations true."
+          }
+        ],
+        "keyFacts": [
+          "The solution to a pair of simultaneous linear equations corresponds to the coordinates of the point of intersection of their graphs.",
+          "If the lines intersect at exactly one point, the equations have a unique solution.",
+          "If two lines are parallel (same gradient, different intercepts), they never intersect and have no solution.",
+          "If two lines are coincident (identical lines), they intersect at every point, giving an infinite number of solutions."
+        ],
+        "workedExamples": [
+          "Using the graphical method, solve the simultaneous equations:\n2x - 5y = 32\n2x + 3y = 0 → 1. Find coordinates for Line 1 (2x - 5y = 32):\n- When x = 1: 2(1) - 5y = 32 => -5y = 30 => y = -6 -> (1, -6)\n- When x = 6: 2(6) - 5y = 32 => 12 - 5y = 32 => -5y = 20 => y = -4 -> (6, -4)\n- When x = -4: 2(-4) - 5y = 32 => -8 - 5y = 32 => -5y = 40 => y = -8 -> (-4, -8)\n\n2. Find coordinates for Line 2 (2x + 3y = 0):\n- When x = 0: y = 0 -> (0, 0)\n- When x = 3: 2(3) + 3y = 0 => 3y = -6 => y = -2 -> (3, -2)\n- When x = 6: 2(6) + 3y = 0 => 3y = -12 => y = -4 -> (6, -4)\n\n3. Plot both lines on the Cartesian plane. The two lines intersect at (6, -4).\n4. Therefore, the solution is x = 6 and y = -4. → Answer: x = 6, y = -4"
+        ],
+        "difficultyLevel": 3,
+        "typicalTeachingOrder": 3,
+        "chapter": "Chapter 1: Linear Graphs and Simultaneous Linear Equations",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "graphical-representation",
+        "chapterId": "ch1-linear-graphs-and-simultaneous-l",
+        "chapterNumber": 1,
+        "orderInChapter": 3,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "Two straight lines intersect at the point (-3, 5). What is the solution to the simultaneous equations represented by these lines?",
+            "lookFor": "States x = -3 and y = 5."
+          },
+          {
+            "level": 2,
+            "prompt": "Two equations are given as y = 2x + 1 and y = 2x - 4. Explain, using graphical reasoning, how many solutions this pair of simultaneous equations has.",
+            "lookFor": "Explains that both lines have the same gradient (m = 2) but different y-intercepts (1 and -4), so they are parallel and will never intersect, meaning there are no solutions."
+          },
+          {
+            "level": 3,
+            "prompt": "By drawing or analyzing tables of values for y = x + 3 and y = -2x + 6, find the coordinates of their point of intersection.",
+            "lookFor": "Determines that the intersection point is (1, 4), giving the solution x = 1, y = 4.",
+            "id": "L3-A",
+            "hints": [
+              "Look for an x-value that produces the exact same y-value when plugged into both equations.",
+              "Create a small table of values for each line or set the two linear expressions equal to each other to identify where the lines share a point.",
+              "For y = x + 1 and y = -3x + 5, testing x = 1 gives y = 1 + 1 = 2 for the first and y = -3(1) + 5 = 2 for the second, so their intersection is (1, 2)."
+            ]
+          },
+          {
+            "level": 4,
+            "prompt": "Company A rents a car for $40 plus $0.20 per km driven. Company B rents a car for $20 plus $0.30 per km driven. How does the graphical intersection of these two pricing models help a customer decide which company to choose?",
+            "lookFor": "Explains that the intersection point gives the exact distance where both cost the same ($80 at 200 km); for distances below 200 km Company B is cheaper (lower line), and for distances above 200 km Company A is cheaper."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Show three side-by-side graphs: (1) Intersecting lines = 1 unique solution, (2) Parallel lines = 0 solutions, (3) Coincident lines = infinite solutions."
+          },
+          {
+            "strategy": "interactive_simulation",
+            "idea": "Using dynamic graph software, drag the y-intercept of one line while keeping gradient constant to watch the intersection point disappear when lines become parallel."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified worked example numbers and intersection point (6, -4).",
+            "Added second misconception with kebab-case IDs.",
+            "Populated complete 4-level ladder and teaching representations."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": false,
+            "why": "The graphical solution of simultaneous equations is an abstract geometric method on a Cartesian coordinate plane."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "The graphs and their point of intersection are entirely contained within a two-dimensional plane."
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-elimination",
+        "label": "Solving Simultaneous Linear Equations by Elimination",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [],
+        "prerequisiteDetails": [
+          {
+            "label": "Solving Linear Equations in One Variable",
+            "reason": "Elimination reduces two equations to a single linear equation in one variable.",
+            "checkQuestion": "Solve 13y = 13 for y."
+          }
+        ],
+        "commonMisconceptions": [
+          "Subtracting an equation with a negative term results in subtraction rather than addition: e.g., 7y - (-6y) = y.",
+          "Multiplying an equation by a constant only applies to the terms on the left-hand side."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "subtracting-negative-coefficients",
+            "belief": "Subtracting an equation with a negative term results in subtraction rather than addition: e.g., 7y - (-6y) = y.",
+            "triggerPattern": "Errors in signs when subtracting equations involving negative coefficients.",
+            "probeQuestion": "What is 7 minus negative 6?",
+            "correctionHint": "Remember that subtracting a negative quantity is equivalent to adding: 7y - (-6y) = 7y + 6y = 13y."
+          },
+          {
+            "id": "rhs-unmultiplied-scaling",
+            "belief": "Multiplying an equation by a constant only applies to the terms on the left-hand side.",
+            "triggerPattern": "Multiplying 13x - 6y = 20 by 2 and writing 26x - 12y = 20.",
+            "probeQuestion": "To keep an equation balanced, whatever operation you do to the left-hand side must also be done to what?",
+            "correctionHint": "Every single term on both the LHS and the RHS must be multiplied by the constant to preserve equality."
+          }
+        ],
+        "keyFacts": [
+          "The elimination method eliminates one variable by adding or subtracting the two equations when the coefficients of that variable have the same or opposite absolute values.",
+          "If the coefficients of a variable have the same sign and magnitude, subtract the equations; if they have opposite signs, add the equations.",
+          "If coefficients differ, multiply one or both equations by suitable constants to make the absolute values of the coefficients of one variable equal before adding or subtracting."
+        ],
+        "workedExamples": [
+          "Using the elimination method, solve the simultaneous equations:\n3x + 7y = 17\n3x - 6y = 4 → 1. Label equations:\n   3x + 7y = 17  --- (1)\n   3x - 6y = 4   --- (2)\n2. The coefficients of x are both 3 (same sign). Subtract equation (2) from (1):\n   (3x - 3x) + (7y - (-6y)) = 17 - 4\n   0 + 13y = 13\n   y = 1\n3. Substitute y = 1 into equation (1):\n   3x + 7(1) = 17\n   3x = 10\n   x = 10/3 (or 3 1/3)\n4. Check in (2): 3(10/3) - 6(1) = 10 - 6 = 4 (correct). → Answer: x = 10/3, y = 1",
+          "Using the elimination method, solve the simultaneous equations:\n13x - 6y = 20\n7x + 4y = 18 → 1. Label equations:\n   13x - 6y = 20  --- (1)\n   7x + 4y = 18   --- (2)\n2. Eliminate y. The LCM of 6 and 4 is 12.\n   Multiply (1) by 2: 26x - 12y = 40  --- (3)\n   Multiply (2) by 3: 21x + 12y = 54  --- (4)\n3. Coefficients of y have opposite signs (-12 and +12), so add (3) and (4):\n   (26x + 21x) + (-12y + 12y) = 40 + 54\n   47x = 94\n   x = 2\n4. Substitute x = 2 into (1):\n   13(2) - 6y = 20\n   26 - 6y = 20\n   6y = 6\n   y = 1\n5. Check in (2): 7(2) + 4(1) = 14 + 4 = 18 (correct). → Answer: x = 2, y = 1"
+        ],
+        "difficultyLevel": 3,
+        "typicalTeachingOrder": 4,
+        "chapter": "Chapter 1: Linear Graphs and Simultaneous Linear Equations",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "algebraic-systems",
+        "chapterId": "ch1-linear-graphs-and-simultaneous-l",
+        "chapterNumber": 1,
+        "orderInChapter": 4,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "In the equations 4x + 3y = 11 and 2x - 3y = 7, should you add or subtract the equations to eliminate y?",
+            "lookFor": "States that you should add the equations because the coefficients of y are +3 and -3 (opposite signs)."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why multiplying an entire equation by a non-zero number does not change the solution pair (x, y).",
+            "lookFor": "Explains that multiplying both sides of an equality by the same non-zero number produces an equivalent equation whose solution set is identical."
+          },
+          {
+            "level": 3,
+            "prompt": "Solve the simultaneous equations using elimination:\n5x + 2y = 16\n3x - 4y = 7",
+            "lookFor": "Multiplies first equation by 2 to get 10x + 4y = 32; adds to second equation: 13x = 39 => x = 3; substitutes to find y = 1/2 (or 0.5).",
+            "id": "L3-A"
+          },
+          {
+            "level": 4,
+            "prompt": "A student attempts to solve 2/x + 3/y = 8 and 5/x - 3/y = 6 using elimination. How can elimination be applied directly here without clearing fractions?",
+            "lookFor": "Recognizes that 3/y and -3/y have opposite coefficients (+3 and -3), so adding the equations gives 7/x = 14, leading directly to x = 1/2, then finds y = 3/4."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "step_by_step",
+            "idea": "Provide an elimination flowchart: Step 1: Match coefficients of one variable using LCM. Step 2: Same signs subtract, different signs add (SSS / DSA). Step 3: Solve single variable. Step 4: Back-substitute and check."
+          },
+          {
+            "strategy": "real_world_analogy",
+            "idea": "Balance scale analogy: If two baskets balance two weights, combining both baskets balances the combined weights; removing equal weights preserves balance."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified worked examples step-by-step.",
+            "Added kebab-case IDs to misconceptions.",
+            "Populated complete 4-level ladder and teaching representations."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": false,
+            "why": "Elimination is an abstract, symbolic procedure for manipulating algebraic equations."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "Solving simultaneous linear equations algebraically involves symbolic manipulation with no spatial or volumetric structure."
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-substitution",
+        "label": "Solving Simultaneous Linear Equations by Substitution",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [],
+        "prerequisiteDetails": [
+          {
+            "label": "Changing the Subject of a Formula",
+            "reason": "Substitution requires isolating one variable on one side of an equation.",
+            "checkQuestion": "Make y the subject of the equation 4x + y = 57."
+          }
+        ],
+        "commonMisconceptions": [
+          "Substituting an expression back into the exact same equation it was derived from will find the value of the variable.",
+          "When substituting an expression with multiple terms, brackets are unnecessary."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "substituting-into-same-equation",
+            "belief": "Substituting an expression back into the exact same equation it was derived from will find the value of the variable.",
+            "triggerPattern": "Expressing y from equation (1) and substituting it back into equation (1), obtaining 0 = 0.",
+            "probeQuestion": "If you rearranged equation (1) to get y, what happens if you plug it back into equation (1)? Did you use the information from equation (2) yet?",
+            "correctionHint": "You must substitute the expression into the OTHER equation so that information from both equations is combined."
+          },
+          {
+            "id": "forgetting-brackets-in-substitution",
+            "belief": "When substituting an expression with multiple terms, brackets are unnecessary.",
+            "triggerPattern": "Substituting y = 57 - 4x into -2y as -2 * 57 - 4x instead of -2(57 - 4x).",
+            "probeQuestion": "What does -2y mean when y is the entire expression (57 - 4x)? Does the -2 multiply only 57 or both parts?",
+            "correctionHint": "Always place parentheses around the substituted expression so that multiplication and negative signs distribute to every term."
+          }
+        ],
+        "keyFacts": [
+          "The substitution method involves expressing one variable in terms of the other from one equation, then substituting that expression into the other equation.",
+          "It is most convenient to make a variable the subject if its coefficient is 1 or -1.",
+          "Both elimination and substitution methods share the same underlying principle: reducing a system of two variables to a single equation in one variable."
+        ],
+        "workedExamples": [
+          "Using the substitution method, solve the simultaneous equations:\n7x - 2y = 21\n4x + y = 57 → 1. Label equations:\n   7x - 2y = 21  --- (1)\n   4x + y = 57   --- (2)\n2. Rearrange equation (2) to express y in terms of x (since coefficient of y is 1):\n   y = 57 - 4x   --- (3)\n3. Substitute (3) into equation (1):\n   7x - 2(57 - 4x) = 21\n4. Expand and solve for x:\n   7x - 114 + 8x = 21\n   15x - 114 = 21\n   15x = 135\n   x = 9\n5. Substitute x = 9 into (3) to find y:\n   y = 57 - 4(9) = 57 - 36 = 21\n6. Check in (1): 7(9) - 2(21) = 63 - 42 = 21 (correct). → Answer: x = 9, y = 21"
+        ],
+        "difficultyLevel": 3,
+        "typicalTeachingOrder": 5,
+        "chapter": "Chapter 1: Linear Graphs and Simultaneous Linear Equations",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "algebraic-systems",
+        "chapterId": "ch1-linear-graphs-and-simultaneous-l",
+        "chapterNumber": 1,
+        "orderInChapter": 5,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "Given the equations y = 3x - 2 and 2x + y = 13, write down the single equation in x obtained by substituting y into the second equation.",
+            "lookFor": "Writes 2x + (3x - 2) = 13 (or 5x - 2 = 13)."
+          },
+          {
+            "level": 2,
+            "prompt": "For the system 3x + 5y = 19 and x - 4y = -5, explain which variable is easiest to make the subject and why.",
+            "lookFor": "Explains that x in the second equation is easiest because its coefficient is 1, so rearranging gives x = 4y - 5 without introducing fractions."
+          },
+          {
+            "level": 3,
+            "prompt": "Solve the simultaneous equations by substitution:\nx + 2y = 8\n3x - 4y = 4",
+            "lookFor": "Rearranges to x = 8 - 2y; substitutes: 3(8 - 2y) - 4y = 4 => 24 - 6y - 4y = 4 => -10y = -20 => y = 2; finds x = 4.",
+            "id": "L3-A",
+            "hints": [
+              "Look at the first equation to find the variable that has a coefficient of 1, as it is the easiest to isolate.",
+              "Rearrange the first equation to express x in terms of y, then replace every instance of x in the second equation with that expression.",
+              "For x + 3y = 7 and 2x - 5y = 3, rearrange the first to x = 7 - 3y; substitute into the second: 2(7 - 3y) - 5y = 3 gives 14 - 11y = 3, so -11y = -11 and y = 1."
+            ]
+          },
+          {
+            "level": 4,
+            "prompt": "A perimeter of a rectangle is 28 cm. Its length is 2 cm more than twice its width. Set up the two simultaneous equations and solve for the dimensions using substitution.",
+            "lookFor": "Sets up 2L + 2W = 28 (or L + W = 14) and L = 2W + 2; substitutes to get (2W + 2) + W = 14 => 3W = 12 => W = 4 cm, L = 10 cm."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "direct_explanation",
+            "idea": "Define substitution like substituting a sports player: take out the symbol 'y' and put in its equal teammate '(57 - 4x)' inside brackets."
+          },
+          {
+            "strategy": "worked_example",
+            "idea": "Demonstrate side-by-side: left column showing algebraic manipulation, right column showing explicit annotations: 'Isolate', 'Replace with brackets', 'Expand', 'Solve', 'Back-substitute'."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified worked example numbers and steps.",
+            "Added second misconception with kebab-case IDs.",
+            "Populated complete 4-level ladder and teaching representations."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": false,
+            "why": "Substitution is a procedural algebraic technique involving variable replacement and symbolic simplification."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "The substitution method is purely symbolic and algebraic, requiring no 3D spatial representation."
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--applications-of-simultaneous-equations-in-real-world-context",
+        "label": "Applications of Simultaneous Equations in Real-World Contexts",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [
+          "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-elimination",
+          "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-substitution"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Solving Simultaneous Linear Equations by Elimination",
+            "reason": "Solving the formulated two-variable systems requires algebraic solution methods such as elimination",
+            "checkQuestion": "In the equations 4x + 3y = 11 and 2x - 3y = 7, should you add or subtract the equations to eliminate y?",
+            "conceptId": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-elimination"
+          },
+          {
+            "label": "Solving Simultaneous Linear Equations by Substitution",
+            "reason": "Substitution is needed to solve formulated systems where one variable is easily isolated",
+            "checkQuestion": "Given the equations y = 3x - 2 and 2x + y = 13, write down the single equation in x obtained by substituting y into the second equation.",
+            "conceptId": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-substitution"
+          },
+          {
+            "label": "Translating Word Problems into Algebraic Expressions",
+            "reason": "Must correctly formulate mathematical statements from written descriptions.",
+            "checkQuestion": "Write an algebraic expression for '5 less than three times a number n'."
+          }
+        ],
+        "commonMisconceptions": [
+          "A two-digit number with tens digit x and units digit y can be written algebraically as xy.",
+          "Any algebraic output is acceptable regardless of physical constraints in word problems."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "place-value-as-product",
+            "belief": "A two-digit number with tens digit x and units digit y can be written algebraically as xy.",
+            "triggerPattern": "Writing xy instead of 10x + y when setting up equations for number-digit problems.",
+            "probeQuestion": "In algebra, what does 'xy' mean? Does it mean x multiplied by y, or does it mean the place value of the digits?",
+            "correctionHint": "In algebra, xy means x times y. To represent place value, multiply the tens digit by 10 and add the units digit: 10x + y."
+          },
+          {
+            "id": "unrealistic-solution-acceptance",
+            "belief": "Any algebraic output is acceptable regardless of physical constraints in word problems.",
+            "triggerPattern": "Accepting negative numbers or fractional answers for counts of people, coins, or ages without noticing the contradiction.",
+            "probeQuestion": "Can a cinema sell -4 child tickets or 3.7 adults? What does getting that answer tell you about your equations?",
+            "correctionHint": "Always sanity-check answers against real-world constraints; quantities of discrete items must be non-negative integers."
+          }
+        ],
+        "keyFacts": [
+          "Word problems involving two unknown quantities can be solved by defining two variables, forming two independent linear equations, and solving them simultaneously.",
+          "For two-digit number problems, if the tens digit is x and the units digit is y, the value of the number is 10x + y, and the reversed number is 10y + x.",
+          "Solutions must be interpreted and checked within the context of the real-world scenario (e.g., quantities of items, ages, and money amounts must make practical sense)."
+        ],
+        "workedExamples": [
+          "The sum of two numbers is 67 and their difference is 3. Find the two numbers. → 1. Let the larger number be x and the smaller number be y.\n2. From the problem statement, form two equations:\n   x + y = 67  --- (1)\n   x - y = 3   --- (2)\n3. Add equation (1) and equation (2):\n   (x + x) + (y - y) = 67 + 3\n   2x = 70\n   x = 35\n4. Substitute x = 35 into equation (1):\n   35 + y = 67\n   y = 32\n5. Check difference: 35 - 32 = 3 (correct).\n6. The two numbers are 32 and 35.",
+          "The sum of the digits of a two-digit number is 8. When the digits of the number are reversed and the number is subtracted from the original number, the result obtained is 18. Find the original number. → 1. Let the tens digit of the original number be x and the units digit be y.\n2. The value of the original number is 10x + y, and the reversed number is 10y + x.\n3. From the sum of digits:\n   x + y = 8  --- (1)\n4. From the subtraction condition:\n   (10x + y) - (10y + x) = 18\n   9x - 9y = 18\n   Divide by 9: x - y = 2  --- (2)\n5. Add (1) and (2):\n   2x = 10 => x = 5\n6. Substitute x = 5 into (1):\n   5 + y = 8 => y = 3\n7. The original number is 10(5) + 3 = 53.\n8. Check: 5 + 3 = 8, reversed is 35, 53 - 35 = 18 (correct)."
+        ],
+        "difficultyLevel": 4,
+        "typicalTeachingOrder": 6,
+        "chapter": "Chapter 1: Linear Graphs and Simultaneous Linear Equations",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "algebraic-modelling",
+        "chapterId": "ch1-linear-graphs-and-simultaneous-l",
+        "chapterNumber": 1,
+        "orderInChapter": 6,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "If a pencil costs $p and an eraser costs $e, write an algebraic expression for the total cost of 4 pencils and 3 erasers.",
+            "lookFor": "Writes 4p + 3e."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why reversing the digits of a two-digit number with tens digit t and units digit u changes its algebraic value from (10t + u) to (10u + t).",
+            "lookFor": "Explains that place value determines the weight of each digit; when u becomes the tens digit, its value is 10u, and t becomes the units digit with value t."
+          },
+          {
+            "level": 3,
+            "prompt": "5 notebooks and 2 pens cost $27, while 3 notebooks and 4 pens cost $26. Set up and solve simultaneous equations to find the cost of one notebook and one pen.",
+            "lookFor": "Sets up 5n + 2p = 27 and 3n + 4p = 26; solves to find notebook n = $4 and pen p = $3.50.",
+            "id": "L3-A",
+            "hints": [
+              "Assign variables such as n for the cost of one notebook and p for the cost of one pen, then translate each statement into an equation.",
+              "Set up the system of two equations and multiply the first equation by 2 so that the coefficients of p match, then subtract the equations.",
+              "For 4 folders and 2 pens costing $20, and 2 folders and 3 pens costing $14, multiply the second by 2: 4 folders + 6 pens = $28; subtract the first to get 4 pens = $8, so 1 pen = $2."
+            ]
+          },
+          {
+            "level": 4,
+            "prompt": "A father is currently four times as old as his son. In 6 years' time, the father will be three times as old as his son. Set up simultaneous equations and determine their current ages.",
+            "lookFor": "Sets up F = 4S and F + 6 = 3(S + 6); substitutes to find S = 12 years and F = 48 years."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "real_world_analogy",
+            "idea": "Use currency notes to explain two-digit numbers: 5 ten-dollar notes and 3 one-dollar coins make 10(5) + 3 = $53, not 5 × 3 = $15."
+          },
+          {
+            "strategy": "step_by_step",
+            "idea": "Provide a 4-step word problem template: (1) Define variables with units ('Let x = ...'), (2) Translate sentences to two distinct equations, (3) Solve algebraically, (4) State final answer with units and check context."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified both worked examples step-by-step.",
+            "Added second misconception with kebab-case IDs.",
+            "Populated complete 4-level ladder and teaching representations."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": false,
+            "why": "While items like pens and notebooks are physical, the concept being taught is mathematical modeling and algebraic systems, which is abstract and symbolic."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "Translating word problems into simultaneous linear equations involves quantitative relationships, not solid geometric shapes."
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch2-linear-inequalities--inequality-notation-and-properties-of-inequalities",
+        "label": "Inequality Notation and Properties of Inequalities",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [],
+        "prerequisiteDetails": [
+          {
+            "label": "Directed Numbers on the Number Line",
+            "reason": "Understanding relative magnitude of positive and negative numbers is foundational for inequalities.",
+            "checkQuestion": "Which number is greater: -10 or -5?"
+          }
+        ],
+        "commonMisconceptions": [
+          "The inequality sign reverses whenever a negative number appears anywhere in the inequality.",
+          "'At least 5' means x <= 5 because 'least' suggests smaller.",
+          "Strict inequalities (<, >) include the boundary value just like inclusive inequalities (<=, >=)."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "negative-presence-reversal",
+            "belief": "The inequality sign reverses whenever a negative number appears anywhere in the inequality.",
+            "triggerPattern": "Reversing the sign when adding/subtracting a negative number or when dividing a negative numerator by a positive denominator (e.g. 2x < -8 becoming x > -4).",
+            "probeQuestion": "In the step from 2x < -8 to x < -4, are you dividing both sides by 2 or by -8?",
+            "correctionHint": "The inequality sign reverses ONLY when you multiply or divide BOTH sides by a negative number, not because a term is negative."
+          },
+          {
+            "id": "at-least-interpreted-as-less",
+            "belief": "'At least 5' means x <= 5 because 'least' suggests smaller.",
+            "triggerPattern": "Translating 'at least' into <= and 'at most' into >=.",
+            "probeQuestion": "If a film requires you to be at least 15 years old to watch it, can a 14-year-old enter? Can a 16-year-old enter?",
+            "correctionHint": "'At least' means the minimum allowed value is that number, so the quantity must be greater than or equal to it (>=)."
+          },
+          {
+            "id": "strict-vs-inclusive-confusion",
+            "belief": "Strict inequalities (<, >) include the boundary value just like inclusive inequalities (<=, >=).",
+            "triggerPattern": "Stating that x > 4 includes 4 as a valid solution.",
+            "probeQuestion": "Substitute x = 4 into x > 4. Is the statement 4 > 4 true or false?",
+            "correctionHint": "4 is not strictly greater than 4, so strict inequalities do not include the boundary number itself."
+          }
+        ],
+        "keyFacts": [
+          "The inequality symbols are: > (is greater than), < (is less than), >= (is greater than or equal to / at least), and <= (is less than or equal to / at most).",
+          "Adding or subtracting the same number on both sides of an inequality preserves the inequality sign.",
+          "Multiplying or dividing both sides of an inequality by a positive number preserves the inequality sign.",
+          "Multiplying or dividing both sides of an inequality by a negative number reverses the direction of the inequality sign (e.g. > becomes <)."
+        ],
+        "workedExamples": [
+          "Solve the inequality -3x < 15 and state how the inequality sign changes. → Divide both sides by -3.\nSince we are dividing by a negative number, reverse the inequality sign from < to >:\nx > 15 / (-3)\nx > -5",
+          "Given that x >= 4, find the range of values for 7 - 2x. → Start with: x >= 4\nMultiply both sides by -2 (reverse the sign): -2x <= -8\nAdd 7 to both sides (sign does not change): 7 - 2x <= 7 - 8\n7 - 2x <= -1"
+        ],
+        "difficultyLevel": 2,
+        "typicalTeachingOrder": 7,
+        "chapter": "Chapter 2: Linear Inequalities",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "inequalities",
+        "chapterId": "ch2-linear-inequalities",
+        "chapterNumber": 2,
+        "orderInChapter": 1,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "What must you do to the inequality sign when you multiply or divide both sides of an inequality by a negative number?",
+            "lookFor": "State clearly that the inequality sign reverses / flips direction."
+          },
+          {
+            "level": 2,
+            "prompt": "Using the true statement 2 < 5, explain why multiplying both sides by -1 requires reversing the inequality sign.",
+            "lookFor": "Shows that multiplying gives -2 and -5, and notes that -2 lies to the right of -5 on the number line, making -2 > -5."
+          },
+          {
+            "level": 3,
+            "prompt": "Solve the inequality -5y >= 35.",
+            "lookFor": "Divides both sides by -5, flips the sign from >= to <=, and concludes y <= -7."
+          },
+          {
+            "level": 4,
+            "prompt": "If a < b, determine whether -3a + 10 is greater than, less than, or equal to -3b + 10. Justify each step.",
+            "lookFor": "Multiplies a < b by -3 to get -3a > -3b (reversing sign), then adds 10 to get -3a + 10 > -3b + 10."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Show positive numbers 2 and 5 on a number line, then reflect them across 0 to show -2 and -5, visually proving why the order reverses."
+          },
+          {
+            "strategy": "direct_explanation",
+            "idea": "Provide a side-by-side reference table matching verbal phrases ('at most', 'no more than', 'at least', 'minimum of') with their algebraic symbols (<=, >=)."
+          },
+          {
+            "strategy": "peer_comparison",
+            "idea": "Show two student workings for 4x < -12: Student A writes x > -3 and Student B writes x < -3. Ask the learner which student applied the division rule correctly and why."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Added two worked examples with step-by-step verification.",
+            "Added third misconception 'strict-vs-inclusive-confusion' with stable kebab-case id.",
+            "Constructed evidence ladder across all 4 levels.",
+            "Provided 3 pedagogical representations."
+          ]
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch2-linear-inequalities--solving-linear-inequalities-and-number-line-representation",
+        "label": "Solving Linear Inequalities and Number Line Representation",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [
+          "igcse--g8--mathematics--ch2-linear-inequalities--inequality-notation-and-properties-of-inequalities"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Inequality Notation and Properties of Inequalities",
+            "reason": "Understanding inequality symbols and operation rules (like sign reversal) is required before solving inequalities",
+            "checkQuestion": "What must you do to the inequality sign when you multiply or divide both sides of an inequality by a negative number?",
+            "conceptId": "igcse--g8--mathematics--ch2-linear-inequalities--inequality-notation-and-properties-of-inequalities"
+          },
+          {
+            "label": "Linear Equation Solving Techniques",
+            "reason": "Inverse operations used to isolate variables in equations are similarly applied to inequalities.",
+            "checkQuestion": "Solve the equation 4x - 5 = 11."
+          }
+        ],
+        "commonMisconceptions": [
+          "Representing a strict inequality like x < 5 uses a solid dot at 4 on a continuous number line.",
+          "The arrow on the number line always points in the same direction as the inequality symbol, regardless of which side the variable is on."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "open-circle-discrete-step",
+            "belief": "Representing a strict inequality like x < 5 uses a solid dot at 4 on a continuous number line.",
+            "triggerPattern": "Placing a solid dot at the previous integer instead of an open circle at the boundary value.",
+            "probeQuestion": "Can x be 4.9? If you put a dot at 4, are you including 4.9?",
+            "correctionHint": "Real numbers are continuous; an open circle at 5 includes all real numbers up to but not including 5, such as 4.99."
+          },
+          {
+            "id": "arrow-direction-variable-on-right",
+            "belief": "The arrow on the number line always points in the same direction as the inequality symbol, regardless of which side the variable is on.",
+            "triggerPattern": "Drawing an arrow pointing left for 3 < x because the symbol '<' points left.",
+            "probeQuestion": "If 3 < x, can x be 10? Is 10 to the left or right of 3 on the number line?",
+            "correctionHint": "Always rewrite the inequality with the variable on the left: 3 < x means x > 3, so the arrow points to the right."
+          }
+        ],
+        "keyFacts": [
+          "Solving a linear inequality means finding all values of the variable that make the statement true.",
+          "On a number line, an open circle indicates that the boundary value is not included (< or >), whereas a solid dot indicates that the boundary value is included (<= or >=).",
+          "An inequality can have infinitely many solutions within a continuous range, unlike a linear equation which typically has a single solution."
+        ],
+        "workedExamples": [
+          "Solve each of the following inequalities and represent the solutions on a number line.\n(a) 3x < 27\n(b) -2x >= 4 → (a) 3x < 27\nDivide both sides by 3 (positive divisor, sign remains unchanged):\nx < 9\nRepresent on a number line with an open circle at 9 and an arrow pointing to the left.\n\n(b) -2x >= 4\nDivide both sides by -2 (negative divisor, reverse the inequality sign):\nx <= -2\nRepresent on a number line with a solid dot at -2 and an arrow pointing to the left. → Answer: (a) x < 9; (b) x <= -2",
+          "Solve the inequality 8 - x > 3 and represent the solution on a number line.\n(i) If x is a prime number, write down the largest possible value of x that satisfies the inequality.\n(ii) Write down the positive integer values of x that satisfy the inequality. → 8 - x > 3\nSubtract 8 from both sides: -x > -5\nDivide both sides by -1 and reverse sign: x < 5\nRepresentation: open circle at 5 with arrow pointing left.\n(i) Prime numbers less than 5 are 2 and 3. The largest prime number is 3.\n(ii) Positive integers less than 5 are 1, 2, 3, and 4. → Answer: x < 5; (i) 3; (ii) 1, 2, 3, 4"
+        ],
+        "difficultyLevel": 3,
+        "typicalTeachingOrder": 8,
+        "chapter": "Chapter 2: Linear Inequalities",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "inequalities",
+        "chapterId": "ch2-linear-inequalities",
+        "chapterNumber": 2,
+        "orderInChapter": 2,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "On a number line representation of an inequality, what is the difference between an open circle and a solid dot?",
+            "lookFor": "Open circle means the boundary number is not included (< or >); solid dot means it is included (<= or >=)."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why the equation 2x - 3 = 5 has only one solution, but the inequality 2x - 3 <= 5 has infinitely many solutions.",
+            "lookFor": "Explains that the equation specifies an exact single value (x = 4), while the inequality specifies an entire continuous range of real numbers (x <= 4)."
+          },
+          {
+            "level": 3,
+            "prompt": "Solve 5 - 2x <= 11 and describe its representation on a number line.",
+            "lookFor": "Subtracts 5 to get -2x <= 6, divides by -2 reversing the sign to get x >= -3; describes a solid dot at -3 with an arrow pointing to the right."
+          },
+          {
+            "level": 4,
+            "prompt": "A number line shows an open circle at -2 pointing left, and another shows a solid dot at 3 pointing right. Write the two inequalities and state all integers between -4 and 4 inclusive that satisfy neither inequality.",
+            "lookFor": "Identifies inequalities as x < -2 and x >= 3; finds the unshaded region is -2 <= x < 3, so integers satisfying neither are -2, -1, 0, 1, and 2."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Draw a clear number line highlighting the boundary point with a magnified circle (open vs. filled) and a directional shaded ray with an arrowhead."
+          },
+          {
+            "strategy": "step_by_step",
+            "idea": "A 3-step checklist for graphing: 1. Isolate variable on the left. 2. Mark boundary point (solid for <= / >=, open for < / >). 3. Shade in the direction of the solution."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified all worked examples step by step.",
+            "Added misconception 'arrow-direction-variable-on-right'.",
+            "Constructed evidence ladder across all 4 levels.",
+            "Provided 2 pedagogical representations."
+          ]
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch2-linear-inequalities--real-world-applications-of-linear-inequalities",
+        "label": "Real-World Applications of Linear Inequalities",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [
+          "igcse--g8--mathematics--ch2-linear-inequalities--solving-linear-inequalities-and-number-line-representation"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Solving Linear Inequalities and Number Line Representation",
+            "reason": "Solving contextual inequalities requires proficiency in manipulating inequalities and interpreting bound solutions",
+            "checkQuestion": "On a number line representation of an inequality, what is the difference between an open circle and a solid dot?",
+            "conceptId": "igcse--g8--mathematics--ch2-linear-inequalities--solving-linear-inequalities-and-number-line-representation"
+          },
+          {
+            "label": "Forming Linear Expressions from Word Problems",
+            "reason": "Translating given conditions into mathematical expressions is necessary to form inequalities.",
+            "checkQuestion": "If a ticket costs $13.50, write an expression for the total cost of n tickets."
+          }
+        ],
+        "commonMisconceptions": [
+          "Fractional solutions in real-world inequalities should always follow standard rounding rules (e.g., 12.5 rounds up to 13).",
+          "Budget constraints must always use strict inequality '<' because you cannot spend more than your budget."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "standard-rounding-on-inequalities",
+            "belief": "Fractional solutions in real-world inequalities should always follow standard rounding rules (e.g., 12.5 rounds up to 13).",
+            "triggerPattern": "Answering 13 curry puffs when x <= 12.5.",
+            "probeQuestion": "If you buy 13 curry puffs at $1.60 each, how much does it cost? Do you have enough money with $20?",
+            "correctionHint": "Because x <= 12.5, 13 violates the inequality ($20.80 > $20). The greatest integer that satisfies x <= 12.5 is 12."
+          },
+          {
+            "id": "budget-strict-inequality-confusion",
+            "belief": "Budget constraints must always use strict inequality '<' because you cannot spend more than your budget.",
+            "triggerPattern": "Writing 1.60x < 20 instead of 1.60x <= 20 when given a budget of $20.",
+            "probeQuestion": "If your total bill comes to exactly $20.00, can you pay for it with a $20 bill?",
+            "correctionHint": "Having a budget of $20 means you can spend up to and including $20, so use <= unless the problem states 'less than $20'."
+          }
+        ],
+        "keyFacts": [
+          "Real-world constraints involving budgets, capacities, scores, or limits are modeled by setting up an inequality in one variable.",
+          "When the physical context requires discrete or whole-number solutions (e.g. number of items, people, days), the algebraic boundary must be interpreted to find the greatest or least feasible integer."
+        ],
+        "workedExamples": [
+          "A curry puff costs $1.60. By forming an inequality, find the maximum number of curry puffs that can be bought with $20. → Let x be the number of curry puffs bought.\n1.60x <= 20\nx <= 20 / 1.60\nx <= 12.5\nSince the number of curry puffs must be a non-negative integer, the maximum integer satisfying x <= 12.5 is 12. → Answer: 12 curry puffs",
+          "Weiming has 12 pieces of $10-notes and $5-notes in his wallet. If the total value of all the notes is less than $95, what is the maximum number of $10-notes that he has? → Let the number of $10-notes be x.\nThen the number of $5-notes is 12 - x.\n10x + 5(12 - x) < 95\n10x + 60 - 5x < 95\n5x + 60 < 95\n5x < 35\nx < 7\nSince x must be an integer strictly less than 7, the maximum number of $10-notes is 6."
+        ],
+        "difficultyLevel": 3,
+        "typicalTeachingOrder": 9,
+        "chapter": "Chapter 2: Linear Inequalities",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "algebraic-modelling",
+        "chapterId": "ch2-linear-inequalities",
+        "chapterNumber": 2,
+        "orderInChapter": 3,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "If a problem states that the total weight must be 'at most 500 kg', which inequality symbol should you use?",
+            "lookFor": "<= (less than or equal to)."
+          },
+          {
+            "level": 2,
+            "prompt": "A problem about hiring passenger vans gives the mathematical solution v >= 3.2. Explain why the final answer must be 4 vans rather than 3 vans, even though 3.2 is closer to 3.",
+            "lookFor": "Explains that 3 vans would not hold all passengers (3 < 3.2 violates the minimum requirement), so one must round up to the next integer to satisfy the constraint."
+          },
+          {
+            "level": 3,
+            "prompt": "A gym membership has a one-off joining fee of $25 plus $15 per month. Form an inequality and find the maximum number of full months a student can join with a budget of $100.",
+            "lookFor": "Sets up 25 + 15m <= 100, solves to 15m <= 75, m <= 5, and concludes maximum is 5 full months."
+          },
+          {
+            "level": 4,
+            "prompt": "A cargo lift has a safe working load of 1000 kg. A worker weighing 80 kg needs to transport boxes weighing 35 kg each. Formulate an inequality for the number of boxes b, determine the maximum number of boxes, and explain what happens physically if one extra box is loaded.",
+            "lookFor": "Writes 80 + 35b <= 1000, solves 35b <= 920 to get b <= 26.285..., identifies maximum as 26 boxes, and explains that 27 boxes would make the total weight 1025 kg, exceeding the safe limit."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "real_world_analogy",
+            "idea": "Use a shopping cart and cash-at-hand analogy: if items cost $3 each and you have $10, you can buy 3 items ($9), but 4 items ($12) would get you turned away at the checkout, illustrating rounding down for <=."
+          },
+          {
+            "strategy": "step_by_step",
+            "idea": "A 4-step modelling guide: 1. Define variable with units. 2. Identify the constraint word and corresponding symbol. 3. Solve the inequality algebraically. 4. Interpret the boundary according to physical feasibility (round up or down)."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified all worked examples and arithmetic.",
+            "Added misconception 'budget-strict-inequality-confusion'.",
+            "Constructed evidence ladder across all 4 levels.",
+            "Provided 2 pedagogical representations."
+          ]
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--addition-and-subtraction-of-quadratic-expressions",
+        "label": "Addition and Subtraction of Quadratic Expressions",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [],
+        "prerequisiteDetails": [
+          {
+            "label": "Combining Like Terms in Linear Expressions",
+            "reason": "Understanding algebraic coefficients and like terms is extended to terms of degree 2.",
+            "checkQuestion": "Simplify 5x - 8x + 2x."
+          }
+        ],
+        "commonMisconceptions": [
+          "Terms with the same variable letter but different powers can be added together, e.g., x^2 + x = x^3 or 2x^2.",
+          "xy and yx are unlike terms because the variables appear in a different order."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "combine-unlike-powers",
+            "belief": "Terms with the same variable letter but different powers can be added together, e.g., x^2 + x = x^3 or 2x^2.",
+            "triggerPattern": "Combining x^2 and x into a single term when simplifying algebraic expressions.",
+            "probeQuestion": "If x = 3, what is x^2 + x? Is that the same as 3^3 or 2(3^2)?",
+            "correctionHint": "x^2 and x represent different powers and are unlike terms; they cannot be added together."
+          },
+          {
+            "id": "order-of-variables-unlike",
+            "belief": "xy and yx are unlike terms because the variables appear in a different order.",
+            "triggerPattern": "Failing to combine terms like -3xy and 4yx.",
+            "probeQuestion": "Does 3 times 4 equal 4 times 3? Does x times y equal y times x?",
+            "correctionHint": "Multiplication is commutative, so xy = yx; thus, -3xy and 4yx are like terms and combine to give xy."
+          }
+        ],
+        "keyFacts": [
+          "A quadratic expression in one variable x is of the form ax^2 + bx + c, where a, b, and c are constants and a != 0.",
+          "Terms containing the same variable raised to the same power are like terms (e.g. 5x^2 and -11x^2); terms with different powers (e.g. x^2 and x) are unlike terms.",
+          "Only like terms can be combined by adding or subtracting their coefficients; unlike terms cannot be combined."
+        ],
+        "workedExamples": [
+          "Without using a calculator, simplify the following:\n(a) 5x^2 + (-11x^2)\n(b) -8x^2 + 4x^2\n(c) -2y^2 - 8y^2\n(d) -3y^2 - (-9y^2) → (a) 5x^2 + (-11x^2) = 5x^2 - 11x^2 = -6x^2\n(b) -8x^2 + 4x^2 = 4x^2 - 8x^2 = -4x^2\n(c) -2y^2 - 8y^2 = -10y^2\n(d) -3y^2 - (-9y^2) = -3y^2 + 9y^2 = 6y^2 → Answer: (a) -6x^2, (b) -4x^2, (c) -10y^2, (d) 6y^2",
+          "Without using a calculator, simplify each of the following expressions:\n(a) -3x^2 + (-4x^2) + 2 - 8\n(b) -y^2 - 3xy - 5y^2 - (-4yx) → (a) -3x^2 + (-4x^2) + 2 - 8 = -7x^2 + (-6) = -7x^2 - 6\n(b) -y^2 - 3xy - 5y^2 - (-4yx) = -y^2 - 5y^2 - 3xy - (-4xy) = -6y^2 - 3xy + 4xy = -6y^2 + xy → Answer: (a) -7x^2 - 6, (b) -6y^2 + xy"
+        ],
+        "difficultyLevel": 2,
+        "typicalTeachingOrder": 10,
+        "chapter": "Chapter 3: Expansion and Factorisation of Algebraic Expressions",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "polynomial-expansion",
+        "chapterId": "ch3-expansion-and-factorisation-of-a",
+        "chapterNumber": 3,
+        "orderInChapter": 1,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "Which of these terms can be combined with 7x^2: 3x, -2x^2, 7x^3, or 5y^2?",
+            "lookFor": "Identifies -2x^2 because it has the exact same variable raised to the same power."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why 4x^2 + 3x cannot be simplified to 7x^3 or 7x^2.",
+            "lookFor": "Explains that x^2 and x represent different quantities/powers (e.g. area vs length) and are unlike terms, so their coefficients cannot be added."
+          },
+          {
+            "level": 3,
+            "prompt": "Simplify completely: 4a^2 - 7ab + 3b^2 - (2a^2 + 5ba - b^2).",
+            "lookFor": "Correct expansion of brackets and collection of like terms to reach 2a^2 - 12ab + 4b^2 (recognising ab = ba)."
+          },
+          {
+            "level": 4,
+            "prompt": "A rectangular garden has an area of (5x^2 + 8x) m^2. A paved path inside takes up (2x^2 - 3x + 4) m^2. Write a simplified algebraic expression for the remaining lawn area.",
+            "lookFor": "Subtracts the path area from the total area: (5x^2 + 8x) - (2x^2 - 3x + 4) = 3x^2 + 11x - 4 m^2."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Use algebra tiles showing large x-by-x squares for x^2, x-by-1 strips for x, and 1-by-1 squares for units to visually illustrate why areas of different dimensions cannot merge into a single shape."
+          },
+          {
+            "strategy": "step_by_step",
+            "idea": "Teach a 3-step routine: (1) underline like terms with matching symbols (e.g. single underline for x^2, double underline for xy, wavy line for constants), (2) group like terms with their preceding signs, (3) add/subtract coefficients."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified all worked examples and assigned status 'verified'.",
+            "Added stable kebab-case IDs to misconceptions.",
+            "Added 4-level evidence ladder.",
+            "Added concrete pedagogical representations."
+          ]
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-products-of-two-linear-binomials-using-distribu",
+        "label": "Expansion of Products of Two Linear Binomials using Distributive Law",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [
+          "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--addition-and-subtraction-of-quadratic-expressions"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Addition and Subtraction of Quadratic Expressions",
+            "reason": "Multiplying binomials produces quadratic expressions whose like terms must be identified and combined",
+            "checkQuestion": "Which of these terms can be combined with 7x^2: 3x, -2x^2, 7x^3, or 5y^2?",
+            "conceptId": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--addition-and-subtraction-of-quadratic-expressions"
+          },
+          {
+            "label": "Distributive law for single brackets",
+            "reason": "Expanding $(a+b)(c+d)$ applies the single-bracket distributive law twice: $a(c+d) + b(c+d)$.",
+            "checkQuestion": "Expand $3x(2y - 5)$."
+          }
+        ],
+        "commonMisconceptions": [
+          "Only multiplying the first terms and last terms together, i.e., $(a+b)(c+d) = ac + bd$.",
+          "Dropping brackets when subtracting an expanded product without distributing the negative sign."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "foil-missing-inner-outer",
+            "belief": "Only multiplying the first terms and last terms together, i.e., $(a+b)(c+d) = ac + bd$.",
+            "triggerPattern": "Expanding $(x+2)(x+3)$ as $x^2 + 6$.",
+            "probeQuestion": "If $x = 1$, what is the value of $(x+2)(x+3)$, and what is the value of $x^2 + 6$?",
+            "correctionHint": "Remember that each of the two terms in the first bracket must multiply each of the two terms in the second bracket, yielding 4 terms before simplification."
+          },
+          {
+            "id": "drop-brackets-after-subtraction",
+            "belief": "Dropping brackets when subtracting an expanded product without distributing the negative sign.",
+            "triggerPattern": "Writing $2ac - (3a - b)(c + 4b) = 2ac - 3ac + 12ab - bc - 4b^2$.",
+            "probeQuestion": "In $2ac - (3a - b)(c + 4b)$, does the minus sign apply to just $3ac$ or the entire expanded product?",
+            "correctionHint": "Keep the entire expansion inside brackets after a minus sign, then distribute $-1$ to every term inside."
+          }
+        ],
+        "keyFacts": [
+          "The expansion of $(a + b)(c + d)$ using the Distributive Law gives $ac + ad + bc + bd$.",
+          "Every term in the first factor $(a + b)$ must be multiplied by every term in the second factor $(c + d)$.",
+          "When expanding binomials with negative signs, watch the signs carefully: $-(x + y) = -x - y$ and $-(x - y) = -x + y$."
+        ],
+        "workedExamples": [
+          "Expand each of the following expressions.\n(a) $(a + b)(7x + 5y)$\n(b) $(3a + 1)(x - 4y)$\n(c) $(x - 6y)(3c + 2d)$\n(d) $(8p - 3q)(2r - 5s)$ → (a) $(a + b)(7x + 5y) = 7ax + 5ay + 7bx + 5by$\n(b) $(3a + 1)(x - 4y) = 3ax - 12ay + x - 4y$\n(c) $(x - 6y)(3c + 2d) = 3cx + 2dx - 18cy - 12dy$\n(d) $(8p - 3q)(2r - 5s) = 16pr - 40ps - 6qr + 15qs$ → Answer: (a) $7ax + 5ay + 7bx + 5by$; (b) $3ax - 12ay + x - 4y$; (c) $3cx + 2dx - 18cy - 12dy$; (d) $16pr - 40ps - 6qr + 15qs$",
+          "Simplify the expression $2ac - (3a - b)(c + 4b)$. → $2ac - (3a - b)(c + 4b) = 2ac - (3ac + 12ab - bc - 4b^2)$\n$= 2ac - 3ac - 12ab + bc + 4b^2$\n$= 4b^2 - ac - 12ab + bc$ → Answer: $4b^2 - ac - 12ab + bc$"
+        ],
+        "difficultyLevel": 2,
+        "typicalTeachingOrder": 11,
+        "chapter": "Chapter 3: Expansion and Factorisation of Algebraic Expressions",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "polynomial-expansion",
+        "chapterId": "ch3-expansion-and-factorisation-of-a",
+        "chapterNumber": 3,
+        "orderInChapter": 1,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "How many individual products do you get when expanding $(2x + 3)(4y - 5)$ before collecting any like terms?",
+            "lookFor": "Identifies that there are 4 terms (2 terms in first bracket * 2 terms in second bracket)."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why $(a + b)(c + d)$ equals $a(c + d) + b(c + d)$.",
+            "lookFor": "Explains that the bracket $(c + d)$ is treated as a single quantity and distributed over $(a + b)$ using the single-bracket distributive law."
+          },
+          {
+            "level": 3,
+            "prompt": "Expand and simplify: $(4m - 3n)(2p + 5q)$.",
+            "lookFor": "Correctly computes $8mp + 20mq - 6np - 15nq$."
+          },
+          {
+            "level": 4,
+            "prompt": "A square photo of side length $x$ cm is enlarged by increasing its width by $3$ cm and its length by $5$ cm. Write an algebraic expression for the increase in area.",
+            "lookFor": "New area is $(x + 5)(x + 3) = x^2 + 8x + 15$. Subtracts original area $x^2$ to find the increase: $8x + 15$ cm^2."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Use a 2x2 grid (area model) with rows labelled with the terms of the first bracket and columns labelled with the terms of the second bracket to visualize all four partial products."
+          },
+          {
+            "strategy": "step_by_step",
+            "idea": "Break $(a + b)(c + d)$ into two single-bracket expansions: Step 1 write $a(c + d) + b(c + d)$; Step 2 expand both; Step 3 collect any like terms."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified all worked examples and assigned status 'verified'.",
+            "Added stable kebab-case IDs to misconceptions.",
+            "Added 4-level evidence ladder.",
+            "Added pedagogical representations."
+          ]
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-algebraic-expressions-using-the-distributive-la",
+        "label": "Expansion of Algebraic Expressions Using the Distributive Law",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [],
+        "prerequisiteDetails": [
+          {
+            "label": "Rules of Negative Number Multiplication",
+            "reason": "Expanding expressions with negative signs requires multiplying directed numbers accurately.",
+            "checkQuestion": "What is (-3) * (-5)?"
+          }
+        ],
+        "commonMisconceptions": [
+          "The negative sign outside the brackets only applies to the first term inside.",
+          "A leading term outside the bracket is distributed or subtracted before multiplication, e.g. calculating 8 - a first in 8 - a(b + c)."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "negative-only-first-term",
+            "belief": "The negative sign outside the brackets only applies to the first term inside.",
+            "triggerPattern": "Writing -4(5x - y) = -20x - y or -20x - 4y.",
+            "probeQuestion": "What is -4 multiplied by -y?",
+            "correctionHint": "Distribute the negative sign and factor to every term inside: (-4) * (5x) + (-4) * (-y) = -20x + 4y."
+          },
+          {
+            "id": "distribute-to-outside-terms",
+            "belief": "A leading term outside the bracket is distributed or subtracted before multiplication, e.g. calculating 8 - a first in 8 - a(b + c).",
+            "triggerPattern": "Simplifying 8 - a(3b + 2c) as (8 - a)(3b + 2c).",
+            "probeQuestion": "According to the order of operations (BIDMAS), do we perform multiplication or subtraction first?",
+            "correctionHint": "Multiplication takes precedence over subtraction; keep 8 separate and multiply -a by each term inside the bracket first."
+          }
+        ],
+        "keyFacts": [
+          "The Distributive Law states that a(b + c) = ab + ac, where the factor outside is multiplied by each term inside the bracket.",
+          "Expanding -(x + y) gives -x - y, and -(x - y) gives -x + y.",
+          "When multiplying a negative term outside brackets by a negative term inside brackets, the product is positive."
+        ],
+        "workedExamples": [
+          "Expand each of the following expressions:\n(a) 3(x + 2)\n(b) -4(5x - y)\n(c) 8 - a(-3b + 2c) → (a) 3(x + 2) = 3x + 6\n(b) -4(5x - y) = -20x + 4y  [since -4 * (-y) = +4y]\n(c) 8 - a(-3b + 2c) = 8 + 3ab - 2ac → Answer: (a) 3x + 6, (b) -20x + 4y, (c) 8 + 3ab - 2ac"
+        ],
+        "difficultyLevel": 2,
+        "typicalTeachingOrder": 12,
+        "chapter": "Chapter 3: Expansion and Factorisation of Algebraic Expressions",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "polynomial-expansion",
+        "chapterId": "ch3-expansion-and-factorisation-of-a",
+        "chapterNumber": 3,
+        "orderInChapter": 2,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "State what -5(2x - 3) equals before simplifying any arithmetic.",
+            "lookFor": "Shows the distributive multiplication: (-5)(2x) + (-5)(-3) or -10x + 15."
+          },
+          {
+            "level": 2,
+            "prompt": "Using the area of a rectangle divided into two parts with height a and widths b and c, explain why a(b + c) = ab + ac.",
+            "lookFor": "Explains that the total area of the large rectangle is height * total width = a(b + c), which must equal the sum of the two smaller areas ab and ac."
+          },
+          {
+            "level": 3,
+            "prompt": "Expand and simplify: 5(2x - 4) - 3(x - 7).",
+            "lookFor": "10x - 20 - 3x + 21 = 7x + 1."
+          },
+          {
+            "level": 4,
+            "prompt": "A shop offers a discount voucher of $4 off each shirt. If you buy 6 shirts at original price $p and a jacket for $45, write a simplified expression for the total cost.",
+            "lookFor": "Sets up 6(p - 4) + 45 and expands it to 6p - 24 + 45 = 6p + 21."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Draw a rectangle with height a and two partitioned base widths b and c, labeling the areas of each section as ab and ac to demonstrate total area = a(b + c) = ab + ac."
+          },
+          {
+            "strategy": "worked_example",
+            "idea": "Demonstrate expansion using curved arrows (rainbow method) from the outside factor to each term inside, writing out the multiplication explicitly before combining signs."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified worked example and assigned status 'verified'.",
+            "Added second misconception ('distribute-to-outside-terms') with ID.",
+            "Added 4-level evidence ladder.",
+            "Added pedagogical representations."
+          ]
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-quadratic-expressions-using-the-distributive-la",
+        "label": "Expansion of Quadratic Expressions Using the Distributive Law and Multiplication Frame",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [
+          "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--addition-and-subtraction-of-quadratic-expressions",
+          "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-products-of-two-linear-binomials-using-distribu",
+          "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-algebraic-expressions-using-the-distributive-la"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Addition and Subtraction of Quadratic Expressions",
+            "reason": "Expanding into standard quadratic forms requires adding and collecting like variable terms",
+            "checkQuestion": "Simplify $7x - 15x$.",
+            "conceptId": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--addition-and-subtraction-of-quadratic-expressions"
+          },
+          {
+            "label": "Expansion of Products of Two Linear Binomials using Distributive Law",
+            "reason": "Using multiplication frames and distributive patterns builds directly on expanding products of binomials",
+            "checkQuestion": "How many individual products do you get when expanding $(2x + 3)(4y - 5)$ before collecting any like terms?",
+            "conceptId": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-products-of-two-linear-binomials-using-distribu"
+          },
+          {
+            "label": "Expansion of Algebraic Expressions Using the Distributive Law",
+            "reason": "Distributing signs and numerical coefficients into bracketed terms is fundamental to expanding quadratic factors",
+            "checkQuestion": "State what -5(2x - 3) equals before simplifying any arithmetic.",
+            "conceptId": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-algebraic-expressions-using-the-distributive-la"
+          }
+        ],
+        "commonMisconceptions": [
+          "Thinking $xy$ and $yx$ are unlike terms and cannot be combined.",
+          "Multiplying coefficients incorrectly when multiplying negative terms, e.g. $(-3)(-5) = -15$."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "xy-yx-unlike",
+            "belief": "Thinking $xy$ and $yx$ are unlike terms and cannot be combined.",
+            "triggerPattern": "Leaving an expanded expression as $x^2 - 3xy + 2yx - 6y^2$.",
+            "probeQuestion": "Is $2 \\times 3$ different from $3 \\times 2$? Can $2yx$ be written as $2xy$?",
+            "correctionHint": "Multiplication is commutative, so $yx = xy$. Combine them as like terms."
+          },
+          {
+            "id": "negative-product-sign-error",
+            "belief": "Multiplying coefficients incorrectly when multiplying negative terms, e.g. $(-3)(-5) = -15$.",
+            "triggerPattern": "Sign errors in the constant term or cross terms.",
+            "probeQuestion": "What is the product of two negative numbers?",
+            "correctionHint": "Remember that negative times negative is positive: $(-a) \\times (-b) = +ab$."
+          }
+        ],
+        "keyFacts": [
+          "A multiplication frame / rectangular array can be used to organize the products of terms in expanding quadratic expressions like $(px + q)(rx + s)$.",
+          "The product of $(px + q)(rx + s)$ results in $prx^2 + (ps + qr)x + qs$ upon collecting like terms in $x$.",
+          "When expanding expressions with two variables, such as $(x + 2y)(x - 3y)$, the middle terms combine as like terms: $-3xy + 2xy = -xy$ because multiplication is commutative ($yx = xy$)."
+        ],
+        "workedExamples": [
+          "Without using algebra discs, expand $(3x + 4)(7 - 8x)$ using a multiplication frame. → Method 1: Rearrange as $(3x + 4)(-8x + 7)$.\nUsing frame with rows $3x, +4$ and columns $-8x, +7$:\n$3x \\times (-8x) = -24x^2$, $3x \\times 7 = +21x$, $4 \\times (-8x) = -32x$, $4 \\times 7 = +28$.\nSum = $-24x^2 + 21x - 32x + 28 = -24x^2 - 11x + 28$.\nMethod 2: Using frame with rows $3x, +4$ and columns $7, -8x$:\nSum = $21x - 24x^2 + 28 - 32x = -24x^2 - 11x + 28$.",
+          "Simplify $(2x - 3)(x + 5) - 2(4x + 1)(5 - 3x)$. → $(2x - 3)(x + 5) = 2x^2 + 10x - 3x - 15 = 2x^2 + 7x - 15$\n$(4x + 1)(5 - 3x) = 20x - 12x^2 + 5 - 3x = -12x^2 + 17x + 5$\nExpression = $2x^2 + 7x - 15 - 2(-12x^2 + 17x + 5)$\n$= 2x^2 + 7x - 15 + 24x^2 - 34x - 10$\n$= 26x^2 - 27x - 25",
+          "Expand $(x + 2y)(x - 3y)$. → Method 1 (Distributive Law):\n$(x + 2y)(x - 3y) = x^2 - 3xy + 2yx - 6y^2 = x^2 - xy - 6y^2$\nMethod 2 (Multiplication frame):\nRows $x, +2y$; Columns $x, -3y$:\nTerms are $x^2, -3xy, +2yx, -6y^2$.\nSum = $x^2 - xy - 6y^2$."
+        ],
+        "difficultyLevel": 2,
+        "typicalTeachingOrder": 13,
+        "chapter": "Chapter 3: Expansion and Factorisation of Algebraic Expressions",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "polynomial-expansion",
+        "chapterId": "ch3-expansion-and-factorisation-of-a",
+        "chapterNumber": 3,
+        "orderInChapter": 2,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "Identify the four terms produced when using a multiplication frame for $(2x - 1)(3x + 4)$ before combining like terms.",
+            "lookFor": "Lists $6x^2$, $+8x$, $-3x$, and $-4$."
+          },
+          {
+            "level": 2,
+            "prompt": "In expanding $(x + a)(x + b) = x^2 + (a+b)x + ab$, explain where the middle coefficient $(a+b)$ comes from.",
+            "lookFor": "Explains that multiplying the outer terms gives $bx$ and the inner terms gives $ax$; factoring out $x$ gives $(a+b)x$ as they are like terms."
+          },
+          {
+            "level": 3,
+            "prompt": "Expand and simplify: $(3x - 5)(2x + 7)$.",
+            "lookFor": "$6x^2 + 21x - 10x - 35 = 6x^2 + 11x - 35$."
+          },
+          {
+            "level": 4,
+            "prompt": "A rectangle has width $(2x - 1)$ cm and length $(3x + 5)$ cm. A smaller square of side $(x - 2)$ cm is cut out from it. Find an expression for the remaining area in simplified form.",
+            "lookFor": "Expands $(2x - 1)(3x + 5) = 6x^2 + 7x - 5$. Expands $(x - 2)^2 = x^2 - 4x + 4$. Subtracts: $(6x^2 + 7x - 5) - (x^2 - 4x + 4) = 5x^2 + 11x - 9$ cm^2."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Multiplication frame / box method: draw a 2x2 grid with terms of one binomial along the top and the other down the side, showing each box as a cell product and highlighting diagonal like terms."
+          },
+          {
+            "strategy": "peer_comparison",
+            "idea": "Show Student A who used FOIL and made a sign error on $-3 \\times (-5)$ versus Student B who used a multiplication frame with explicit +/- signs in every cell, discussing why the frame prevents dropped signs."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified all worked examples and assigned status 'verified'.",
+            "Added stable kebab-case IDs to misconceptions.",
+            "Added 4-level evidence ladder.",
+            "Added pedagogical representations."
+          ]
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-by-extracting-common-factors",
+        "label": "Factorisation by Extracting Common Factors",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [],
+        "prerequisiteDetails": [
+          {
+            "label": "Finding the Highest Common Factor (HCF)",
+            "reason": "Required to determine the greatest common term to extract.",
+            "checkQuestion": "What is the HCF of $18a^2b$ and $24ab^2$?"
+          }
+        ],
+        "commonMisconceptions": [
+          "Extracting only a numerical factor and leaving common variable factors inside, resulting in incomplete factorisation.",
+          "Failing to change signs inside brackets when factoring out a negative sign."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "partial-factorisation-missing-variables",
+            "belief": "Extracting only a numerical factor and leaving common variable factors inside, resulting in incomplete factorisation.",
+            "triggerPattern": "Factorising $6x^2 + 15x$ as $3(2x^2 + 5x)$.",
+            "probeQuestion": "Can the expression inside the bracket $(2x^2 + 5x)$ be divided further by any variable?",
+            "correctionHint": "Check if any variable appears in every term; the HCF must include common variables to the lowest power."
+          },
+          {
+            "id": "neg-factor-sign-error",
+            "belief": "Failing to change signs inside brackets when factoring out a negative sign.",
+            "triggerPattern": "Writing $-15x - 6 = -3(5x - 2)$.",
+            "probeQuestion": "If you expand $-3(5x - 2)$, what do you get?",
+            "correctionHint": "Dividing a negative term by a negative factor yields a positive term."
+          }
+        ],
+        "keyFacts": [
+          "Factorisation is the reverse process of expansion; it expresses an algebraic sum as a product of factors.",
+          "To factorise completely, extract the Highest Common Factor (HCF) of all terms.",
+          "When extracting a negative common factor, all signs inside the brackets change: $-x - y = -(x + y)$."
+        ],
+        "workedExamples": [
+          "Factorise each of the following expressions completely.\n(a) $12x + 18$\n(b) $-15x - 6$\n(c) $-10ax + 25ay$ → (a) HCF of 12 and 18 is 6: $12x + 18 = 6(2x + 3)$\n(b) HCF of 6 and 15 is 3. Factoring out $-3$: $-15x - 6 = -3(5x + 2)$\n(c) Rearrange order of terms: $-10ax + 25ay = 25ay - 10ax = 5a(5y - 2x)$ → Answer: (a) $6(2x + 3)$; (b) $-3(5x + 2)$; (c) $5a(5y - 2x)$",
+          "Factorise each of the following expressions completely.\n(a) $6x^2 + 15x$\n(b) $-a^3bc - a^2b^2$ → (a) HCF of 6 and 15 is 3; HCF of $x^2$ and $x$ is $x$. Thus, $6x^2 + 15x = 3x(2x + 5)$.\n(b) HCF of $a^3$ and $a^2$ is $a^2$; HCF of $b$ and $b^2$ is $b$. Factoring out $-a^2b$: $-a^3bc - a^2b^2 = -a^2b(ac + b)$. → Answer: (a) $3x(2x + 5)$; (b) $-a^2b(ac + b)$"
+        ],
+        "difficultyLevel": 2,
+        "typicalTeachingOrder": 14,
+        "chapter": "Chapter 3: Expansion and Factorisation of Algebraic Expressions",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "algebraic-factorisation",
+        "chapterId": "ch3-expansion-and-factorisation-of-a",
+        "chapterNumber": 3,
+        "orderInChapter": 3,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "What is the highest common factor (HCF) of the terms $8x^2y$ and $12xy^2$?",
+            "lookFor": "Identifies $4xy$ (HCF of numbers is 4, lowest power of $x$ is $x$, lowest power of $y$ is $y$)."
+          },
+          {
+            "level": 2,
+            "prompt": "A student factors $4x^2 + 8x$ as $2x(2x + 4)$. Explain why this is not fully factorised and what the correct answer is.",
+            "lookFor": "Explains that $(2x + 4)$ still shares a common numerical factor of 2; the HCF was $4x$, so the completely factorised form is $4x(x + 2)$."
+          },
+          {
+            "level": 3,
+            "prompt": "Factorise completely: $-14p^2q - 21pq^2 + 7pq$.",
+            "lookFor": "Takes out $-7pq$ (or $7pq$): $-7pq(2p + 3q - 1)$ or $7pq(-2p - 3q + 1)$, retaining the $-1$ / $+1$ term."
+          },
+          {
+            "level": 4,
+            "prompt": "The total surface area of a solid cylinder without a top is given by $\\pi r^2 + 2\\pi rh$. Express this formula in factorised form, and calculate its value when $r = 7$ and $h = 3$ taking $\\pi = \\frac{22}{7}$.",
+            "lookFor": "Factorises to $\\pi r(r + 2h)$. Substitutes values: $\\frac{22}{7} \\times 7 \\times (7 + 6) = 22 \\times 13 = 286$."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "step_by_step",
+            "idea": "3-step HCF procedure: (1) Find numerical HCF, (2) Find lowest power of each common letter, (3) Divide each original term by the full HCF to write the bracketed expression."
+          },
+          {
+            "strategy": "direct_explanation",
+            "idea": "Define factorisation as the exact inverse operation of expansion, showing that expanding the answer must yield the original question as an essential self-check."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters",
+          "pages": [
+            71,
+            72
+          ]
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified all worked examples and assigned status 'verified'.",
+            "Added stable kebab-case IDs to misconceptions.",
+            "Added 4-level evidence ladder.",
+            "Added pedagogical representations."
+          ]
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-of-quadratic-expressions-of-the-form-x2-bx-c-a",
+        "label": "Factorisation of Quadratic Expressions of the Form x² + bx + c and ax² + bx + c",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [
+          "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-by-extracting-common-factors"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Factorisation by Extracting Common Factors",
+            "reason": "Extracting common factors is the foundational step before attempting trinomial quadratic factorisation",
+            "checkQuestion": "What is the highest common factor (HCF) of the terms $8x^2y$ and $12xy^2$?",
+            "conceptId": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-by-extracting-common-factors"
+          },
+          {
+            "label": "Factor pairs of integers",
+            "reason": "Finding combinations of integers with a given product and sum.",
+            "checkQuestion": "List all integer factor pairs of $-24$ that add up to $+5$."
+          }
+        ],
+        "commonMisconceptions": [
+          "Confusing the conditions: looking for factors that multiply to $b$ and add to $c$.",
+          "Forgetting to extract a negative common factor when the coefficient of $x^2$ is negative."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "reverse-sum-and-product",
+            "belief": "Confusing the conditions: looking for factors that multiply to $b$ and add to $c$.",
+            "triggerPattern": "Factorising $x^2 + 5x + 6$ into $(x + 1)(x + 6)$ because $1 + 5 = 6$.",
+            "probeQuestion": "When you expand $(x+p)(x+q)$, which term gives the constant $c$, the sum or the product?",
+            "correctionHint": "The constant term is the product of the two numbers, while the coefficient of $x$ is their sum."
+          },
+          {
+            "id": "neg-leading-coeff-ignored",
+            "belief": "Forgetting to extract a negative common factor when the coefficient of $x^2$ is negative.",
+            "triggerPattern": "Directly factoring $-x^2 + 6x - 9$ without factoring out $-1$ first.",
+            "probeQuestion": "What is the common factor of all three terms in $-x^2 + 6x - 9$?",
+            "correctionHint": "First write $-x^2 + 6x - 9 = -(x^2 - 6x + 9)$, then factorise the expression inside the brackets."
+          }
+        ],
+        "keyFacts": [
+          "To factorise $x^2 + bx + c$, find two numbers whose product is $c$ and whose sum is $b$.",
+          "If $c > 0$ and $b > 0$, both factors are positive; if $c > 0$ and $b < 0$, both factors are negative; if $c < 0$, one factor is positive and the other is negative.",
+          "For $ax^2 + bx + c$ with $a \\neq 1$, split the middle term $bx$ into two terms whose product equals $(a \\times c)x^2$ or use a multiplication frame / cross method.",
+          "Always check for and extract any common factors across all terms before attempting quadratic factorisation."
+        ],
+        "workedExamples": [
+          "Factorise $2x^2 + 7x - 15$. → The product of the diagonal terms is $2x^2 \\times (-15) = -30x^2$.\nFind two terms whose product is $-30x^2$ and sum is $+7x$:\nPairs of factors of $-30$: $(-3) \\times 10 = -30$ and $-3 + 10 = 7$.\nSo the two terms are $-3x$ and $10x$.\nArrange in multiplication frame:\nRow 1: $2x^2, -3x$ (HCF is $x$)\nRow 2: $+10x, -15$ (HCF is $5$)\nColumn 1: $2x^2, 10x$ (HCF is $2x$)\nColumn 2: $-3x, -15$ (HCF is $-3$)\nThus, $2x^2 + 7x - 15 = (2x - 3)(x + 5)$.",
+          "Factorise $x^2 + 5xy - 6y^2$. → Compare with $x^2 + 5x - 6 = (x - 1)(x + 6)$ since $6x - x = 5x$.\nAttach $y$ to the second term of each factor:\n$x^2 + 5xy - 6y^2 = (x - y)(x + 6y)$."
+        ],
+        "difficultyLevel": 3,
+        "typicalTeachingOrder": 15,
+        "chapter": "Chapter 3: Expansion and Factorisation of Algebraic Expressions",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "algebraic-factorisation",
+        "chapterId": "ch3-expansion-and-factorisation-of-a",
+        "chapterNumber": 3,
+        "orderInChapter": 4,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "Find two integers whose product is $-24$ and whose sum is $+5$.",
+            "lookFor": "Identifies $+8$ and $-3$ ($8 \\times -3 = -24$ and $8 + (-3) = 5$)."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why the signs of the binomial factors of $x^2 - 7x + 12$ must both be negative.",
+            "lookFor": "Explains that because the product $+12$ is positive, both numbers must have the same sign; because their sum $-7$ is negative, both numbers must be negative."
+          },
+          {
+            "level": 3,
+            "prompt": "Factorise completely: $3x^2 - 11x - 4$.",
+            "lookFor": "Finds factors of $3 \\times (-4) = -12$ that sum to $-11$ (which are $-12$ and $+1$), splits the middle term, and factors to $(3x + 1)(x - 4)$."
+          },
+          {
+            "level": 4,
+            "prompt": "The area of a rectangular playing field is given by $(2x^2 + 9x - 5)$ m^2. If the width is $(x + 5)$ m, find the length in terms of $x$, and find the perimeter when $x = 10$.",
+            "lookFor": "Factorises $(2x^2 + 9x - 5) = (2x - 1)(x + 5)$ to find length $(2x - 1)$ m. Evaluates length $= 19$ m and width $= 15$ m when $x = 10$, giving perimeter $= 2(19 + 15) = 68$ m."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Multiplication frame / cross method: place $ax^2$ and $c$ in the top-left and bottom-right cells, find factors of $ac$ that sum to $b$ for the other two cells, then extract common factors across rows and columns."
+          },
+          {
+            "strategy": "peer_comparison",
+            "idea": "Compare a student who guesses and checks factors of $a$ and $c$ randomly with a student who systematically lists factor pairs of $a \\times c$ by sum to highlight how systematic factor listing prevents missed combinations."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified all worked examples and assigned status 'verified'.",
+            "Added stable kebab-case IDs to misconceptions.",
+            "Added 4-level evidence ladder.",
+            "Added pedagogical representations."
+          ]
+        }
+      },
+      {
+        "id": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-by-grouping",
+        "label": "Factorisation by Grouping",
+        "subjectId": "igcse--g8--mathematics",
+        "prerequisites": [
+          "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-by-extracting-common-factors"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Factorisation by Extracting Common Factors",
+            "reason": "Grouping requires extracting common monomial and binomial factors from pairs of terms",
+            "checkQuestion": "Factorise $12ax - 8bx$.",
+            "conceptId": "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-by-extracting-common-factors"
+          }
+        ],
+        "commonMisconceptions": [
+          "Grouping terms that do not share a common binomial factor, and stopping halfway, e.g. leaving an answer as $a(c+d) + bc + bd$.",
+          "Failing to recognize that $(a - b) = -(b - a)$."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "stop-at-partial-grouping",
+            "belief": "Grouping terms that do not share a common binomial factor, and stopping halfway, e.g. leaving an answer as $a(c+d) + bc + bd$.",
+            "triggerPattern": "Stopping when only one pair has been factorised.",
+            "probeQuestion": "Is an expression fully factorised if there is still an addition sign between terms?",
+            "correctionHint": "The final answer must be a single product of factors; all terms must be factored into brackets."
+          },
+          {
+            "id": "opposite-sign-bracket-confusion",
+            "belief": "Failing to recognize that $(a - b) = -(b - a)$.",
+            "triggerPattern": "Getting stuck when one bracket has $(2x - 3)$ and the other has $(3 - 2x)$.",
+            "probeQuestion": "What happens when you multiply $(3 - 2x)$ by $-1$?",
+            "correctionHint": "Factor out $-1$ from $(b - a)$ to convert it into $-(a - b)$ so that the binomial factors match."
+          }
+        ],
+        "keyFacts": [
+          "An expression with four terms of the form $ac + ad + bc + bd$ can be factorised by grouping terms into pairs: $(ac + ad) + (bc + bd) = a(c + d) + b(c + d) = (a + b)(c + d)$.",
+          "Terms can sometimes be rearranged in different valid groupings to reveal a common binomial factor.",
+          "When extracting a negative factor from the second pair, be careful to change the sign inside the bracket so that the binomial factors match: e.g., $k(y - x) = -k(x - y)$."
+        ],
+        "workedExamples": [
+          "Factorise $12ax - 6by - 8bx + 9ay$ completely. → Rearrange terms: $12ax - 8bx + 9ay - 6by$\nGroup into two pairs: $(12ax - 8bx) + (9ay - 6by)$\nFactor out common factors from each pair: $4x(3a - 2b) + 3y(3a - 2b)$\nFactor out the common binomial factor $(3a - 2b)$: $(3a - 2b)(4x + 3y)$.",
+          "Factorise $6x^2 - 9x + 15y - 10xy$ fully. → Method 1:\n$(6x^2 - 9x) + (15y - 10xy) = 3x(2x - 3) + 5y(3 - 2x)$\nSince $(3 - 2x) = -(2x - 3)$:\n$= 3x(2x - 3) - 5y(2x - 3)$\n$= (2x - 3)(3x - 5y)"
+        ],
+        "difficultyLevel": 3,
+        "typicalTeachingOrder": 16,
+        "chapter": "Chapter 3: Expansion and Factorisation of Algebraic Expressions",
+        "book": "Shinglee 2A Think Mathematics first 3 chapters",
+        "conceptType": "algebraic-factorisation",
+        "chapterId": "ch3-expansion-and-factorisation-of-a",
+        "chapterNumber": 3,
+        "orderInChapter": 5,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "In the expression $3x(a + 2b) - 5(a + 2b)$, identify the common binomial factor and factorise the expression.",
+            "lookFor": "Identifies $(a + 2b)$ as common and writes $(a + 2b)(3x - 5)$."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why $(y - 4)$ can be rewritten as $-(4 - y)$ and how this helps when factorising by grouping.",
+            "lookFor": "Explains that distributing $-1$ gives $-4 + y = y - 4$, which allows opposite binomial brackets to be made identical so they can be factored out."
+          },
+          {
+            "level": 3,
+            "prompt": "Factorise completely: $2px - 6qx - py + 3qy$.",
+            "lookFor": "Groups pairs: $2x(p - 3q) - y(p - 3q) = (p - 3q)(2x - y)$."
+          },
+          {
+            "level": 4,
+            "prompt": "Show that the value of $103 \\times 47 - 103 \\times 17 + 3 \\times 17 - 3 \\times 47$ can be calculated mentally by factorising by grouping, and find its value.",
+            "lookFor": "Groups as $103(47 - 17) - 3(47 - 17) = (47 - 17)(103 - 3) = 30 \\times 100 = 3000$."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "step_by_step",
+            "idea": "4-step grouping procedure: (1) Underline the first pair and second pair, (2) Factor out the HCF from each pair, (3) Check if binomial brackets match (negate second term if reversed), (4) Factor out the common bracket."
+          },
+          {
+            "strategy": "visual_diagram",
+            "idea": "Use a 2x2 grid where the 4 terms are placed inside the cells, and common factors are extracted along the outer edges to show how grouping reconstructs the two factors of a rectangle."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "shinglee-2a-think-mathematics-first-3-chapters"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Verified all worked examples and assigned status 'verified'.",
+            "Added stable kebab-case IDs to misconceptions.",
+            "Added 4-level evidence ladder.",
+            "Added pedagogical representations."
+          ]
+        }
+      }
+    ],
+    "prerequisiteMap": {
+      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--equations-of-horizontal-and-vertical-lines": [],
+      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--graphs-of-linear-equations-in-the-form-ax-by-k": [
+        "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--equations-of-horizontal-and-vertical-lines"
+      ],
+      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-graphically": [
+        "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--graphs-of-linear-equations-in-the-form-ax-by-k"
+      ],
+      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-elimination": [],
+      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-substitution": [],
+      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--applications-of-simultaneous-equations-in-real-world-context": [
+        "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-elimination",
+        "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-substitution"
+      ],
+      "igcse--g8--mathematics--ch2-linear-inequalities--inequality-notation-and-properties-of-inequalities": [],
+      "igcse--g8--mathematics--ch2-linear-inequalities--solving-linear-inequalities-and-number-line-representation": [
+        "igcse--g8--mathematics--ch2-linear-inequalities--inequality-notation-and-properties-of-inequalities"
+      ],
+      "igcse--g8--mathematics--ch2-linear-inequalities--real-world-applications-of-linear-inequalities": [
+        "igcse--g8--mathematics--ch2-linear-inequalities--solving-linear-inequalities-and-number-line-representation"
+      ],
+      "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--addition-and-subtraction-of-quadratic-expressions": [],
+      "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-products-of-two-linear-binomials-using-distribu": [
+        "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--addition-and-subtraction-of-quadratic-expressions"
+      ],
+      "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-algebraic-expressions-using-the-distributive-la": [],
+      "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-quadratic-expressions-using-the-distributive-la": [
+        "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--addition-and-subtraction-of-quadratic-expressions",
+        "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-products-of-two-linear-binomials-using-distribu",
+        "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--expansion-of-algebraic-expressions-using-the-distributive-la"
+      ],
+      "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-by-extracting-common-factors": [],
+      "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-of-quadratic-expressions-of-the-form-x2-bx-c-a": [
+        "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-by-extracting-common-factors"
+      ],
+      "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-by-grouping": [
+        "igcse--g8--mathematics--ch3-expansion-and-factorisation-of-a--factorisation-by-extracting-common-factors"
+      ]
+    },
+    "scopeMaps": [
+      {
+        "chapterTitle": "Chapter 1: Linear Graphs and Simultaneous Linear Equations",
+        "inScope": [
+          "What the equation of a horizontal line and of a vertical line is",
+          "How to draw graphs of linear equations in the form ax + by = k",
+          "How to solve simultaneous linear equations in two variables using the graphical method",
+          "How to solve simultaneous linear equations in two variables using the elimination method",
+          "How to solve simultaneous linear equations in two variables using the substitution method",
+          "Why formulating a pair of linear equations in two variables has useful real-life applications"
+        ],
+        "advanced": [
+          "Challenge Yourself: Conditions for simultaneous equations to have an infinite number of solutions, no solution, or a unique solution",
+          "Challenge Yourself: Non-linear simultaneous equations reducible to linear form and coordinate modeling of constellations"
+        ],
+        "outOfScope": [],
+        "source": "textbook"
+      },
+      {
+        "chapterTitle": "Chapter 2: Linear Inequalities",
+        "inScope": [
+          "What linear inequalities are",
+          "How to solve linear inequalities in one variable and represent the solution on a number line",
+          "How to apply linear inequalities to solve real-world problems"
+        ],
+        "advanced": [
+          "Challenge Yourself: Proofs and counterexamples of inequality properties; solving quadratic/rational inequality products"
+        ],
+        "outOfScope": [],
+        "source": "textbook"
+      },
+      {
+        "chapterTitle": "Chapter 3: Expansion and Factorisation of Algebraic Expressions",
+        "inScope": [
+          "What quadratic expressions are",
+          "How to add, subtract, expand, factorise and simplify quadratic expressions",
+          "How to simplify algebraic expressions in two or more variables involving squares and cubes",
+          "How to expand algebraic expressions of the form (a + b)(c + d)",
+          "How to factorise algebraic expressions of the form ac + ad + bc + bd"
+        ],
+        "advanced": [],
+        "outOfScope": [],
+        "source": "textbook"
+      }
+    ],
+    "verification": {
+      "verifiedAt": 1790503217628,
+      "model": "gemini-3.8-flash",
+      "conceptsChecked": 16,
+      "conceptsCorrected": 16,
+      "conceptsRejected": 0,
+      "examplesCorrected": 4,
+      "examplesDropped": 0,
+      "prerequisiteEdgesDropped": 0,
+      "issues": []
+    },
+    "updatedAt": 1790503217630
+  },
+  {
+    "id": "igcse--g8--biology",
+    "label": "Biology",
+    "subject": "Biology",
+    "board": "IGCSE",
+    "gradeLevel": 8,
+    "grade": "Grade 8",
+    "source": "Biology chapter 1",
+    "sources": [
+      {
+        "id": "biology-chapter-1",
+        "kind": "textbook",
+        "title": "Biology chapter 1",
+        "fileName": "Biology-chapter-1.pdf",
+        "pages": 30,
+        "ingestedAt": 1790505820525
+      }
+    ],
+    "subjectMode": "well_structured",
+    "conceptTypes": {
+      "organism-level-biology": "Concepts dealing with whole-organism traits, life processes, and taxonomic grouping criteria.",
+      "cellular-structure-and-organisation": "Concepts dealing with microscopic cell anatomy, organelles, and hierarchical biological organization.",
+      "cellular-transport": "Concepts dealing with passive and active mechanisms of molecular movement across biological membranes.",
+      "cellular-division": "Concepts dealing with nuclear division, chromosome mechanics, and cellular reproduction."
+    },
+    "concepts": [
+      {
+        "id": "igcse--g8--biology--ch1-introducing-living-things--characteristics-and-needs-of-living-things",
+        "label": "Characteristics and Needs of Living Things",
+        "subjectId": "igcse--g8--biology",
+        "prerequisites": [],
+        "prerequisiteDetails": [
+          {
+            "label": "Distinction between living and non-living things",
+            "reason": "Learners must know that living things carry out specific active functions not observed in inanimate objects.",
+            "checkQuestion": "State two observable differences between an animal and a stone."
+          }
+        ],
+        "commonMisconceptions": [
+          "Respiration is simply another word for breathing.",
+          "Egestion (passing faeces) is an example of excretion.",
+          "Plants do not excrete because they do not produce urine or sweat."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "respiration-vs-breathing",
+            "belief": "Respiration is simply another word for breathing.",
+            "triggerPattern": "When learners are asked to define respiration or explain how living organisms obtain energy.",
+            "probeQuestion": "If a single-celled organism such as an amoeba does not possess lungs or breathe, does it still respire?",
+            "correctionHint": "Breathing is physical ventilation to take in air; respiration is the cellular chemical reaction that releases energy from food."
+          },
+          {
+            "id": "egestion-confused-with-excretion",
+            "belief": "Egestion (passing faeces) is an example of excretion.",
+            "triggerPattern": "When learners list examples of excretory organs or waste products.",
+            "probeQuestion": "Does undigested food in faeces ever participate in chemical reactions inside body cells?",
+            "correctionHint": "Excretion removes cellular metabolic waste (like urea and CO2). Passing faeces is egestion because undigested fibre never entered your cells."
+          },
+          {
+            "id": "plants-do-not-excrete",
+            "belief": "Plants do not excrete because they do not produce urine or sweat.",
+            "triggerPattern": "When learners compare excretion in animals with plant processes.",
+            "probeQuestion": "What happens to excess oxygen produced during daytime photosynthesis or waste stored in shed autumn leaves?",
+            "correctionHint": "Plants excrete excess oxygen and carbon dioxide through stomata, and store other metabolic wastes in old leaves that fall off."
+          }
+        ],
+        "keyFacts": [
+          "Living things perform seven life processes (MRS GREN): movement, respiration, sensitivity, growth, reproduction, excretion, and nutrition.",
+          "Respiration is a cellular chemical process that releases energy from food molecules (usually glucose) using oxygen: Glucose + Oxygen -> Carbon dioxide + Water + Energy released.",
+          "Excretion is the removal of toxic materials and substances in excess of requirements from the body (e.g. urea, carbon dioxide). Egestion (defecation) is not excretion because faeces consist of undigested food that never entered body cells.",
+          "To survive, living things need water, mineral nutrients, warmth, and gases (oxygen for respiration, and carbon dioxide for autotrophic photosynthesis in plants).",
+          "The biosphere is the global sum of all ecosystems, encompassing every part of Earth where life exists."
+        ],
+        "workedExamples": [
+          "A car moves, consumes fuel and oxygen, and produces waste gases through its exhaust. Explain why a car is not classified as a living organism using the seven life processes. → 1. Identify the life processes that the car appears to mimic: movement (wheels), nutrition/fuel intake (petrol), respiration/energy release (burning fuel in engine), and excretion (exhaust fumes).\n2. Test for the remaining life processes: growth, reproduction, and sensitivity.\n3. The car cannot grow on its own, it cannot reproduce to make new cars, and it does not detect and respond to environmental stimuli autonomously.\n4. To be classified as living, an entity must show all seven life processes naturally. → Answer: A car lacks sensitivity, growth, and reproduction, and its energy release is combustion rather than cellular respiration; an entity must display all seven life processes to be alive."
+        ],
+        "difficultyLevel": 2,
+        "typicalTeachingOrder": 1,
+        "chapter": "Chapter 1: Introducing living things",
+        "book": "Biology chapter 1",
+        "conceptType": "organism-level-biology",
+        "chapterId": "ch1-introducing-living-things",
+        "chapterNumber": 1,
+        "orderInChapter": 1,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "List the seven characteristics of all living organisms.",
+            "lookFor": "Movement, Respiration, Sensitivity, Growth, Reproduction, Excretion, Nutrition (MRS GREN)."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why breathing and cellular respiration are not the same thing.",
+            "lookFor": "Breathing is the physical ventilation/gas exchange of moving air into and out of lungs; respiration is the biochemical breakdown of glucose in cells to release energy."
+          },
+          {
+            "level": 3,
+            "prompt": "A student claims that a crystal growing in an evaporating salt solution is a living thing because it increases in size. How would you refute this claim?",
+            "lookFor": "Crystals increase in size by external accretion of identical minerals, not internal cellular growth; they do not perform respiration, nutrition, excretion, sensitivity, or reproduction."
+          },
+          {
+            "level": 4,
+            "prompt": "A space probe discovers microscopic particles on Mars that consume atmospheric methane and release heat when exposed to moisture, but do not divide or change size over months. Propose tests to determine if they are alive.",
+            "lookFor": "Propose testing for sensitivity/response to varied stimuli, evidence of reproduction/replication, cellular organisation, or removal of metabolic by-products rather than simple abiotic catalytic chemical reactions."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "direct_explanation",
+            "idea": "Define MRS GREN with explicit contrasts between nutrition vs feeding, excretion vs egestion, and respiration vs ventilation."
+          },
+          {
+            "strategy": "real_world_analogy",
+            "idea": "Compare a cell's respiration to a power station: fuel (glucose) and oxygen enter, useful electrical energy is generated, and exhaust wastes (carbon dioxide, water) must be released."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "biology-chapter-1"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Clarified terminology to standard IGCSE 'MRS GREN' (Nutrition instead of Feeding).",
+            "Added distinction between excretion and egestion in key facts and misconceptions.",
+            "Supplied missing worked example, ladder, and representations."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": true,
+            "scene": "A mimosa pudica plant with half of its leaves open and the other half curled inward and drooping right after being touched by a finger.",
+            "why": "It provides direct visible proof of 'sensitivity' and 'movement' in plants, which students often mistakenly think lack these life characteristics."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "The concept focuses on functional characteristics and life requirements (MRS GREN), which are procedural and classification-based rather than 3D spatial structures."
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--biology--ch1-introducing-living-things--classification-and-diversity-of-living-organisms",
+        "label": "Classification and Diversity of Living Organisms",
+        "subjectId": "igcse--g8--biology",
+        "prerequisites": [
+          "igcse--g8--biology--ch1-introducing-living-things--characteristics-and-needs-of-living-things"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Characteristics and Needs of Living Things",
+            "reason": "Classifying organisms requires recognizing fundamental life processes and shared organism-level traits.",
+            "checkQuestion": "List the seven characteristics of all living organisms.",
+            "conceptId": "igcse--g8--biology--ch1-introducing-living-things--characteristics-and-needs-of-living-things"
+          },
+          {
+            "label": "Basic animal and plant body parts",
+            "reason": "Classification depends on recognizing external anatomical features like roots, flowers, legs, and backbones.",
+            "checkQuestion": "What is the structural difference between an invertebrate and a vertebrate?"
+          }
+        ],
+        "commonMisconceptions": [
+          "Fungi are plants because they grow in soil and are stationary.",
+          "Spiders and centipedes are insects.",
+          "Whales and dolphins are fish because they live in the ocean and have fins."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "fungi-are-plants",
+            "belief": "Fungi are plants because they grow in soil and are stationary.",
+            "triggerPattern": "When categorising organisms like mushrooms, toadstools, and moulds.",
+            "probeQuestion": "Can a mushroom perform photosynthesis to make its own food like a plant does?",
+            "correctionHint": "Fungi are heterotrophs with chitin cell walls; they cannot photosynthesise and lack chlorophyll, placing them in their own kingdom."
+          },
+          {
+            "id": "spiders-are-insects",
+            "belief": "Spiders and centipedes are insects.",
+            "triggerPattern": "When classifying terrestrial arthropods based on general appearance.",
+            "probeQuestion": "How many legs and body parts does a spider have compared to a housefly?",
+            "correctionHint": "Insects have three body sections and six legs; spiders are arachnids with two body sections and eight legs."
+          },
+          {
+            "id": "dolphins-are-fish",
+            "belief": "Whales and dolphins are fish because they live in the ocean and have fins.",
+            "triggerPattern": "When classifying aquatic vertebrates.",
+            "probeQuestion": "Do whales breathe with gills or lungs, and do they produce milk for their young?",
+            "correctionHint": "Whales and dolphins breathe air with lungs, give live birth, and nurse their young with milk, classifying them as mammals."
+          }
+        ],
+        "keyFacts": [
+          "Organisms are classified based on evolutionary relationships and shared morphological/cellular features into kingdoms (e.g. Animals, Plants, Fungi, Protoctista, Prokaryotes).",
+          "Plants are multicellular autotrophs; key groups include mosses (non-vascular, no true roots), ferns (vascular, reproduce via spores), conifers/gymnosperms (vascular, produce naked seeds in cones), and angiosperms (flowering plants, produce seeds enclosed in fruit/ovaries).",
+          "Flowering plants are divided into monocotyledons (one seed leaf, parallel leaf veins, floral parts usually in multiples of 3) and dicotyledons (two seed leaves, net-like leaf veins, floral parts usually in multiples of 4 or 5).",
+          "Invertebrates lack a vertebral column; arthropods have a chitinous exoskeleton, segmented bodies, and jointed appendages. Major arthropod groups: insects (3 body parts, 6 legs), arachnids (2 body parts, 8 legs), crustaceans (mainly aquatic, 2 pairs of antennae), and myriapods (many body segments, each with legs).",
+          "Vertebrates possess a backbone and include five classes: fish (gills, scales, fins), amphibians (moist skin, aquatic larval stage), reptiles (dry scaly skin, leathery shelled eggs), birds (feathers, beaks, hard-shelled eggs), and mammals (fur/hair, mammary glands producing milk)."
+        ],
+        "workedExamples": [
+          "An unknown animal specimen has a segmented body, a hard exoskeleton, 4 pairs of walking legs, and no antennae or wings. Identify its phylum and class. → 1. Look at features: segmented body, hard exoskeleton, and jointed limbs indicate the Phylum Arthropoda.\n2. Count the legs: 4 pairs = 8 walking legs.\n3. Check antennae: 0 antennae (insects have 1 pair, crustaceans have 2 pairs).\n4. 8 legs and no antennae define the class Arachnida. → Answer: Phylum Arthropoda, Class Arachnida."
+        ],
+        "difficultyLevel": 2,
+        "typicalTeachingOrder": 2,
+        "chapter": "Chapter 1: Introducing living things",
+        "book": "Biology chapter 1",
+        "conceptType": "organism-level-biology",
+        "chapterId": "ch1-introducing-living-things",
+        "chapterNumber": 1,
+        "orderInChapter": 2,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "State two diagnostic characteristics of mammals that distinguish them from all other vertebrate classes.",
+            "lookFor": "Possession of hair/fur and mammary glands producing milk (also acceptable: external ear pinna, three middle ear bones)."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why scientists classify organisms based on internal anatomy and DNA rather than just external habitat and movement.",
+            "lookFor": "External similarities can arise from convergent evolution (e.g. fins in fish vs dolphins living in water), whereas internal structure and DNA reveal true evolutionary relationships and shared ancestry."
+          },
+          {
+            "level": 3,
+            "prompt": "You find a plant with narrow strap-like leaves displaying parallel veins, fibrous roots, and flower petals in multiples of three. Classify it as a monocot or dicot, giving your reasons.",
+            "lookFor": "Monocotyledon; justified by parallel leaf venation and floral parts in multiples of three (and fibrous roots)."
+          },
+          {
+            "level": 4,
+            "prompt": "Construct a dichotomous key to distinguish between the following four organisms: an earthworm, an ant, a spider, and a snake.",
+            "lookFor": "A valid two-choice key using distinct anatomical criteria (e.g., presence/absence of legs/jointed limbs, presence/absence of backbone, 6 legs vs 8 legs)."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Branching classification tree diagram showing the 5 vertebrate classes alongside arthropod classes with callout labels highlighting leg counts and skin coverings."
+          },
+          {
+            "strategy": "step_by_step",
+            "idea": "Walk through using a dichotomous key: 1. Backbone present? -> 2. Skin type? -> 3. Body temperature regulation / limb structure."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "biology-chapter-1",
+          "pages": [
+            17,
+            18
+          ]
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Updated invertebrate terminology to modern IGCSE standards (replacing archaic 'coelenterates' with arthropod/annelid focus).",
+            "Added marine mammal misconception.",
+            "Supplied worked example, ladder, and representations."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": true,
+            "scene": "A close-up comparison of a grass leaf displaying distinct parallel vertical veins alongside an oak leaf displaying branching, net-like veins.",
+            "why": "Leaf venation is a primary visual diagnostic feature distinguishing monocots from dicots directly in nature."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "Biological classification relies on morphological traits, dichotomy, and taxonomic trees, not solid 3D spatial geometry."
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--biology--ch1-introducing-living-things--cell-structure-and-levels-of-organisation",
+        "label": "Cell Structure and Levels of Organisation",
+        "subjectId": "igcse--g8--biology",
+        "prerequisites": [
+          "igcse--g8--biology--ch1-introducing-living-things--characteristics-and-needs-of-living-things"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Characteristics and Needs of Living Things",
+            "reason": "Understanding cells as the fundamental functional units of life builds directly on what defines living things.",
+            "checkQuestion": "List the seven characteristics of all living organisms.",
+            "conceptId": "igcse--g8--biology--ch1-introducing-living-things--characteristics-and-needs-of-living-things"
+          },
+          {
+            "label": "Microscopic units of measurement",
+            "reason": "Understanding cell dimensions requires navigating the micrometre scale relative to millimetres.",
+            "checkQuestion": "How many micrometres (µm) make up one millimetre?"
+          }
+        ],
+        "commonMisconceptions": [
+          "Plant cells have a cell wall instead of a cell membrane.",
+          "All plant cells contain chloroplasts.",
+          "The nucleus is the 'brain' of the cell that thinks and makes conscious decisions."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "cell-wall-replaces-membrane",
+            "belief": "Plant cells have a cell wall instead of a cell membrane.",
+            "triggerPattern": "When drawing or labelling the outer boundaries of a plant cell.",
+            "probeQuestion": "Does a plant cell have a cell membrane underneath its rigid cellulose wall?",
+            "correctionHint": "Plant cells have both: an inner partially permeable cell membrane controlling entry/exit, surrounded by an outer fully permeable cellulose cell wall providing strength."
+          },
+          {
+            "id": "all-plant-cells-have-chloroplasts",
+            "belief": "All plant cells contain chloroplasts.",
+            "triggerPattern": "When considering cells from underground plant structures like roots or inner onion bulb scales.",
+            "probeQuestion": "Would you find chloroplasts in the root hair cells of a plant growing underground in total darkness?",
+            "correctionHint": "Chloroplasts only occur in cells exposed to light (such as leaves and green stems); underground root cells do not have chloroplasts."
+          },
+          {
+            "id": "nucleus-is-the-brain",
+            "belief": "The nucleus is the 'brain' of the cell that thinks and makes conscious decisions.",
+            "triggerPattern": "When describing the role of the nucleus in cellular function.",
+            "probeQuestion": "Does a cell possess conscious thoughts, or does the nucleus direct activity through genetic code encoding enzymes?",
+            "correctionHint": "The nucleus is not a brain; it contains genetic material (DNA) that carries instructions for synthesizing proteins and enzymes."
+          }
+        ],
+        "keyFacts": [
+          "Cells are the basic structural and functional units of all living organisms. Linear dimensions are often measured in micrometres (1 µm = 10^-3 mm = 10^-6 m).",
+          "Animal cells typically contain: cell membrane (partially permeable barrier), cytoplasm (site of metabolic reactions), nucleus (contains DNA/chromosomes and regulates cellular activity), mitochondria (aerobic respiration), and ribosomes (protein synthesis).",
+          "Plant cells contain all animal cell structures plus: a cellulose cell wall (structural support and shape), a large permanent central vacuole containing cell sap, and chloroplasts (in photosynthetic green cells, containing chlorophyll).",
+          "Specialised cells have adaptations for their role: e.g., red blood cells (biconcave, no nucleus, contains haemoglobin for oxygen transport), root hair cells (elongated projection for water/mineral uptake), ciliated epithelial cells (cilia to sweep mucus).",
+          "Levels of biological organisation: Organelle -> Cell -> Tissue (group of similar cells performing a shared function) -> Organ (different tissues working together) -> Organ system -> Organism."
+        ],
+        "workedExamples": [
+          "A diagram of a plant cell measures 60 mm in length under a microscope. If the actual length of the cell is 0.04 mm, calculate the magnification of the image. → 1. Recall the magnification formula: Magnification (M) = Image size (I) / Actual size (A).\n2. Ensure both quantities share the same units: Image size = 60 mm, Actual size = 0.04 mm.\n3. Compute: M = 60 mm / 0.04 mm = 1500. → Answer: x1500 (or 1500x)"
+        ],
+        "difficultyLevel": 3,
+        "typicalTeachingOrder": 3,
+        "chapter": "Chapter 1: Introducing living things",
+        "book": "Biology chapter 1",
+        "conceptType": "cellular-structure-and-organisation",
+        "chapterId": "ch1-introducing-living-things",
+        "chapterNumber": 1,
+        "orderInChapter": 3,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "Name three cell structures found in typical plant leaf cells that are absent from typical animal cells.",
+            "lookFor": "Cellulose cell wall, permanent central vacuole, and chloroplasts."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain how the structure of a red blood cell is adapted to its function of transporting oxygen.",
+            "lookFor": "Biconcave disc shape increases surface area to volume ratio for rapid diffusion; lack of nucleus provides more space for haemoglobin; flexibility allows passage through narrow capillaries."
+          },
+          {
+            "level": 3,
+            "prompt": "Identify the level of biological organisation (cell, tissue, organ, or organ system) for each of the following: heart, epithelial layer lining the stomach, red blood cell, digestive system.",
+            "lookFor": "Heart = organ; epithelial layer = tissue; red blood cell = cell; digestive system = organ system."
+          },
+          {
+            "level": 4,
+            "prompt": "Under a microscope, a cell has a cell wall and ribosomes, but lacks a membrane-bound nucleus and chloroplasts. Is this cell from an animal, a green plant root, or a bacterium? Justify your choice.",
+            "lookFor": "Bacterium (prokaryote); plant cells are eukaryotic and always possess a membrane-bound nucleus despite lacking chloroplasts in roots, whereas bacteria lack a membrane-bound nucleus and possess a cell wall."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Side-by-side comparative diagram of an animal cell and a plant cell with a Venn diagram mapping shared organelles (nucleus, cytoplasm, membrane, mitochondria) versus plant-only structures."
+          },
+          {
+            "strategy": "real_world_analogy",
+            "idea": "Analogy of levels of organisation to building construction: Bricks = Cells, Brick wall = Tissue, Room (combining walls, wiring, plumbing) = Organ, Entire house = Organ system / Organism."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "biology-chapter-1"
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Added mitochondria and ribosomes to key facts to align with IGCSE syllabus.",
+            "Included standard IGCSE magnification calculation formula (M = I/A) in worked examples.",
+            "Added 'nucleus is the brain' misconception.",
+            "Supplied ladder and representations."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": false,
+            "why": "Microscopic cell organelles and organisational hierarchies are best depicted diagrammatically; real-world photos at macroscopic scales cannot show internal cellular structures clearly."
+          },
+          "spatial3d": {
+            "useful": true,
+            "why": "Cells possess layered 3D volumetric boundaries (plasma membrane enclosing cytoplasm, organelles suspended in volume, and external rigid plant cell walls) that 2D cross-sections flatten and misrepresen"
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--biology--ch1-introducing-living-things--movement-of-substances-diffusion-osmosis-and-active-transpor",
+        "label": "Movement of Substances: Diffusion, Osmosis, and Active Transport",
+        "subjectId": "igcse--g8--biology",
+        "prerequisites": [
+          "igcse--g8--biology--ch1-introducing-living-things--cell-structure-and-levels-of-organisation"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Cell Structure and Levels of Organisation",
+            "reason": "Understanding transport into and out of cells requires familiarity with the cell membrane and cytoplasm.",
+            "checkQuestion": "Name three cell structures found in typical plant leaf cells that are absent from typical animal cells.",
+            "conceptId": "igcse--g8--biology--ch1-introducing-living-things--cell-structure-and-levels-of-organisation"
+          },
+          {
+            "label": "Particle theory of matter",
+            "reason": "Diffusion relies on the concept that particles in liquids and gases are in continuous, random motion.",
+            "checkQuestion": "Why does a drop of perfume spread across a room without being blown by wind?"
+          }
+        ],
+        "commonMisconceptions": [
+          "During osmosis, solute particles (such as sugar or salt) move across the membrane to equalize concentration.",
+          "Molecular movement ceases once molecules have diffused evenly throughout a space.",
+          "A 'high concentration sugar solution' has a 'high water concentration'."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "solute-moves-in-osmosis",
+            "belief": "During osmosis, solute particles (such as sugar or salt) move across the membrane to equalize concentration.",
+            "triggerPattern": "When predicting liquid movement in osmosis experiments involving sugar solutions.",
+            "probeQuestion": "Why do sucrose molecules fail to move through the pores of a partially permeable membrane?",
+            "correctionHint": "Only water molecules are small enough to pass through the partially permeable membrane; large solute molecules cannot pass."
+          },
+          {
+            "id": "particles-stop-at-equilibrium",
+            "belief": "Molecular movement ceases once molecules have diffused evenly throughout a space.",
+            "triggerPattern": "When describing the end point of diffusion in liquid or gas systems.",
+            "probeQuestion": "Do particles stop moving when ink becomes uniformly mixed in water?",
+            "correctionHint": "Particles never stop moving; at dynamic equilibrium, molecules move randomly in all directions at equal rates so there is no net movement."
+          },
+          {
+            "id": "water-concentration-vs-solution-concentration",
+            "belief": "A 'high concentration sugar solution' has a 'high water concentration'.",
+            "triggerPattern": "When predicting direction of osmosis between solutions of differing molarities.",
+            "probeQuestion": "If a solution has a very large amount of sugar dissolved in it, does it contain a high or low proportion of free water molecules?",
+            "correctionHint": "A concentrated sugar solution has a high solute concentration but a low water potential (low free water concentration)."
+          }
+        ],
+        "keyFacts": [
+          "Diffusion is the net movement of particles from a region of higher concentration to a region of lower concentration down a concentration gradient, as a result of their random movement.",
+          "Osmosis is the net movement of water molecules from a region of higher water potential (dilute solution) to a region of lower water potential (concentrated solution) through a partially permeable membrane.",
+          "In plant cells placed in pure water, water enters by osmosis, causing the cell to become turgid (cell wall prevents bursting). In concentrated solutions, plant cells lose water and become flaccid/plasmolysed.",
+          "In animal cells placed in pure water, water enters by osmosis and the cell lyses (bursts) because it lacks a cell wall. In concentrated solutions, animal cells lose water and crenate (shrink).",
+          "Active transport is the movement of particles through a cell membrane from a region of lower concentration to a region of higher concentration (against a concentration gradient) using energy released from respiration via carrier proteins."
+        ],
+        "workedExamples": [
+          "A cylinder of potato tuber has an initial mass of 2.50 g. After being submerged in a concentrated sucrose solution for 2 hours, its final mass is 2.15 g. Calculate the percentage change in mass and explain the direction of water movement. → 1. Calculate change in mass: Final mass - Initial mass = 2.15 g - 2.50 g = -0.35 g.\n2. Calculate percentage change: (Change / Initial mass) * 100 = (-0.35 / 2.50) * 100 = -14.0%.\n3. Explain the biology: The potato tissue had a higher water potential than the concentrated sucrose solution, so water moved out of the potato cells by osmosis down the water potential gradient. → Answer: Percentage change = -14.0%; water moved out of potato cells into the solution by osmosis."
+        ],
+        "difficultyLevel": 3,
+        "typicalTeachingOrder": 4,
+        "chapter": "Chapter 1: Introducing living things",
+        "book": "Biology chapter 1",
+        "conceptType": "cellular-transport",
+        "chapterId": "ch1-introducing-living-things",
+        "chapterNumber": 1,
+        "orderInChapter": 4,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "Define active transport and state what is required for it to occur that is not required for diffusion.",
+            "lookFor": "The movement of particles against a concentration gradient (low to high concentration) across a membrane; requires energy from cellular respiration and carrier proteins."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why red blood cells burst when placed into pure water, whereas plant leaf cells do not.",
+            "lookFor": "Water enters both cells by osmosis down a water potential gradient; red blood cells lack a cell wall and burst under pressure, whereas plant cells have a rigid cellulose cell wall that exerts turgor pressure to prevent bursting."
+          },
+          {
+            "level": 3,
+            "prompt": "Root hair cells take up nitrate ions from soil water where the nitrate concentration is 0.05 mmol/dm3, while inside the root cell the nitrate concentration is 2.50 mmol/dm3. State and explain the transport process involved.",
+            "lookFor": "Active transport; nitrate ions are moving from an area of lower concentration in the soil to an area of higher concentration inside the root (against the concentration gradient), requiring energy from cellular respiration."
+          },
+          {
+            "level": 4,
+            "prompt": "A dialysis tubing bag filled with a mixed solution of starch and glucose is submerged in a beaker of pure water. Predict what substances will be detected in the beaker water after 1 hour, and explain your reasoning.",
+            "lookFor": "Glucose and water will be detected in the beaker, but starch will not; dialysis tubing is partially permeable, allowing small glucose and water molecules to diffuse through pores down their concentration gradients, while starch molecules are too large to pass."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Diagram of a U-tube with a partially permeable membrane separating dilute and concentrated solutions, showing individual water molecules (small dots) passing freely while large solute molecules (large circles) are blocked, causing the water level on the concentrated side to rise."
+          },
+          {
+            "strategy": "interactive_simulation",
+            "idea": "Simulation showing plant cells in hypotonic, isotonic, and hypertonic solutions, demonstrating cell volume changes, turgor pressure, and plasmolysis (cytoplasm pulling away from the cell wall)."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "biology-chapter-1",
+          "pages": [
+            23,
+            24
+          ]
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Updated 'semi-permeable' to standard Cambridge IGCSE term 'partially permeable'.",
+            "Updated osmosis definition to use modern 'water potential' alongside solute concentration.",
+            "Supplied worked example, ladder, and representations."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": false,
+            "why": "Diffusion, osmosis, and active transport occur at molecular scales across partially permeable membranes, which cannot be captured in a photographic real-world scene."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "Transport mechanisms are dynamic physiological processes involving concentration gradients and membrane proteins, which are effectively modelled with 2D schematics."
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--biology--ch1-introducing-living-things--cell-division-by-mitosis",
+        "label": "Cell Division by Mitosis",
+        "subjectId": "igcse--g8--biology",
+        "prerequisites": [
+          "igcse--g8--biology--ch1-introducing-living-things--cell-structure-and-levels-of-organisation"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Cell Structure and Levels of Organisation",
+            "reason": "Understanding cell division requires knowing the nucleus and its role in holding genetic instructions in chromosomes.",
+            "checkQuestion": "Which organelle in an animal cell carries genetic instructions?",
+            "conceptId": "igcse--g8--biology--ch1-introducing-living-things--cell-structure-and-levels-of-organisation"
+          }
+        ],
+        "commonMisconceptions": [
+          "Mitosis halves the number of chromosomes because the cell divides into two.",
+          "Mitosis stops occurring once an individual reaches adult size.",
+          "Mitosis produces sperm and egg cells."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "mitosis-halves-chromosomes",
+            "belief": "Mitosis halves the number of chromosomes because the cell divides into two.",
+            "triggerPattern": "When calculating the chromosome count in daughter cells following mitosis.",
+            "probeQuestion": "If a human cell with 46 chromosomes divides by mitosis, how many chromosomes are in each daughter cell?",
+            "correctionHint": "Chromosomes duplicate before dividing, so each daughter cell gets an exact, full copy of the original 46 chromosomes."
+          },
+          {
+            "id": "mitosis-stops-in-adults",
+            "belief": "Mitosis stops occurring once an individual reaches adult size.",
+            "triggerPattern": "When discussing the purpose of mitosis in adult organisms.",
+            "probeQuestion": "How does an adult body replace dead skin cells or heal a broken bone?",
+            "correctionHint": "Mitosis continues throughout life to heal injuries and replace billions of worn-out cells daily."
+          },
+          {
+            "id": "mitosis-produces-gametes",
+            "belief": "Mitosis produces sperm and egg cells.",
+            "triggerPattern": "When distinguishing between types of cell division in reproductive organs.",
+            "probeQuestion": "If gametes were produced by mitosis, what would happen to the chromosome number at fertilisation every generation?",
+            "correctionHint": "Mitosis preserves chromosome number for body cells. Gametes are formed by meiosis, which halves chromosome number."
+          }
+        ],
+        "keyFacts": [
+          "Mitosis is nuclear division giving rise to genetically identical cells in which the chromosome number is maintained (e.g. diploid to diploid).",
+          "Before mitosis occurs, each chromosome replicates its DNA, producing two identical sister chromatids joined at a centromere.",
+          "During mitosis, replicated chromosomes line up at the spindle equator, sister chromatids separate to opposite poles, and two identical daughter nuclei form.",
+          "Mitosis is essential for: growth of multicellular organisms from a zygote, repair of damaged tissues, replacement of worn-out cells, and asexual reproduction.",
+          "Asexual reproduction involves a single parent producing genetically identical offspring (clones) via mitosis."
+        ],
+        "workedExamples": [
+          "A horse skin cell has a diploid number of 64 chromosomes (2n = 64). The cell undergoes mitosis. State the number of daughter cells formed and the number of chromosomes in each daughter cell. → 1. Mitosis results in one parent cell dividing once to produce exactly 2 daughter cells.\n2. Before division, chromosomes duplicate and then separate equally.\n3. The chromosome number in mitosis is conserved: daughter cells have the exact same diploid number as the parent cell.\n4. Therefore, each daughter cell has 64 chromosomes. → Answer: 2 daughter cells, each containing 64 chromosomes."
+        ],
+        "difficultyLevel": 3,
+        "typicalTeachingOrder": 5,
+        "chapter": "Chapter 1: Introducing living things",
+        "book": "Biology chapter 1",
+        "conceptType": "cellular-division",
+        "chapterId": "ch1-introducing-living-things",
+        "chapterNumber": 1,
+        "orderInChapter": 5,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "State the three main roles of mitosis in multicellular organisms.",
+            "lookFor": "Growth, repair of damaged tissues / replacement of cells, and asexual reproduction."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why chromosomes must replicate their DNA before the nucleus divides in mitosis.",
+            "lookFor": "Replication ensures that two full sets of genetic instructions exist, so that when the chromatids separate, each new daughter cell receives a complete and identical copy of DNA."
+          },
+          {
+            "level": 3,
+            "prompt": "A fruit fly has 8 chromosomes in each body cell. A single fruit fly cell undergoes two successive rounds of mitosis. State the number of cells produced and the chromosome count in each cell.",
+            "lookFor": "4 cells produced (1 -> 2 -> 4), and each cell contains 8 chromosomes."
+          },
+          {
+            "level": 4,
+            "prompt": "A gardener takes stem cuttings from a rose plant with pink flowers to grow 20 new rose bushes. Predict the flower colour and genetic similarity of these 20 bushes to the parent plant, explaining the biological mechanism.",
+            "lookFor": "All 20 bushes will have identical pink flowers and be genetically identical (clones) to the parent plant because vegetative propagation relies exclusively on mitosis, which preserves the parental genetic code without meiosis or fertilisation."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Sequential cartoon of mitosis: 1 cell with 2 pairs of distinct chromosomes -> Chromosome duplication (X-shapes) -> Equator alignment -> Chromatid separation -> 2 identical daughter cells with the original chromosome count."
+          },
+          {
+            "strategy": "real_world_analogy",
+            "idea": "Photocopier analogy: You have a master document (chromosomes). You photocopy every page first (DNA replication), then put one identical copy in Binder A and one in Binder B (daughter cells)."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "biology-chapter-1",
+          "pages": [
+            25,
+            26
+          ]
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Supplied worked example, ladder, and representations.",
+            "Added third misconception clarifying mitosis vs meiosis in gamete formation."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": false,
+            "why": "Mitotic stages occur at microscopic scales inside cell nuclei and require staining under high magnification; a regular real-world photograph cannot make the chromosome movements visible."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "Mitosis is a sequential cellular process traditionally and clearest represented as a stepped flow diagram."
+          }
+        }
+      },
+      {
+        "id": "igcse--g8--biology--ch1-introducing-living-things--cell-division-by-meiosis-and-sexual-reproduction",
+        "label": "Cell Division by Meiosis and Sexual Reproduction",
+        "subjectId": "igcse--g8--biology",
+        "prerequisites": [
+          "igcse--g8--biology--ch1-introducing-living-things--cell-division-by-mitosis"
+        ],
+        "prerequisiteDetails": [
+          {
+            "label": "Cell Division by Mitosis",
+            "reason": "Understanding reduction division in meiosis requires prior knowledge of standard mitotic division and chromosome numbers.",
+            "checkQuestion": "How many cells are formed in mitosis, and do they have identical chromosomes?",
+            "conceptId": "igcse--g8--biology--ch1-introducing-living-things--cell-division-by-mitosis"
+          }
+        ],
+        "commonMisconceptions": [
+          "After fertilisation, the zygote continues to divide by meiosis to form the embryo.",
+          "Haploid gametes simply receive any 23 random chromosomes rather than one from each homologous pair.",
+          "All sperm or egg cells produced by the same individual are genetically identical."
+        ],
+        "misconceptionDetails": [
+          {
+            "id": "zygote-divides-by-meiosis",
+            "belief": "After fertilisation, the zygote continues to divide by meiosis to form the embryo.",
+            "triggerPattern": "When tracing the sequence of cell division from gametes to a multi-cellular organism.",
+            "probeQuestion": "What type of cell division allows a single-celled zygote to grow into a multi-cellular baby without changing chromosome count?",
+            "correctionHint": "Meiosis only produces gametes; once fertilisation occurs, all subsequent growth of the zygote occurs via mitosis."
+          },
+          {
+            "id": "haploid-is-random-assortment-without-pairs",
+            "belief": "Haploid gametes simply receive any 23 random chromosomes rather than one from each homologous pair.",
+            "triggerPattern": "When describing homologous chromosome segregation during meiosis.",
+            "probeQuestion": "Does a sperm cell receive random chromosomes, or one complete set containing one member of each chromosome pair?",
+            "correctionHint": "Meiosis separates homologous pairs so that each gamete receives exactly one member of every matching chromosome pair."
+          },
+          {
+            "id": "gametes-are-identical",
+            "belief": "All sperm or egg cells produced by the same individual are genetically identical.",
+            "triggerPattern": "When explaining why siblings look different despite having the same parents.",
+            "probeQuestion": "Why don't non-identical brothers and sisters look exactly alike if they come from the same mother and father?",
+            "correctionHint": "Meiosis shuffles parental genes (independent assortment and crossing over), so every single gamete has a unique combination of alleles."
+          }
+        ],
+        "keyFacts": [
+          "Meiosis is a reduction division in which the chromosome number is halved from diploid (2n) to haploid (n), resulting in four genetically non-identical daughter cells.",
+          "Gametes are sex cells (sperm and egg cells in animals; pollen grains and ovules in flowering plants) that are haploid.",
+          "In humans, diploid body cells have 46 chromosomes (23 pairs); haploid gametes produced by meiosis have 23 single chromosomes.",
+          "During fertilisation, the haploid nucleus of a male gamete fuses with the haploid nucleus of a female gamete to form a diploid zygote (restoring 2n).",
+          "Meiosis and random fertilisation create genetic variation among offspring, which is the raw material for natural selection."
+        ],
+        "workedExamples": [
+          "The domestic dog has 78 chromosomes in a normal skin cell. State the chromosome number in: (a) a dog sperm cell, (b) a fertilised dog egg cell (zygote), and (c) a cell from a dog embryo. → 1. Skin cell is diploid (2n = 78).\n2. (a) A sperm cell is a gamete produced by meiosis, so it is haploid (n): 78 / 2 = 39 chromosomes.\n3. (b) A zygote is formed by fertilisation fusing two haploid gametes (n + n = 2n): 39 + 39 = 78 chromosomes.\n4. (c) The embryo grows from the zygote by mitosis, which maintains the diploid number: 78 chromosomes. → Answer: (a) 39 chromosomes, (b) 78 chromosomes, (c) 78 chromosomes."
+        ],
+        "difficultyLevel": 4,
+        "typicalTeachingOrder": 6,
+        "chapter": "Chapter 1: Introducing living things",
+        "book": "Biology chapter 1",
+        "conceptType": "cellular-division",
+        "chapterId": "ch1-introducing-living-things",
+        "chapterNumber": 1,
+        "orderInChapter": 6,
+        "ladderItems": [
+          {
+            "level": 1,
+            "prompt": "Define the terms 'diploid' and 'haploid', stating the human chromosome numbers for each.",
+            "lookFor": "Diploid (2n) = having two complete sets of chromosomes (46 in humans); Haploid (n) = having a single set of unpaired chromosomes (23 in humans)."
+          },
+          {
+            "level": 2,
+            "prompt": "Explain why it is necessary for gametes to be formed by reduction division (meiosis) rather than mitosis.",
+            "lookFor": "If gametes were produced by mitosis, each gamete would be diploid; upon fertilisation, the chromosome number would double every generation. Meiosis halves the number so the diploid number is restored at fertilisation."
+          },
+          {
+            "level": 3,
+            "prompt": "A species of wheat has a haploid number of n = 14. How many chromosomes are present in: (a) a pollen grain, (b) a root cell, and (c) a zygote?",
+            "lookFor": "(a) 14 chromosomes (gamete, haploid), (b) 28 chromosomes (somatic cell, diploid), (c) 28 chromosomes (fertilised ovule, diploid)."
+          },
+          {
+            "level": 4,
+            "prompt": "A farmer notices that when pea plants self-pollinate, the offspring show variations in height and seed texture, but when strawberry plants grow from runners, the offspring are all identical. Explain the biological reason for this difference.",
+            "lookFor": "Self-pollination involves sexual reproduction with meiosis and gamete fusion, generating genetic variation through independent assortment, whereas strawberry runners reproduce asexually by mitosis, producing genetically identical clones without meiosis."
+          }
+        ],
+        "representationIdeas": [
+          {
+            "strategy": "visual_diagram",
+            "idea": "Comparison table/diagram of Mitosis vs Meiosis side by side: starting cell (2n), number of divisions (1 vs 2), number of daughter cells (2 vs 4), ploidy (2n vs n), and genetic variation (identical vs varied)."
+          },
+          {
+            "strategy": "real_world_analogy",
+            "idea": "Shoe pair analogy: A diploid cell has 23 pairs of shoes (left and right). Meiosis divides them so each gamete gets exactly 23 single shoes (one from each pair). At fertilisation, maternal and paternal shoes pair up again."
+          }
+        ],
+        "sourceRef": {
+          "sourceId": "biology-chapter-1",
+          "pages": [
+            27,
+            28
+          ]
+        },
+        "verification": {
+          "status": "corrected",
+          "notes": [
+            "Supplied worked example, ladder, and representations.",
+            "Added third misconception explaining why gametes are genetically varied."
+          ]
+        },
+        "presentation": {
+          "photo": {
+            "useful": false,
+            "why": "Meiotic chromosome segregation and ploidy changes are sub-cellular and conceptual genetic processes."
+          },
+          "spatial3d": {
+            "useful": false,
+            "why": "Chromosome counts and ploidy relationships (n vs 2n) are mathematical and conceptual relations, not a 3D spatial configuration."
+          }
+        }
+      }
+    ],
+    "prerequisiteMap": {
+      "igcse--g8--biology--ch1-introducing-living-things--characteristics-and-needs-of-living-things": [],
+      "igcse--g8--biology--ch1-introducing-living-things--classification-and-diversity-of-living-organisms": [
+        "igcse--g8--biology--ch1-introducing-living-things--characteristics-and-needs-of-living-things"
+      ],
+      "igcse--g8--biology--ch1-introducing-living-things--cell-structure-and-levels-of-organisation": [
+        "igcse--g8--biology--ch1-introducing-living-things--characteristics-and-needs-of-living-things"
+      ],
+      "igcse--g8--biology--ch1-introducing-living-things--movement-of-substances-diffusion-osmosis-and-active-transpor": [
+        "igcse--g8--biology--ch1-introducing-living-things--cell-structure-and-levels-of-organisation"
+      ],
+      "igcse--g8--biology--ch1-introducing-living-things--cell-division-by-mitosis": [
+        "igcse--g8--biology--ch1-introducing-living-things--cell-structure-and-levels-of-organisation"
+      ],
+      "igcse--g8--biology--ch1-introducing-living-things--cell-division-by-meiosis-and-sexual-reproduction": [
+        "igcse--g8--biology--ch1-introducing-living-things--cell-division-by-mitosis"
+      ]
+    },
+    "scopeMaps": [
+      {
+        "chapterTitle": "Chapter 1: Introducing living things",
+        "inScope": [
+          "Features of living things other than their ability to grow and reproduce",
+          "The enormous variety of life",
+          "What cells are",
+          "The differences between plant and animal cells",
+          "How, by dividing millions of times, they produce complex multi-cellular organisms and the sex cells they need to reproduce"
+        ],
+        "advanced": [],
+        "outOfScope": [],
+        "source": "textbook"
+      }
+    ],
+    "verification": {
+      "verifiedAt": 1790505903146,
+      "model": "gemini-3.8-flash",
+      "conceptsChecked": 6,
+      "conceptsCorrected": 6,
+      "conceptsRejected": 0,
+      "examplesCorrected": 0,
+      "examplesDropped": 0,
+      "prerequisiteEdgesDropped": 0,
+      "issues": []
+    },
+    "updatedAt": 1790505903147
+  }
+]

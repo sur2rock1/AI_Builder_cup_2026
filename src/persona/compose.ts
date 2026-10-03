@@ -23,14 +23,20 @@ export const DEFAULT_PERSONA_NAME = process.env.PERSONA_NAME || 'Dr. Marcus Vanc
 
 const VOICE_BOARD_BLOCK = `THE BOARD (voice channel)
 One idea on the board at a time. It follows your voice — you say it, then it appears.
-  Naming a part of a figure/diagram      -> reveal_part({parts:[...]}) AT THE MOMENT you say it
-  Setting up a worked example            -> set_figure(...) or update_diagram({focus})
+The Shape view holds a picture drawn for this concept as a sequence of STEPS (listed under
+THE BOARD PICTURES below when one is prepared). It starts almost empty and you build it up.
+  Starting the next step of the picture  -> reveal_part({parts:["<step name>"]}) AT THE MOMENT you start it
+  Pointing at one part of the picture    -> reveal_part({parts:["<its name>"]}) or highlight_concept
+  A misconception is suspected/confirmed -> update_diagram({focus:"contrast:<id>"}) — its prepared contrast case
+  Moving on to application               -> update_diagram({focus:"apply"}) — the situation, never the answer
+  Something else worth drawing           -> update_diagram({focus:"<what you are explaining>"})
+  Setting up a right-triangle example    -> set_figure(...)
   A rule worth keeping                   -> update_chalkboard_notes({title, bulletPoints, coreRuleOrFormula})
   The learner explains their method      -> show_student_thinking({method, verdict})
 EVERY TOOL CALL PAUSES YOUR VOICE until it returns, so make board calls BETWEEN spoken
-chunks, never mid-sentence. Batch reveals: one reveal_part({parts:[...]}) per spoken chunk.
-Do NOT narrate the board ("as you can see"). Do NOT read your own board notes out loud —
-the learner can already see them; move to the next thought instead.`;
+chunks, never mid-sentence. One reveal_part per step, not per word.
+Do NOT narrate the board ("as you can see"). Do NOT read captions or board notes out loud —
+the learner can already see them; say the idea in your own words and move on.`;
 
 export interface ComposeInput {
   ageBand: AgeBand;
@@ -43,6 +49,8 @@ export interface ComposeInput {
   planBlock?: string;
   /** From src/curriculum/curriculumIntelligence.ts — scope, prerequisites, misconceptions. */
   curriculumContext?: string;
+  /** From src/visual/tutorBrief.ts boardContextBlock() — the prepared board pictures and their steps. */
+  boardContext?: string;
   topic?: string;
 }
 
@@ -66,8 +74,9 @@ export function composeSystemInstruction(input: ComposeInput): string {
   parts.push(ACADEMIC_INTEGRITY_BLOCK, SAFETY_BLOCK);
   if (input.planBlock) parts.push(input.planBlock);
   if (input.curriculumContext) parts.push(input.curriculumContext);
+  if (input.boardContext && input.channel === 'voice') parts.push(input.boardContext);
   if (input.topic) parts.push(`CURRENT TOPIC: "${input.topic}"${input.learnerName ? ` — learner: ${input.learnerName}` : ''}`);
-  parts.push('If anything above conflicts with a HARD RULE (H1-H12), the hard rule wins.');
+  parts.push('If anything above conflicts with a HARD RULE (H1-H13), the hard rule wins.');
   return parts.join('\n\n');
 }
 

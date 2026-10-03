@@ -4,6 +4,8 @@ import { ScenePanel, PanelMode } from './ScenePanel';
 import type { ConceptMapDiagram } from './ScenePanel';
 import { SceneDef } from '../scenes/pythagorasScenes';
 import { Scene3DData } from '../types';
+import type { BoardVisual, BoardVisual3D } from '../visual/types';
+import type { StepState } from './BoardVisualView';
 import { FigureSpec, FigurePart, StudentThinking, LiveAssessment, BoardNote } from './TeachingCanvas';
 import type { LearnerSnapshot, Level } from '../adaptive/liveObserver';
 
@@ -64,8 +66,18 @@ interface Props {
   scene3d?: Scene3DData;
   /** Pre-generated real-world photo (base64 data URI) for this topic, from the pregen cache. */
   pregenPhoto?: string | null;
-  /** Pre-generated concept map diagram for this topic. */
+  /** The reviewer's neutral one-line description of the verified photo. */
+  pregenPhotoCaption?: string | null;
+  /** Legacy concept map (lessons generated before board pictures). */
   topicDiagram?: ConceptMapDiagram | null;
+  /** Board pictures and how far each has been built (docs/BOARD_VISUALS.md). */
+  visual?: BoardVisual | null;
+  visual3d?: BoardVisual3D | null;
+  visualStep?: StepState;
+  visual3dStep?: StepState;
+  onVisualStepChange?: (s: StepState) => void;
+  onVisual3dStepChange?: (s: StepState) => void;
+  visualSpotlight?: string[];
   tutorLine?: string;
   presenter?: PresenterMedia;
   studentName?: string;
@@ -82,8 +94,9 @@ export const ImmersiveStage: React.FC<Props> = ({
   conceptLabel, subject, grade, figure, revealed, focusPart,
   studentThinking, assessment, notes, liveNotes, masteryScore, misconceptions,
   isLessonActive, isSpeaking, isThinking, learner, mouthOpenness, micLevel,
-  panelMode, scene, scene3d, pregenPhoto, topicDiagram, tutorLine, presenter, studentName,
+  panelMode, scene, scene3d, pregenPhoto, pregenPhotoCaption, topicDiagram, tutorLine, presenter, studentName,
   onPanelModeChange, onConfusion, onToggleLesson, onChangeTopic, onOpenProfile,
+  visual, visual3d, visualStep, visual3dStep, onVisualStepChange, onVisual3dStepChange, visualSpotlight,
 }) => {
   const shown = (p: FigurePart) => revealed.includes(p);
   const isFocus = (p: FigurePart) => focusPart === p;
@@ -191,7 +204,15 @@ export const ImmersiveStage: React.FC<Props> = ({
               studentThinking={studentThinking}
               scene3d={scene3d}
               pregenPhoto={pregenPhoto}
+              pregenPhotoCaption={pregenPhotoCaption}
               topicDiagram={topicDiagram}
+              visual={visual}
+              visual3d={visual3d}
+              visualStep={visualStep}
+              visual3dStep={visual3dStep}
+              onVisualStepChange={onVisualStepChange}
+              onVisual3dStepChange={onVisual3dStepChange}
+              visualSpotlight={visualSpotlight}
               conceptLabel={conceptLabel}
               isLessonActive={isLessonActive}
               notes={notes}

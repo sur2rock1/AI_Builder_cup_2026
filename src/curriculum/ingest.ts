@@ -11,11 +11,16 @@
 //                     / GOOGLE_APPLICATION_CREDENTIALS / GCLOUD_PROJECT).
 //   In-memory cache: loaded once at first read, kept hot for the session.
 //
-// Public API (unchanged):
+// Public API:
 //   getCurriculum(subjectId)  → CurriculumSubject | null
 //   listCurricula()           → CurriculumSubject[]
 //   saveCurriculum(subject)   → void  (async internally, returns immediately)
+//   saveCurriculumAsync(subj) → Promise<void> (used by the ingest pipeline)
+//   deleteCurriculum(id)      → Promise<boolean> (admin content library)
 //   nextUnmasteredConcept(...)→ CurriculumConcept | undefined
+//
+// A "subject" here is one COURSE: board + grade + subject, id built by
+// src/curriculum/catalog.ts courseId(), e.g. "igcse--g8--mathematics".
 // ─────────────────────────────────────────────────────────────────
 import fs from 'fs';
 import path from 'path';
@@ -24,8 +29,8 @@ import { CurriculumSubject, CurriculumConcept } from '../adaptive/learnerModel';
 // Firestore collection name
 const FS_COLLECTION = 'curricula';
 
-// Local file fallback (dev / offline)
-const LOCAL_FILE = path.join(process.cwd(), 'data', 'curricula.json');
+// Local file fallback (dev / offline). CURRICULA_FILE overrides it (tests).
+const localFile = () => process.env.CURRICULA_FILE || path.join(process.cwd(), 'data', 'curricula.json');
 
 // ─── In-memory cache ────────────────────────────────────────────
 let cache: Record<string, CurriculumSubject> | null = null;
@@ -64,9 +69,10 @@ async function loadAll(): Promise<Record<string, CurriculumSubject>> {
 }
 
 function loadLocalFile(): Record<string, CurriculumSubject> {
-  if (!fs.existsSync(LOCAL_FILE)) { cacheSource = 'empty'; return {}; }
+  const file = localFile();
+  if (!fs.existsSync(file)) { cacheSource = 'empty'; return {}; }
   try {
-    const raw = JSON.parse(fs.readFileSync(LOCAL_FILE, 'utf-8'));
+    const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
     // Support both array format (old) and object format (new)
     const result: Record<string, CurriculumSubject> = Array.isArray(raw)
       ? Object.fromEntries(raw.map((c: CurriculumSubject) => [c.id, c]))
@@ -99,19 +105,34 @@ async function persist(subject: CurriculumSubject): Promise<void> {
   const db = getFirestore();
   if (db) {
     try {
-      await db.collection(FS_COLLECTION).doc(subject.id).set(subject);
+      // JSON round-trip drops `undefined` fields — Firestore rejects them, and
+      // courses carry many optional fields (triggerPattern, gradeNote, pages…).
+      await db.collection(FS_COLLECTION).doc(subject.id).set(JSON.parse(JSON.stringify(subject)));
       console.log(`[Curriculum] Saved "${subject.label}" to Firestore`);
       return;
     } catch (err: any) {
       console.warn('[Curriculum] Firestore write failed, saving to local file:', err?.message);
     }
   }
-  // Fallback: local file
-  const dir = path.dirname(LOCAL_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  const all = cache || {};
-  fs.writeFileSync(LOCAL_FILE, JSON.stringify(Object.values(all), null, 2), 'utf-8');
+  writeLocalFile();
   console.log(`[Curriculum] Saved "${subject.label}" to local file`);
+}
+
+function writeLocalFile() {
+  const file = localFile();
+  const dir = path.dirname(file);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(Object.values(cache || {}), null, 2), 'utf-8');
+}
+
+/** Firestore documents are capped at 1 MiB. A very large course (hundreds of
+ * concepts with ladder items) can approach that; warn well before it fails. */
+const FIRESTORE_SOFT_LIMIT = 900 * 1024;
+function warnIfLarge(subject: CurriculumSubject) {
+  const bytes = Buffer.byteLength(JSON.stringify(subject), 'utf8');
+  if (bytes > FIRESTORE_SOFT_LIMIT) {
+    console.warn(`[Curriculum] "${subject.id}" is ${(bytes / 1024).toFixed(0)} KB — close to Firestore's 1 MiB document limit. Split the course by term/book or move concepts to a subcollection (docs/CURRICULUM.md §9).`);
+  }
 }
 
 // ─── Public API ─────────────────────────────────────────────────
@@ -141,11 +162,45 @@ export async function listCurriculaAsync(): Promise<CurriculumSubject[]> {
 }
 
 export function saveCurriculum(subject: CurriculumSubject): void {
-  // Update cache immediately so the rest of the request sees it
+  saveCurriculumAsync(subject).catch(err => console.error('[Curriculum] Persist error:', err));
+}
+
+/** Save and wait for it to persist. Loads the store first, so a save made
+ * before the cache was warm can never overwrite the local file with only
+ * this one course (the old fire-and-forget save could, when called cold). */
+export async function saveCurriculumAsync(subject: CurriculumSubject): Promise<void> {
+  await ensureLoaded();
   if (!cache) cache = {};
   cache[subject.id] = subject;
-  // Persist in background — fire and forget, errors are logged
-  persist(subject).catch(err => console.error('[Curriculum] Persist error:', err));
+  warnIfLarge(subject);
+  await persist(subject);
+}
+
+/** Remove a course from the library (admin). Learner histories that reference
+ * its concept ids are left untouched; they simply stop matching a course. */
+export async function deleteCurriculum(subjectId: string): Promise<boolean> {
+  const all = await ensureLoaded();
+  if (!all[subjectId]) return false;
+  delete all[subjectId];
+  const db = getFirestore();
+  if (db) {
+    try {
+      await db.collection(FS_COLLECTION).doc(subjectId).delete();
+      console.log(`[Curriculum] Deleted "${subjectId}" from Firestore`);
+      return true;
+    } catch (err: any) {
+      console.warn('[Curriculum] Firestore delete failed, updating local file:', err?.message);
+    }
+  }
+  writeLocalFile();
+  return true;
+}
+
+/** Test-only: drop the in-memory cache so the next read reloads from storage. */
+export function resetCurriculumCacheForTests() {
+  cache = null;
+  loadPromise = null;
+  cacheSource = 'empty';
 }
 
 /**

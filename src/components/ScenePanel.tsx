@@ -5,6 +5,9 @@ import { Interactive3DVisual } from './Interactive3DVisual';
 import { Scene3DData } from '../types';
 import { FigureSpec, FigurePart, StudentThinking, BoardNote } from './TeachingCanvas';
 import { SceneDef, SceneVertices } from '../scenes/pythagorasScenes';
+import type { BoardVisual, BoardVisual3D } from '../visual/types';
+import { BoardVisualView, StepState } from './BoardVisualView';
+import { Board3DView } from './Board3DView';
 
 
 // ─────────────────────────────────────────────────────────────────
@@ -57,8 +60,21 @@ interface Props {
   scene3d?: Scene3DData;
   /** Pre-generated real-world photo (base64 data URI). Used when scene.photo is absent or fails to load. */
   pregenPhoto?: string | null;
-  /** Concept-map diagram for the current topic (from pregen cache). Rendered in shape mode for non-Pythagorean topics. */
+  /** The reviewer's neutral caption for the (verified, AI-generated) pregen photo. */
+  pregenPhotoCaption?: string | null;
+  /** Legacy concept-map diagram (lessons generated before board pictures). Drawn only when there is no `visual`. */
   topicDiagram?: ConceptMapDiagram | null;
+  /** The board picture for this concept (docs/BOARD_VISUALS.md) — drawn in shape mode. */
+  visual?: BoardVisual | null;
+  /** A 3D board picture — only exists when depth genuinely helps; otherwise the 3D view is not offered. */
+  visual3d?: BoardVisual3D | null;
+  /** How far the picture has been built (the tutor's reveal_part, or the learner's arrows). */
+  visualStep?: StepState;
+  visual3dStep?: StepState;
+  onVisualStepChange?: (s: StepState) => void;
+  onVisual3dStepChange?: (s: StepState) => void;
+  /** Bricks the tutor is pointing at right now. */
+  visualSpotlight?: string[];
   conceptLabel: string;
   isLessonActive: boolean;
   notes?: BoardNote | null;
@@ -67,7 +83,8 @@ interface Props {
 
 export const ScenePanel: React.FC<Props> = ({
   mode, onModeChange, scene, figure, revealed, focusPart,
-  studentThinking, scene3d, pregenPhoto, topicDiagram, conceptLabel, isLessonActive, notes, liveNotes = [],
+  studentThinking, scene3d, pregenPhoto, pregenPhotoCaption, topicDiagram, conceptLabel, isLessonActive, notes, liveNotes = [],
+  visual, visual3d, visualStep = 0, visual3dStep = 0, onVisualStepChange, onVisual3dStepChange, visualSpotlight,
 }) => {
   // Photo resolution: scene photo → pregenPhoto (base64 from pregen cache) → illustration SVG.
   const [scenePhotoOk, setScenePhotoOk] = useState(false);
@@ -82,6 +99,10 @@ export const ScenePanel: React.FC<Props> = ({
 
   // The effective photo: prefer the scene-specific photo, fall back to the pre-generated one.
   const photoOk = scenePhotoOk || !!pregenPhoto;
+  // No verified photo and no hand-built scene → there is nothing honest to show under "Real world",
+  // so the tab is hidden and the board picture is shown instead.
+  const hasRealWorld = photoOk || !!scene;
+  if (mode === 'real' && !hasRealWorld) mode = 'shape';
   const activePhoto = scenePhotoOk ? (scene?.photo ?? '') : (pregenPhoto ?? '');
 
   const photoCalibrated = scenePhotoOk && !!scene?.photoVertices;
@@ -90,10 +111,14 @@ export const ScenePanel: React.FC<Props> = ({
   // photo (which has no vertex mapping) we show the shape inset instead.
   const showOverlay = photoCalibrated && !!v;
 
-  // Detect Pythagorean topics — only those use the concreteness-fading right-triangle figure.
-  // All other topics show the concept-map diagram in shape mode.
+  // Detect Pythagorean topics — only those use the hand-built concreteness-fading right-triangle
+  // figure (set_figure, calibrated photo tracing). Every other topic draws its generated board
+  // picture; the legacy concept map is only for lessons generated before board pictures existed.
   const isPythagorean = /pythag/i.test(conceptLabel);
-  const hasDiagram = !!(topicDiagram?.nodes?.length);
+  const hasVisual = !!visual;
+  const hasDiagram = !hasVisual && !!(topicDiagram?.nodes?.length);
+  // 3D is offered only when there is a 3D picture (or, for older lessons, the legacy scene).
+  const has3D = !!visual3d || (!!scene3d && !hasVisual);
 
   const shown = (p: FigurePart) => revealed.includes(p);
   const u = figure.unitLabel ? ` ${figure.unitLabel}` : '';
@@ -112,7 +137,7 @@ export const ScenePanel: React.FC<Props> = ({
           { m: 'shape', icon: Triangle, label: 'Shape' },
           { m: '3d', icon: Box, label: '3D' },
           { m: 'chalk', icon: PenLine, label: 'Chalkboard' },
-        ] as const).map(({ m, icon: Icon, label }) => (
+        ] as const).filter(({ m }) => m !== '3d' || has3D || mode === '3d').map(({ m, icon: Icon, label }) => (
           <button key={m} onClick={() => onModeChange(m)}
             className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               mode === m ? 'bg-white text-[#0B1020]' : 'text-white/70 hover:text-white'}`}>
@@ -146,6 +171,12 @@ export const ScenePanel: React.FC<Props> = ({
           <div className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/12 text-[12.5px] text-white/85 font-medium">
             {scene?.title ?? conceptLabel}
           </div>
+          {!scenePhotoOk && pregenPhoto && (
+            <div className="absolute left-4 bottom-4 z-20 max-w-[60%] px-3 py-2 rounded-xl bg-black/55 backdrop-blur-md border border-white/12 text-[12px] text-white/85">
+              <span className="block text-[10px] uppercase tracking-wider text-amber-300 font-semibold">AI-generated illustration</span>
+              {pregenPhotoCaption && <span className="block mt-0.5">{pregenPhotoCaption}</span>}
+            </div>
+          )}
         </div>
       )}
 
@@ -156,13 +187,12 @@ export const ScenePanel: React.FC<Props> = ({
           <div className="absolute inset-0 opacity-40"
                style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,.14) 1px, transparent 1px)', backgroundSize: '26px 26px' }} />
           <div className="absolute inset-0 pt-14 pb-4 px-6">
-            {hasDiagram && !isPythagorean ? (
-              <ConceptMapRenderer diagram={topicDiagram!} />
-            ) : isPythagorean && scene ? (
-              // Pythagorean topics use the concreteness-fading right-triangle figure
+            {isPythagorean && scene ? (
+              // Pythagorean topics use the hand-built concreteness-fading right-triangle figure
               <ShapeFigure figure={figure} names={scene.names} val={val} shown={shown} focusPart={focusPart} />
+            ) : hasVisual ? (
+              <BoardVisualView visual={visual!} step={visualStep} onStepChange={onVisualStepChange} spotlight={visualSpotlight} />
             ) : hasDiagram ? (
-              // Fallback: pregen diagram exists but isPythagorean was true — show it
               <ConceptMapRenderer diagram={topicDiagram!} />
             ) : (
               <TopicPlaceholder label={conceptLabel} />
@@ -181,13 +211,31 @@ export const ScenePanel: React.FC<Props> = ({
       {/* ── 3D ─────────────────────────────────────────────────── */}
       {mode === '3d' && (
         <div className="absolute inset-0 bg-[#070B16] animate-fadeIn">
-          <Interactive3DVisual sceneData={scene3d} topic={conceptLabel} subject="Mathematics" />
+          {visual3d ? (
+            <div className="absolute inset-0 pt-14 pb-4 px-6">
+              <Board3DView visual={visual3d} step={visual3dStep} onStepChange={onVisual3dStepChange} spotlight={visualSpotlight} />
+            </div>
+          ) : scene3d && !hasVisual ? (
+            // Lessons generated before board pictures: the legacy 3D scene.
+            <Interactive3DVisual sceneData={scene3d} topic={conceptLabel} subject="Mathematics" />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center px-10">
+              <p className="text-[17px] text-white/85 max-w-[520px] leading-snug">
+                This idea is flat — a 3D model wouldn’t show anything the Shape view doesn’t.
+              </p>
+              <button onClick={() => onModeChange('shape')}
+                className="px-4 py-2 rounded-full bg-white text-[#0B1020] text-[13px] font-semibold cursor-pointer">
+                Go to the Shape view
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* the child's own reasoning, pinned to whatever view is showing */}
       {studentThinking && mode !== '3d' && mode !== 'chalk' && (
-        <div className="absolute right-4 top-16 z-20 max-w-[42%]">
+        // Over a board picture it sits low, so it never covers the step controls and caption.
+        <div className={`absolute right-4 z-20 max-w-[42%] ${mode === 'shape' && hasVisual ? 'bottom-4' : 'top-16'}`}>
           <div className="rounded-2xl bg-black/55 backdrop-blur-md border px-4 py-3"
                style={{ borderColor: studentThinking.verdict === 'sound' ? 'rgba(74,222,128,.5)'
                         : studentThinking.verdict === 'breaks_down' ? 'rgba(251,113,133,.55)' : 'rgba(255,255,255,.18)' }}>
@@ -200,7 +248,7 @@ export const ScenePanel: React.FC<Props> = ({
         </div>
       )}
 
-      {!revealed.includes('triangle') && !hasDiagram && mode !== '3d' && mode !== 'chalk' && (
+      {!revealed.includes('triangle') && !hasDiagram && !hasVisual && mode !== '3d' && mode !== 'chalk' && (
         <div className="absolute inset-x-0 bottom-5 z-20 flex justify-center">
           <span className="px-4 py-2 rounded-full bg-black/45 backdrop-blur-md text-[13px] text-white/75">
             {isLessonActive ? 'Dr. Marcus is setting the scene…' : 'Start the session and we’ll begin'}
@@ -377,12 +425,20 @@ function wrapLabel(text: string, maxChars = 22): string[] {
   return lines.slice(0, 2);
 }
 
+// Fixed 2026-09-27: this used to squeeze the canvas into a constant H=440
+// regardless of how many rows the diagram needed, so 5-6 chained nodes (a
+// straight A->B->C->D->E flow, one per level) ended up with only ~6px of
+// gap between boxes — not enough room for the connector label between them,
+// so the label text printed on top of the next box (looked like "overlap"
+// and, with 6 nodes, the rows could overlap outright). The canvas height
+// now GROWS with the number of rows instead; the SVG scales the whole
+// thing down uniformly to fit its container, so nodes/text shrink together
+// rather than crowding into each other.
 function buildLevelLayout(
   nodes: ConceptMapNode[],
   connections: ConceptMapConnection[],
-  W = 780, H = 440,
-): Array<ConceptMapNode & { x: number; y: number }> {
-  if (!nodes.length) return [];
+): { laid: Array<ConceptMapNode & { x: number; y: number }>; width: number; height: number } {
+  if (!nodes.length) return { laid: [], width: 780, height: 440 };
   const labelToId = new Map(nodes.map(n => [n.label, n.id]));
   const inCount = new Map<string, number>(nodes.map(n => [n.id, 0]));
   const outEdges = new Map<string, string[]>(nodes.map(n => [n.id, []]));
@@ -407,15 +463,22 @@ function buildLevelLayout(
   const byLevel = new Map<number, string[]>();
   for (const [id, lv] of levels) { if (!byLevel.has(lv)) byLevel.set(lv, []); byLevel.get(lv)!.push(id); }
   const maxLv = Math.max(...levels.values());
-  const rows = maxLv + 1;
-  const padY = 55, rowH = rows > 1 ? (H - padY * 2) / (maxLv) : 0;
+  const maxPerLevel = Math.max(...Array.from(byLevel.values()).map(a => a.length));
+  const padX = 50, padY = 55;
+  // Minimum room a row needs: the node itself, plus enough gap below it for
+  // a connector line AND its label text without touching the next node.
+  const ROW_GAP = NODE_H + 60;
+  const COL_GAP = NODE_W + 40;
+  const height = padY * 2 + maxLv * ROW_GAP + NODE_H / 2;
+  const width = Math.max(780, padX * 2 + maxPerLevel * COL_GAP);
   const pos = new Map<string, { x: number; y: number }>();
   for (let lv = 0; lv <= maxLv; lv++) {
     const ids = byLevel.get(lv) ?? [];
-    const y = padY + lv * rowH;
-    ids.forEach((id, i) => pos.set(id, { x: (W / (ids.length + 1)) * (i + 1), y }));
+    const y = padY + lv * ROW_GAP;
+    ids.forEach((id, i) => pos.set(id, { x: (width / (ids.length + 1)) * (i + 1), y }));
   }
-  return nodes.map(n => ({ ...n, x: pos.get(n.id)?.x ?? W / 2, y: pos.get(n.id)?.y ?? H / 2 }));
+  const laid = nodes.map(n => ({ ...n, x: pos.get(n.id)?.x ?? width / 2, y: pos.get(n.id)?.y ?? height / 2 }));
+  return { laid, width, height };
 }
 
 const NODE_W = 190, NODE_H = 76;
@@ -423,11 +486,11 @@ const NODE_W = 190, NODE_H = 76;
 const ConceptMapRenderer: React.FC<{ diagram: ConceptMapDiagram }> = ({ diagram }) => {
   const { nodes = [], connections = [], title } = diagram;
   if (!nodes.length) return null;
-  const laid = buildLevelLayout(nodes, connections);
+  const { laid, width, height } = buildLevelLayout(nodes, connections);
   const posMap = new Map(laid.map(n => [n.label, { x: n.x, y: n.y }]));
 
   return (
-    <svg viewBox="0 0 780 460" className="w-full h-full" style={{ overflow: 'visible' }}>
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" style={{ overflow: 'visible' }}>
       <defs>
         <marker id="cmArrow" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
           <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(255,255,255,0.4)" />
@@ -440,7 +503,7 @@ const ConceptMapRenderer: React.FC<{ diagram: ConceptMapDiagram }> = ({ diagram 
 
       {/* Title */}
       {title && (
-        <text x="390" y="22" textAnchor="middle" fontSize="14" fontWeight="600" fill="rgba(255,255,255,0.45)"
+        <text x={width / 2} y="22" textAnchor="middle" fontSize="14" fontWeight="600" fill="rgba(255,255,255,0.45)"
               fontFamily="ui-sans-serif, system-ui, sans-serif">{title}</text>
       )}
 

@@ -106,6 +106,7 @@ export class FileLearnerRepository implements LearnerRepository {
   async listEvents(studentId: string, filter: EventFilter = {}): Promise<(LearningEvidence & { eventId: string })[]> {
     let events = readJson<(LearningEvidence & { eventId: string })[]>(eventsFile(studentId), []);
     if (filter.conceptId) events = events.filter((e) => e.conceptId === filter.conceptId);
+    if (filter.sessionId) events = events.filter((e: any) => e.sessionId === filter.sessionId);
     if (filter.limit) events = events.slice(-filter.limit);
     return events;
   }

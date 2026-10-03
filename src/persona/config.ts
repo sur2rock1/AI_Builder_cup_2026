@@ -11,7 +11,7 @@ export const PERSONA_VERSION = '1.0.0';
 export const LIMITS = {
   probeBudgetPerQuestion: 2,
   maxConsecutiveChecksWithoutTeach: 3,
-  retryCapPerConcept: 3,        // representation switches before PARK_AND_ESCALATE
+  retryCapPerConcept: 3,        // misses in a row before TEACH_DIRECTLY (never park/escalate)
   maxConsecutiveFailures: 2,     // before ENCOURAGE_RESET
   maxPrereqProbes: 3,
 };

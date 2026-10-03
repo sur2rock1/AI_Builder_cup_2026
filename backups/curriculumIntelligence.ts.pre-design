@@ -1,0 +1,326 @@
+// ─────────────────────────────────────────────────────────────────
+// Curriculum Intelligence Layer
+//
+// Converts the structured curriculum knowledge base (scope maps,
+// prerequisite chains, misconception catalogues) into text blocks
+// that are injected into the voice-tutor system prompt.
+//
+// Key principle from the framework:
+//   Curriculum  → defines WHAT the student should learn
+//   Student     → defines WHERE the student currently is
+//   AI Tutor    → decides HOW to get from here to the outcome
+//
+// This module handles the "WHAT" injection so the tutor:
+//   1. Enforces scope boundaries (never teaches out-of-scope topics)
+//   2. Verifies prerequisites before diving into a concept
+//   3. Uses curriculum-grounded diagnostic probes to catch misconceptions
+// ─────────────────────────────────────────────────────────────────
+
+import {
+  CurriculumSubject,
+  CurriculumConcept,
+  MisconceptionDetail,
+  PrerequisiteDetail,
+  ChapterScopeMap,
+} from '../adaptive/learnerModel';
+import { getCurriculum } from './ingest';
+
+// ─── Public API ──────────────────────────────────────────────────
+
+export interface CurriculumIntelligenceContext {
+  /** Full text block ready for injection into the system prompt. */
+  systemPromptBlock: string;
+  /** Compact summary (for logging / parent portal). */
+  summary: {
+    subjectLabel: string;
+    grade: string;
+    chapterTitle: string;
+    conceptLabel: string;
+    prerequisiteCount: number;
+    misconceptionCount: number;
+    hasScope: boolean;
+  };
+}
+
+/**
+ * Build the curriculum intelligence context for a specific concept.
+ * Returns null when the subject or concept cannot be found.
+ */
+export function buildCurriculumIntelligenceContext(
+  subjectId: string,
+  conceptId: string,
+): CurriculumIntelligenceContext | null {
+  const curriculum = getCurriculum(subjectId);
+  if (!curriculum) return null;
+
+  const concept = curriculum.concepts.find(c => c.id === conceptId);
+  if (!concept) return null;
+
+  const chapterTitle = concept.chapter || 'General';
+  const scopeMap = findScopeMap(curriculum, chapterTitle);
+
+  const prereqDetails = resolvePrerequisiteDetails(curriculum, concept);
+  const misconceptionDetails = resolveMisconceptionDetails(concept);
+
+  const systemPromptBlock = buildSystemPromptBlock({
+    curriculum,
+    concept,
+    chapterTitle,
+    scopeMap,
+    prereqDetails,
+    misconceptionDetails,
+  });
+
+  return {
+    systemPromptBlock,
+    summary: {
+      subjectLabel: curriculum.label,
+      grade: curriculum.grade,
+      chapterTitle,
+      conceptLabel: concept.label,
+      prerequisiteCount: prereqDetails.length,
+      misconceptionCount: misconceptionDetails.length,
+      hasScope: !!scopeMap,
+    },
+  };
+}
+
+/**
+ * Get all misconception probe questions for a concept.
+ * Used by the diagnostic engine to select probes after a correct answer.
+ */
+export function getMisconceptionProbes(
+  subjectId: string,
+  conceptId: string,
+): MisconceptionDetail[] {
+  const curriculum = getCurriculum(subjectId);
+  if (!curriculum) return [];
+  const concept = curriculum.concepts.find(c => c.id === conceptId);
+  if (!concept) return [];
+  return resolveMisconceptionDetails(concept);
+}
+
+/**
+ * Get the prerequisite check questions for a concept.
+ * Used when a student appears stuck — tutor checks foundations first.
+ */
+export function getPrerequisiteChecks(
+  subjectId: string,
+  conceptId: string,
+): Array<{ conceptLabel: string; checkQuestion: string; reason: string }> {
+  const curriculum = getCurriculum(subjectId);
+  if (!curriculum) return [];
+  const concept = curriculum.concepts.find(c => c.id === conceptId);
+  if (!concept) return [];
+
+  const details = resolvePrerequisiteDetails(curriculum, concept);
+  return details.map(d => ({
+    conceptLabel: d.label,
+    checkQuestion: d.checkQuestion,
+    reason: d.reason,
+  }));
+}
+
+/**
+ * Check whether a given topic string falls inside, outside or is advanced
+ * relative to the curriculum scope for a chapter.
+ */
+export function classifyTopic(
+  subjectId: string,
+  chapterTitle: string,
+  topicText: string,
+): 'in_scope' | 'advanced' | 'out_of_scope' | 'unknown' {
+  const curriculum = getCurriculum(subjectId);
+  if (!curriculum?.scopeMaps) return 'unknown';
+
+  const scopeMap = findScopeMap(curriculum, chapterTitle);
+  if (!scopeMap) return 'unknown';
+
+  const t = norm(topicText);
+  if (scopeMap.inScope.some(s => norm(s).includes(t) || t.includes(norm(s)))) return 'in_scope';
+  if (scopeMap.outOfScope.some(s => norm(s).includes(t) || t.includes(norm(s)))) return 'out_of_scope';
+  if (scopeMap.advanced.some(s => norm(s).includes(t) || t.includes(norm(s)))) return 'advanced';
+  return 'unknown';
+}
+
+// ─── Internal helpers ────────────────────────────────────────────
+
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').trim();
+
+function findScopeMap(curriculum: CurriculumSubject, chapterTitle: string): ChapterScopeMap | undefined {
+  if (!curriculum.scopeMaps) return undefined;
+  const t = norm(chapterTitle);
+  return curriculum.scopeMaps.find(m => norm(m.chapterTitle) === t || t.includes(norm(m.chapterTitle)));
+}
+
+function resolvePrerequisiteDetails(
+  curriculum: CurriculumSubject,
+  concept: CurriculumConcept,
+): PrerequisiteDetail[] {
+  // Prefer rich details extracted from the PDF.
+  if (concept.prerequisiteDetails && concept.prerequisiteDetails.length > 0) {
+    return concept.prerequisiteDetails;
+  }
+
+  // Fallback: build lightweight details from plain prerequisite IDs.
+  return concept.prerequisites
+    .map(prereqId => {
+      const prereqConcept = curriculum.concepts.find(c => c.id === prereqId);
+      if (!prereqConcept) return null;
+      return {
+        label: prereqConcept.label,
+        reason: `Understanding ${prereqConcept.label} is needed to learn ${concept.label}.`,
+        checkQuestion: `Can you explain what you know about ${prereqConcept.label}?`,
+      } as PrerequisiteDetail;
+    })
+    .filter((d): d is PrerequisiteDetail => d !== null)
+    .slice(0, 4);
+}
+
+function resolveMisconceptionDetails(concept: CurriculumConcept): MisconceptionDetail[] {
+  // Prefer rich details extracted from the PDF.
+  if (concept.misconceptionDetails && concept.misconceptionDetails.length > 0) {
+    return concept.misconceptionDetails;
+  }
+
+  // Fallback: convert plain string misconceptions to minimal detail objects.
+  return concept.commonMisconceptions.slice(0, 4).map(belief => ({
+    belief,
+    probeQuestion: `Some students think that ${belief.toLowerCase()} — what do you think about that?`,
+    correctionHint: `Gently explain why this is incorrect and revisit ${concept.label} from a different angle.`,
+  }));
+}
+
+// ─── System prompt block builder ─────────────────────────────────
+
+interface BuildParams {
+  curriculum: CurriculumSubject;
+  concept: CurriculumConcept;
+  chapterTitle: string;
+  scopeMap: ChapterScopeMap | undefined;
+  prereqDetails: PrerequisiteDetail[];
+  misconceptionDetails: MisconceptionDetail[];
+}
+
+function buildSystemPromptBlock(p: BuildParams): string {
+  const { curriculum, concept, chapterTitle, scopeMap, prereqDetails, misconceptionDetails } = p;
+  const lines: string[] = [];
+  const rule = '───────────────────────────────────────────────────────';
+
+  // This block supplies WHAT to teach for this course and concept. HOW to
+  // teach (representation order, pacing, probing limits, when to detour to a
+  // prerequisite) comes from the persona and the per-learner Teaching Plan
+  // above it — this block deliberately gives no competing teaching order
+  // (fixed 2026-09-26: it used to hard-code "example → analogy → diagram →
+  // story", which contradicted the plan's evidence-based representation order).
+  lines.push('═══════════════════════════════════════════════════════');
+  lines.push('CURRICULUM CONTEXT — WHAT TO TEACH (the plan above says HOW)');
+  lines.push('═══════════════════════════════════════════════════════');
+  lines.push('');
+  if (curriculum.board) lines.push(`Board:    ${curriculum.board}`);
+  lines.push(`Subject:  ${curriculum.label}`);
+  lines.push(`Grade:    ${curriculum.grade}`);
+  lines.push(`Chapter:  ${chapterTitle}`);
+  lines.push(`Concept:  ${concept.label}`);
+  lines.push(`Source:   ${concept.book || curriculum.source}${concept.sourceRef?.pages ? `, pp. ${concept.sourceRef.pages[0]}–${concept.sourceRef.pages[1]}` : ''}`);
+  lines.push('');
+
+  // ─── Scope constraints ────────────────────────────────────────
+  if (scopeMap) {
+    lines.push(rule);
+    lines.push(scopeMap.source === 'syllabus'
+      ? `CURRICULUM SCOPE — from the official syllabus${scopeMap.syllabusRefs?.length ? ` (${scopeMap.syllabusRefs.join('; ')})` : ''}`
+      : 'CURRICULUM SCOPE — from the textbook');
+    lines.push(rule);
+    lines.push('');
+    if (scopeMap.gradeNote) {
+      lines.push(`Grade expectation: ${scopeMap.gradeNote}`);
+      lines.push('');
+    }
+    if (scopeMap.inScope.length > 0) {
+      lines.push('IN SCOPE for this chapter:');
+      scopeMap.inScope.forEach(t => lines.push(`   • ${t}`));
+      lines.push('');
+    }
+    if (scopeMap.advanced.length > 0) {
+      lines.push('EXTENSION — only if the learner asks or is clearly ready; never the core of the lesson:');
+      scopeMap.advanced.forEach(t => lines.push(`   • ${t}`));
+      lines.push('');
+    }
+    if (scopeMap.outOfScope.length > 0) {
+      lines.push('NOT PART OF THIS LEVEL — if asked, acknowledge the curiosity warmly, say it comes later, and return to the concept:');
+      scopeMap.outOfScope.forEach(t => lines.push(`   • ${t}`));
+      lines.push('');
+    }
+  }
+
+  // ─── Key facts ───────────────────────────────────────────────
+  if (concept.keyFacts.length > 0) {
+    lines.push(rule);
+    lines.push('KEY FACTS — the learner must understand all of these:');
+    lines.push(rule);
+    concept.keyFacts.forEach(f => lines.push(`  • ${f}`));
+    lines.push('');
+  }
+
+  // ─── Worked examples (verified at ingest) ────────────────────
+  if (concept.workedExamples.length > 0) {
+    lines.push(rule);
+    lines.push(`WORKED EXAMPLES${concept.verification ? ' (checked by the automated review at ingest)' : ''} — use for WORKED_EXAMPLE; never reuse one as an assessment item:`);
+    lines.push(rule);
+    concept.workedExamples.forEach(w => lines.push(`  • ${w}`));
+    lines.push('');
+  }
+
+  // ─── Prerequisite checks ─────────────────────────────────────
+  if (prereqDetails.length > 0) {
+    lines.push(rule);
+    lines.push('PREREQUISITES — check questions for PROBE_PREREQ (framed as "where to start", not a test):');
+    lines.push(rule);
+    prereqDetails.forEach((d, i) => {
+      lines.push(`${i + 1}. ${d.label}${d.conceptId ? ' (taught in this course)' : ' (from an earlier grade / another subject)'}`);
+      lines.push(`   Why needed: ${d.reason}`);
+      lines.push(`   Check question: "${d.checkQuestion}"`);
+    });
+    lines.push('');
+  }
+
+  // ─── Evidence-ladder items ───────────────────────────────────
+  if (concept.ladderItems?.length) {
+    lines.push(rule);
+    lines.push('EVIDENCE-LADDER ITEMS for this concept (adapt the wording; L3/L4 are the items that count toward mastery):');
+    lines.push(rule);
+    concept.ladderItems.forEach(l => {
+      lines.push(`  L${l.level}: "${l.prompt}"`);
+      if (l.lookFor) lines.push(`      A sound answer: ${l.lookFor}`);
+    });
+    lines.push('');
+  }
+
+  // ─── Representation ideas ─────────────────────────────────────
+  if (concept.representationIdeas?.length) {
+    lines.push(rule);
+    lines.push('REPRESENTATION IDEAS — concrete options when the plan calls for that representation:');
+    lines.push(rule);
+    concept.representationIdeas.forEach(r => lines.push(`  • ${r.strategy.replace(/_/g, ' ')}: ${r.idea}`));
+    lines.push('');
+  }
+
+  // ─── Misconception diagnostic probes ─────────────────────────
+  if (misconceptionDetails.length > 0) {
+    lines.push(rule);
+    lines.push('KNOWN MISCONCEPTIONS — a correct answer does not rule these out:');
+    lines.push(rule);
+    misconceptionDetails.forEach((m, i) => {
+      lines.push(`${i + 1}. Wrong belief: "${m.belief}"`);
+      if (m.triggerPattern) lines.push(`   Watch for: ${m.triggerPattern}`);
+      lines.push(`   Discriminating probe: "${m.probeQuestion}"`);
+      lines.push(`   If confirmed (by the diagnosis, not by you): ${m.correctionHint}`);
+    });
+    lines.push('');
+  }
+  lines.push('═══════════════════════════════════════════════════════');
+  lines.push('');
+
+  return lines.join('\n');
+}

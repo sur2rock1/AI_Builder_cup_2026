@@ -6,6 +6,16 @@ export const EndSensitivity = { END_SENSITIVITY_HIGH: 'END_SENSITIVITY_HIGH', EN
 export const StartSensitivity = { START_SENSITIVITY_HIGH: 'START_SENSITIVITY_HIGH', START_SENSITIVITY_LOW: 'START_SENSITIVITY_LOW' };
 export const FileState = { PROCESSING:'PROCESSING', ACTIVE:'ACTIVE', FAILED:'FAILED' };
 export const createPartFromUri = (uri, mimeType) => ({ fileData: { fileUri: uri, mimeType } });
+// Added 2026-09-28 (docs/DECISIONS.md D-2026-09-28-5): server.ts started
+// importing server/routes/tutor.ts (T08), which imports this named export
+// from @google/genai — this stub didn't have it, so `npm run test`
+// (which runs this file's bundle build) started failing at build time with
+// "No matching export ... for import createPartFromFunctionResponse".
+// Never actually called by any scenario below (T08's route isn't driven by
+// this test — tests/genai-tool-stub.mjs covers that), so it only needs to
+// exist and match the real helper's shape, matching
+// tests/genai-tool-stub.mjs's own stub of the same function.
+export const createPartFromFunctionResponse = (id, name, response) => ({ functionResponse: { id, name, response } });
 const G = globalThis.__LIVE__ = globalThis.__LIVE__ || { connects: [], toolResponses: [], closed: 0 };
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const REC = process.env.LIVE_RECORD;

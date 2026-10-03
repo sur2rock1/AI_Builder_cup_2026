@@ -1,0 +1,10 @@
+import { shuffleQuiz, lintQuiz, correctSlotSpread, normalizeQuiz } from '../../src/quality/quizTools.ts';
+import { languageIssues } from '../../src/quality/language.ts';
+const q = { question: 'q?', options: ['right answer here', 'b', 'c', 'd'], correctIndex: 0, explanation: 'Because the reasoning goes like this.' };
+const outs = ['a','b','c','d','e','f','g','h'].map(s => shuffleQuiz(q, s));
+console.log(outs.map(o=>o.correctIndex), correctSlotSpread(outs).counts);
+console.log(outs[0].options, shuffleQuiz(outs[0],'zz')===outs[0]);
+console.log(lintQuiz(q).map(i=>i.code), lintQuiz(outs[0]).map(i=>i.code));
+console.log(languageIssues('❌ Mistaken Rule: Impossible!','x').map(i=>i.code));
+console.log(languageIssues('Common Misconception Alert','x').map(i=>i.code), languageIssues('Unlock the secrets of cells','t',{kind:'tagline'}).map(i=>i.code));
+console.log(normalizeQuiz({question:'a',options:['x','y'],correctIndex:5,explanation:''}));

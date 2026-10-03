@@ -1,30 +1,58 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Upload, CheckCircle, AlertCircle, FileText, X, Loader2, AlertTriangle } from 'lucide-react';
+import { Upload, CheckCircle, AlertCircle, FileText, X, Loader2, AlertTriangle, ShieldCheck, Circle } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────
-// Upload one or more textbook PDFs. Any size up to 500 MB each.
-// The server splits, reads and merges them as a background job; this
-// dialog polls that job and shows real progress.
+// Admin upload form (lives inside AdminLibrary — learners never see it).
+//
+// One board + grade + subject per upload: one or more TEXTBOOK PDFs, plus
+// an optional official SYLLABUS PDF that becomes the authority for scope.
+// The server runs split → extract → structure → automated AI review →
+// publish as a background job (src/curriculum/pdfIngest.ts); this form
+// polls that job and shows each stage and the review report. There is no
+// human approval step — the AI review decides what is published
+// (DECISIONS.md D-2026-09-26-7).
 // ─────────────────────────────────────────────────────────────────
 
-interface Props {
-  onCurriculumLoaded: (subjectId: string, label: string) => void;
-  isOpen: boolean;
-  onClose: () => void;
+interface VerificationReport {
+  conceptsChecked: number; conceptsCorrected: number; conceptsRejected: number;
+  examplesCorrected: number; examplesDropped: number; prerequisiteEdgesDropped: number;
+  issues: string[];
 }
 
 interface Job {
   id: string;
-  stage: 'queued' | 'splitting' | 'extracting' | 'merging' | 'done' | 'error';
+  stage: 'queued' | 'splitting' | 'extracting' | 'merging' | 'structuring' | 'verifying' | 'publishing' | 'done' | 'error';
   message: string;
   chunksDone: number;
   chunksTotal: number;
+  progress?: number;
   warnings: string[];
   error?: string;
-  result?: { subjectId: string; label: string; chapterCount: number; conceptCount: number; chapters: string[] };
+  result?: {
+    subjectId: string; label: string; board: string; grade: string;
+    chapterCount: number; conceptCount: number; newConcepts: number; chapters: string[];
+    verification: VerificationReport;
+    chapterLimit?: number; chaptersLoaded?: string[]; chaptersNotLoaded?: number;
+  };
+  chunksSkipped?: number;
 }
 
-const GRADES = ['Elementary (Grade 3-5)', 'Middle School (Grade 6-8)', 'Secondary 2 (Grade 8)', 'High School (Grade 9-12)'];
+interface Props {
+  adminToken: string;
+  boards: string[];
+  onPublished: (courseId: string) => void;
+}
+
+const STAGES: Array<{ id: Job['stage']; label: string }> = [
+  { id: 'splitting', label: 'Split PDFs' },
+  { id: 'extracting', label: 'Read chapters & concepts' },
+  { id: 'merging', label: 'Combine chapters' },
+  { id: 'structuring', label: 'Link prerequisites & concept types' },
+  { id: 'verifying', label: 'AI review: check examples, facts, misconceptions; write ladder items' },
+  { id: 'publishing', label: 'Publish' },
+];
+
+const SUBJECT_SUGGESTIONS = ['Mathematics', 'Science', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'English Language', 'English Literature', 'Economics', 'Computer Science'];
 const MB = (n: number) => `${(n / 1024 / 1024).toFixed(1)} MB`;
 
 /** Reads any response safely — an HTML error page must never surface as "Unexpected token '<'". */
@@ -34,26 +62,37 @@ async function readJson(res: Response): Promise<any> {
   catch { return { error: `Server returned ${res.status} ${res.statusText || ''}`.trim() }; }
 }
 
-export const CurriculumUpload: React.FC<Props> = ({ onCurriculumLoaded, isOpen, onClose }) => {
-  const [subjectLabel, setSubjectLabel] = useState('');
-  const [grade, setGrade] = useState('Secondary 2 (Grade 8)');
-  const [files, setFiles] = useState<File[]>([]);
+export const CurriculumUpload: React.FC<Props> = ({ adminToken, boards, onPublished }) => {
+  const [board, setBoard] = useState('');
+  const [gradeLevel, setGradeLevel] = useState(8);
+  const [subject, setSubject] = useState('');
+  // D-2026-09-26-9: load only the first N chapters (demo / cost control).
+  // Reading stops at chapter N+1, so the rest of the PDF is never sent to Gemini;
+  // pre-generation then covers exactly the chapters that were loaded.
+  const [chapterLimit, setChapterLimit] = useState(3);
+  const [allChapters, setAllChapters] = useState(false);
+  const [textbooks, setTextbooks] = useState<File[]>([]);
+  const [syllabus, setSyllabus] = useState<File | null>(null);
   const [phase, setPhase] = useState<'idle' | 'sending' | 'working' | 'done' | 'error'>('idle');
   const [sendPct, setSendPct] = useState(0);
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [showIssues, setShowIssues] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const sylRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<number | null>(null);
 
   useEffect(() => () => { if (pollRef.current) window.clearInterval(pollRef.current); }, []);
-  if (!isOpen) return null;
 
-  const addFiles = (list: FileList | null) => {
+  const headers = (): Record<string, string> => (adminToken ? { 'X-Admin-Token': adminToken } : {});
+  const isPdf = (f: File) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
+
+  const addTextbooks = (list: FileList | null) => {
     if (!list) return;
-    const pdfs = Array.from(list).filter(f => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+    const pdfs = Array.from(list).filter(isPdf);
     const rejected = list.length - pdfs.length;
-    setFiles(prev => {
+    setTextbooks(prev => {
       const seen = new Set(prev.map(f => f.name + f.size));
       return [...prev, ...pdfs.filter(f => !seen.has(f.name + f.size))].slice(0, 10);
     });
@@ -62,43 +101,48 @@ export const CurriculumUpload: React.FC<Props> = ({ onCurriculumLoaded, isOpen, 
 
   const reset = () => {
     if (pollRef.current) window.clearInterval(pollRef.current);
-    setFiles([]); setJob(null); setPhase('idle'); setError(''); setSendPct(0);
+    setTextbooks([]); setSyllabus(null); setJob(null); setPhase('idle'); setError(''); setSendPct(0); setShowIssues(false);
   };
 
   const poll = (jobId: string) => {
     pollRef.current = window.setInterval(async () => {
       try {
-        const json = await readJson(await fetch(`/api/curriculum/jobs/${jobId}`));
+        const json = await readJson(await fetch(`/api/curriculum/jobs/${jobId}`, { headers: headers() }));
         if (!json.job) throw new Error(json.error || 'Lost track of the job');
         setJob(json.job);
         if (json.job.stage === 'done' || json.job.stage === 'error') {
           window.clearInterval(pollRef.current!);
           pollRef.current = null;
-          if (json.job.stage === 'done') setPhase('done');
-          else { setPhase('error'); setError(json.job.error || 'Extraction failed'); }
+          if (json.job.stage === 'done') { setPhase('done'); onPublished(json.job.result?.subjectId); }
+          else { setPhase('error'); setError(json.job.error || 'Ingestion failed'); }
         }
       } catch (e: any) {
         window.clearInterval(pollRef.current!);
         pollRef.current = null;
         setPhase('error'); setError(e.message);
       }
-    }, 1500);
+    }, 2000);
   };
 
   const submit = () => {
-    if (!subjectLabel.trim()) { setError('Give the subject a name, e.g. "Sec 2 Maths".'); return; }
-    if (!files.length) { setError('Add at least one PDF.'); return; }
+    if (!board.trim()) { setError('Choose or type the board, e.g. IGCSE or CBSE.'); return; }
+    if (!subject.trim()) { setError('Give the subject, e.g. Mathematics.'); return; }
+    if (!textbooks.length) { setError('Add at least one textbook PDF.'); return; }
     setError(''); setPhase('sending'); setSendPct(0);
 
     const form = new FormData();
-    files.forEach(f => form.append('pdfs', f));
-    form.append('subjectLabel', subjectLabel.trim());
-    form.append('grade', grade);
+    textbooks.forEach(f => form.append('textbooks', f));
+    if (syllabus) form.append('syllabus', syllabus);
+    form.append('board', board.trim());
+    form.append('grade', String(gradeLevel));
+    form.append('subject', subject.trim());
+    form.append('chapterLimit', allChapters ? 'all' : String(Math.max(1, Math.floor(chapterLimit) || 3)));
 
     // XHR rather than fetch: fetch cannot report upload progress, and a
     // 119 MB book should not look frozen while it transfers.
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/curriculum/upload');
+    if (adminToken) xhr.setRequestHeader('X-Admin-Token', adminToken);
     xhr.upload.onprogress = e => { if (e.lengthComputable) setSendPct(Math.round((e.loaded / e.total) * 100)); };
     xhr.onerror = () => { setPhase('error'); setError('Could not reach the server.'); };
     xhr.onload = () => {
@@ -114,13 +158,13 @@ export const CurriculumUpload: React.FC<Props> = ({ onCurriculumLoaded, isOpen, 
   };
 
   const busy = phase === 'sending' || phase === 'working';
-  const pct = phase === 'sending' ? sendPct
-    : job && job.chunksTotal ? Math.round((job.chunksDone / job.chunksTotal) * 100) : 0;
+  const stageIdx = job ? STAGES.findIndex(s => s.id === job.stage) : -1;
 
   const input: React.CSSProperties = {
     width: '100%', background: '#1f2937', border: '1px solid #374151', borderRadius: 8,
-    padding: '9px 11px', color: '#e5e7eb', fontSize: 13, marginBottom: 10, boxSizing: 'border-box',
+    padding: '9px 11px', color: '#e5e7eb', fontSize: 13, boxSizing: 'border-box',
   };
+  const label: React.CSSProperties = { color: '#9ca3af', fontSize: 11, fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 4, display: 'block' };
   const btn = (primary: boolean): React.CSSProperties => ({
     flex: 1, background: primary ? '#1d4ed8' : '#1f2937', border: primary ? 'none' : '1px solid #374151',
     borderRadius: 8, padding: '10px 0', color: primary ? 'white' : '#e5e7eb', fontSize: 14,
@@ -128,130 +172,188 @@ export const CurriculumUpload: React.FC<Props> = ({ onCurriculumLoaded, isOpen, 
   });
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#0d1117', border: '1px solid #1f2937', borderRadius: 16, padding: 28,
-                    width: 520, maxHeight: '88vh', overflowY: 'auto', fontFamily: 'system-ui, sans-serif' }}>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
-          <div>
-            <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 17 }}>Add textbooks</div>
-            <div style={{ color: '#6b7280', fontSize: 12, marginTop: 3, lineHeight: 1.45 }}>
-              Upload one or more PDFs. Gemini reads every chapter and extracts the concepts,
-              common misconceptions and worked examples.
-            </div>
-          </div>
-          <button onClick={() => { if (!busy) { reset(); onClose(); } }} disabled={busy}
-                  style={{ background: 'none', border: 'none', color: '#6b7280', cursor: busy ? 'default' : 'pointer' }}>
-            <X size={20} />
-          </button>
-        </div>
-
-        {(phase === 'idle' || phase === 'error') && (
-          <>
-            <input style={input} placeholder='Subject name, e.g. "Sec 2 Maths"'
-                   value={subjectLabel} onChange={e => setSubjectLabel(e.target.value)} />
-            <select value={grade} onChange={e => setGrade(e.target.value)} style={{ ...input, cursor: 'pointer' }}>
-              {GRADES.map(g => <option key={g}>{g}</option>)}
-            </select>
-            <div style={{ color: '#6b7280', fontSize: 11.5, margin: '-4px 0 12px' }}>
-              Books added under the same subject name are combined — e.g. upload Book 2A now and 2B later.
-            </div>
-
-            <div onClick={() => fileRef.current?.click()}
-                 onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                 onDragLeave={() => setDragOver(false)}
-                 onDrop={e => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
-                 style={{ border: `2px dashed ${dragOver ? '#60a5fa' : '#374151'}`, borderRadius: 10,
-                          padding: '18px 16px', textAlign: 'center', cursor: 'pointer', marginBottom: 12,
-                          background: dragOver ? 'rgba(59,130,246,0.07)' : 'transparent' }}>
-              <Upload size={24} color="#6b7280" style={{ margin: '0 auto 6px' }} />
-              <div style={{ color: '#9ca3af', fontSize: 13.5 }}>Click or drop PDFs here</div>
-              <div style={{ color: '#6b7280', fontSize: 11.5, marginTop: 2 }}>Up to 10 files · up to 500 MB each · scanned or digital</div>
-            </div>
-            <input ref={fileRef} type="file" accept=".pdf,application/pdf" multiple
-                   onChange={e => { addFiles(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
-
-            {files.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                {files.map((f, i) => (
-                  <div key={f.name + f.size} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
-                       background: '#111827', border: '1px solid #1f2937', borderRadius: 8, marginBottom: 6 }}>
-                    <FileText size={16} color="#60a5fa" />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: '#e5e7eb', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
-                      <div style={{ color: '#6b7280', fontSize: 11 }}>{MB(f.size)}{f.size > 50 * 1024 * 1024 ? ' · will be split into parts' : ''}</div>
-                    </div>
-                    <button onClick={() => setFiles(fs => fs.filter((_, j) => j !== i))}
-                            style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}>
-                      <X size={15} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {error && (
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', color: '#f87171', fontSize: 13, marginBottom: 12 }}>
-                <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} /><span>{error}</span>
-              </div>
-            )}
-
-            <button onClick={submit} style={{ ...btn(true), width: '100%' }}>
-              Read {files.length > 1 ? `${files.length} books` : 'book'} with Gemini →
-            </button>
-          </>
-        )}
-
-        {busy && (
-          <div style={{ padding: '6px 0 4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#e5e7eb', fontSize: 14, marginBottom: 12 }}>
-              <Loader2 size={18} className="animate-spin" color="#60a5fa" />
-              <span>{phase === 'sending' ? `Uploading ${files.length > 1 ? `${files.length} files` : files[0]?.name}…` : job?.message || 'Working…'}</span>
-            </div>
-            <div style={{ height: 8, background: '#1f2937', borderRadius: 99, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.max(3, pct)}%`, background: 'linear-gradient(90deg,#3b82f6,#8b5cf6)',
-                            borderRadius: 99, transition: 'width .5s ease' }} />
-            </div>
-            <div style={{ color: '#6b7280', fontSize: 12, marginTop: 8 }}>
-              {phase === 'sending' ? `${sendPct}% sent`
-                : job?.chunksTotal ? `${job.chunksDone} of ${job.chunksTotal} parts read`
-                : 'Preparing…'}
-              {phase === 'working' && ' · a full textbook takes a few minutes — you can leave this open'}
-            </div>
-          </div>
-        )}
-
-        {phase === 'done' && job?.result && (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <CheckCircle size={24} color="#4ade80" />
-              <div>
-                <div style={{ color: '#4ade80', fontWeight: 700, fontSize: 16 }}>{job.result.label} is ready</div>
-                <div style={{ color: '#9ca3af', fontSize: 12.5 }}>
-                  {job.result.conceptCount} concepts across {job.result.chapterCount} chapters
-                </div>
-              </div>
-            </div>
-            <div style={{ background: '#111827', borderRadius: 10, padding: '10px 14px', marginBottom: 12, maxHeight: 220, overflowY: 'auto' }}>
-              {job.result.chapters.map(c => (
-                <div key={c} style={{ color: '#d1d5db', fontSize: 13, padding: '5px 0', borderBottom: '1px solid #1f2937' }}>{c}</div>
-              ))}
-            </div>
-            {job.warnings.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, color: '#fbbf24', fontSize: 12, marginBottom: 12, lineHeight: 1.45 }}>
-                <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
-                <div>{job.warnings.length} part(s) could not be read and were skipped:<br />{job.warnings.slice(0, 3).join(' · ')}</div>
-              </div>
-            )}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={reset} style={btn(false)}>Add more books</button>
-              <button onClick={() => { const r = job.result!; reset(); onCurriculumLoaded(r.subjectId, r.label); onClose(); }}
-                      style={btn(true)}>Done</button>
-            </div>
-          </div>
-        )}
+    <div style={{ background: '#0d1117', border: '1px solid #1f2937', borderRadius: 16, padding: 22, fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 16 }}>Add textbooks to the library</div>
+      <div style={{ color: '#6b7280', fontSize: 12, marginTop: 3, marginBottom: 16, lineHeight: 1.5 }}>
+        One board, grade and subject per upload. Gemini reads every chapter, links prerequisites, then an automated
+        review re-checks every worked example and fact before anything reaches a learner. Books added to the same
+        board + grade + subject are combined — upload Book A now and Book B later.
       </div>
+
+      {(phase === 'idle' || phase === 'error') && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 1fr', gap: 10, marginBottom: 12 }}>
+            <div>
+              <span style={label}>Board</span>
+              <input style={input} list="pt-boards" placeholder="IGCSE, CBSE, IB MYP…" value={board} onChange={e => setBoard(e.target.value)} />
+              <datalist id="pt-boards">{boards.map(b => <option key={b} value={b} />)}</datalist>
+            </div>
+            <div>
+              <span style={label}>Grade</span>
+              <select style={{ ...input, cursor: 'pointer' }} value={gradeLevel} onChange={e => setGradeLevel(Number(e.target.value))}>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(g => <option key={g} value={g}>Grade {g}</option>)}
+              </select>
+            </div>
+            <div>
+              <span style={label}>Subject</span>
+              <input style={input} list="pt-subjects" placeholder="Mathematics" value={subject} onChange={e => setSubject(e.target.value)} />
+              <datalist id="pt-subjects">{SUBJECT_SUGGESTIONS.map(s => <option key={s} value={s} />)}</datalist>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, background: '#111827', border: '1px solid #1f2937', borderRadius: 10, padding: '10px 12px' }}>
+            <div style={{ flex: 1 }}>
+              <span style={{ ...label, marginBottom: 2 }}>Chapters to load</span>
+              <div style={{ color: '#6b7280', fontSize: 11.5, lineHeight: 1.4 }}>
+                {allChapters
+                  ? 'Whole book: every chapter is read, reviewed and pre-generated (most Gemini usage).'
+                  : `Only the first ${chapterLimit || 1} chapter(s) are read, reviewed and pre-generated — the rest of the PDF is never sent to Gemini. Upload the same book again with a higher number to add more.`}
+              </div>
+            </div>
+            <input type="number" min={1} max={200} value={chapterLimit} disabled={allChapters}
+                   onChange={e => setChapterLimit(Math.max(1, Number(e.target.value) || 1))}
+                   style={{ ...input, width: 70, textAlign: 'center', opacity: allChapters ? 0.4 : 1 }} />
+            <label style={{ color: '#d1d5db', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={allChapters} onChange={e => setAllChapters(e.target.checked)} /> All chapters
+            </label>
+          </div>
+
+          <span style={label}>Textbook PDFs (required)</span>
+          <div onClick={() => fileRef.current?.click()}
+               onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+               onDragLeave={() => setDragOver(false)}
+               onDrop={e => { e.preventDefault(); setDragOver(false); addTextbooks(e.dataTransfer.files); }}
+               style={{ border: `2px dashed ${dragOver ? '#60a5fa' : '#374151'}`, borderRadius: 10,
+                        padding: '16px', textAlign: 'center', cursor: 'pointer', marginBottom: 10,
+                        background: dragOver ? 'rgba(59,130,246,0.07)' : 'transparent' }}>
+            <Upload size={22} color="#6b7280" style={{ margin: '0 auto 6px' }} />
+            <div style={{ color: '#9ca3af', fontSize: 13 }}>Click or drop textbook PDFs here</div>
+            <div style={{ color: '#6b7280', fontSize: 11.5, marginTop: 2 }}>Up to 10 files · up to 500 MB each · scanned or digital</div>
+          </div>
+          <input ref={fileRef} type="file" accept=".pdf,application/pdf" multiple
+                 onChange={e => { addTextbooks(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
+
+          {textbooks.map((f, i) => (
+            <div key={f.name + f.size} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px',
+                 background: '#111827', border: '1px solid #1f2937', borderRadius: 8, marginBottom: 6 }}>
+              <FileText size={15} color="#60a5fa" />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: '#e5e7eb', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+                <div style={{ color: '#6b7280', fontSize: 11 }}>{MB(f.size)}{f.size > 40 * 1024 * 1024 ? ' · will be split into parts' : ''}</div>
+              </div>
+              <button onClick={() => setTextbooks(fs => fs.filter((_, j) => j !== i))}
+                      style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={15} /></button>
+            </div>
+          ))}
+
+          <span style={{ ...label, marginTop: 10 }}>Official syllabus PDF (optional — sets what is in and out of scope)</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+            <button onClick={() => sylRef.current?.click()} style={{ ...btn(false), flex: 'none', padding: '8px 12px', fontSize: 12.5 }}>
+              {syllabus ? 'Replace syllabus' : 'Choose syllabus PDF'}
+            </button>
+            {syllabus && (
+              <span style={{ color: '#d1d5db', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <FileText size={14} color="#a78bfa" /> {syllabus.name}
+                <button onClick={() => setSyllabus(null)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={14} /></button>
+              </span>
+            )}
+          </div>
+          <input ref={sylRef} type="file" accept=".pdf,application/pdf"
+                 onChange={e => { const f = e.target.files?.[0]; if (f && isPdf(f)) setSyllabus(f); e.target.value = ''; }} style={{ display: 'none' }} />
+
+          {error && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', color: '#f87171', fontSize: 13, marginBottom: 12 }}>
+              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} /><span>{error}</span>
+            </div>
+          )}
+
+          <button onClick={submit} style={{ ...btn(true), width: '100%' }}>
+            {allChapters ? 'Read, check and publish the whole book →' : `Read, check and publish first ${chapterLimit} chapter(s) →`}
+          </button>
+        </>
+      )}
+
+      {busy && (
+        <div style={{ padding: '4px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#e5e7eb', fontSize: 14, marginBottom: 12 }}>
+            <Loader2 size={18} className="animate-spin" color="#60a5fa" />
+            <span>{phase === 'sending' ? `Uploading… ${sendPct}%` : job?.message || 'Working…'}</span>
+          </div>
+          {phase === 'working' && STAGES.map((s, i) => {
+            const done = stageIdx > i;
+            const active = stageIdx === i;
+            return (
+              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, padding: '3px 0',
+                                        color: done ? '#4ade80' : active ? '#e5e7eb' : '#6b7280' }}>
+                {done ? <CheckCircle size={14} /> : active ? <Loader2 size={14} className="animate-spin" /> : <Circle size={14} />}
+                <span>{s.label}</span>
+                {active && s.id === 'extracting' && job?.chunksTotal ? <span style={{ color: '#9ca3af' }}>· {job.chunksDone}/{job.chunksTotal} parts</span> : null}
+                {active && s.id === 'verifying' && job?.progress ? <span style={{ color: '#9ca3af' }}>· {Math.round(job.progress * 100)}%</span> : null}
+              </div>
+            );
+          })}
+          <div style={{ color: '#6b7280', fontSize: 12, marginTop: 8 }}>A full textbook takes several minutes — you can leave this open.</div>
+        </div>
+      )}
+
+      {phase === 'done' && job?.result && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <CheckCircle size={24} color="#4ade80" />
+            <div>
+              <div style={{ color: '#4ade80', fontWeight: 700, fontSize: 15 }}>
+                {job.result.board} · {job.result.grade} · {job.result.label} published
+              </div>
+              <div style={{ color: '#9ca3af', fontSize: 12.5 }}>
+                {job.result.newConcepts} new concept(s) · {job.result.conceptCount} total across {job.result.chapterCount} chapter(s)
+              </div>
+              {job.result.chapterLimit ? (
+                <div style={{ color: '#fbbf24', fontSize: 12, marginTop: 2 }}>
+                  Chapter limit {job.result.chapterLimit}: loaded {(job.result.chaptersLoaded || []).join(', ') || '—'}
+                  {job.chunksSkipped ? ` · ${job.chunksSkipped} later part(s) of the PDF not read` : ''}
+                  {' '}· upload again with a higher number or “All chapters” to add more.
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#c4b5fd', fontSize: 12.5, fontWeight: 600, marginBottom: 6 }}>
+              <ShieldCheck size={15} /> Automated review
+            </div>
+            {(() => {
+              const v = job.result.verification;
+              return (
+                <div style={{ color: '#d1d5db', fontSize: 12.5, lineHeight: 1.7 }}>
+                  {v.conceptsChecked} concepts checked · {v.conceptsCorrected} corrected · {v.conceptsRejected} rejected<br />
+                  {v.examplesCorrected} worked example(s) corrected · {v.examplesDropped} dropped as unfixable/unverified<br />
+                  {v.prerequisiteEdgesDropped} invalid prerequisite link(s) removed
+                  {v.issues.length > 0 && (
+                    <div style={{ marginTop: 6 }}>
+                      <button onClick={() => setShowIssues(s => !s)} style={{ background: 'none', border: 'none', color: '#93c5fd', cursor: 'pointer', padding: 0, fontSize: 12 }}>
+                        {showIssues ? 'Hide' : 'Show'} {v.issues.length} review note(s)
+                      </button>
+                      {showIssues && (
+                        <ul style={{ margin: '6px 0 0 16px', padding: 0, color: '#9ca3af', fontSize: 11.5, maxHeight: 180, overflowY: 'auto' }}>
+                          {v.issues.map((x, i) => <li key={i}>{x}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          {job.warnings.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, color: '#fbbf24', fontSize: 12, marginBottom: 12, lineHeight: 1.45 }}>
+              <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+              <div>{job.warnings.slice(0, 4).join(' · ')}{job.warnings.length > 4 ? ` · +${job.warnings.length - 4} more` : ''}</div>
+            </div>
+          )}
+          <button onClick={reset} style={{ ...btn(false), width: '100%' }}>Upload another</button>
+        </div>
+      )}
     </div>
   );
 };
