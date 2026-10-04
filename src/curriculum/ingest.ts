@@ -22,6 +22,7 @@
 // A "subject" here is one COURSE: board + grade + subject, id built by
 // src/curriculum/catalog.ts courseId(), e.g. "igcse--g8--mathematics".
 // ─────────────────────────────────────────────────────────────────
+import { admin } from '../firebase/admin';
 import fs from 'fs';
 import path from 'path';
 import { CurriculumSubject, CurriculumConcept } from '../adaptive/learnerModel';
@@ -39,9 +40,7 @@ let cacheSource: 'firestore' | 'local' | 'empty' = 'empty';
 // ─── Firestore helper ───────────────────────────────────────────
 function getFirestore() {
   try {
-    // admin is already initialised by the time any route runs (see server.ts)
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { admin } = require('../firebase/admin') as typeof import('../firebase/admin');
+    // admin is initialised by server.ts / scripts; static import (see pregenStore.ts for why not require)
     const app = admin.apps?.[0];
     if (!app) return null;
     return admin.firestore(app);

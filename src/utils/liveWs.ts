@@ -30,7 +30,9 @@ export function liveWebSocketUrl(
   if (!base && typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host.endsWith('.web.app') || host.endsWith('.firebaseapp.com')) {
-      base = 'https://dr-marcus-live-45388528859.us-central1.run.app';
+      // Hosting rewrites have a 60-second request limit, so the voice WebSocket must connect straight to
+      // Cloud Run. scripts/deploy-cloudrun.sh bakes that URL into the bundle at build time.
+      throw new Error('VITE_LIVE_WS_BASE was not set when this bundle was built, so the voice tutor cannot connect. Rebuild with scripts/deploy-cloudrun.sh.');
     }
   }
 

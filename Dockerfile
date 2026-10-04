@@ -8,6 +8,7 @@ COPY index.html vite.config.ts tsconfig.json metadata.json ./
 COPY public ./public
 COPY src ./src
 COPY server.ts ./
+COPY server ./server
 COPY firebase-config.json ./
 RUN npm run build
 
