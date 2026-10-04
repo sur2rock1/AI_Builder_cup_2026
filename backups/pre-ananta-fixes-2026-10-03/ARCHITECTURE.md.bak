@@ -46,7 +46,7 @@ useFirestore() === true  iff  process.env.USE_FIRESTORE_LEARNERS === 'true'  OR 
 
 ### 4.1 Curriculum library store (2026-09-26 — docs/CURRICULUM.md)
 
-Courses (one per board + grade + subject, id e.g. `igcse--g8--mathematics`) live in `src/curriculum/ingest.ts`: Firestore collection `curricula/{courseId}` when the Admin SDK is initialised (reached through a static `import` of `src/firebase/admin.ts` since 2026-10-03, D-2026-10-03-1; before that a `require()` that did not exist under `tsx`), else `data/curricula.json` (`CURRICULA_FILE` overrides it — tests). In-memory cache loaded once. `saveCurriculumAsync()` loads the store before writing (a cold fire-and-forget save could previously overwrite the local file with one course) and strips `undefined` before Firestore writes. `deleteCurriculum()` removes a course. One course = one Firestore document (1 MiB limit; warning logged above 900 KB). Concept ids, misconception ids and `conceptType` are assigned once at ingest and never changed — learner data is keyed on them (AGENT_GUIDE landmine #6).
+Courses (one per board + grade + subject, id e.g. `igcse--g8--mathematics`) live in `src/curriculum/ingest.ts`: Firestore collection `curricula/{courseId}` when the Admin SDK is initialised (reached via `require()`, so in practice the bundled production server), else `data/curricula.json` (`CURRICULA_FILE` overrides it — tests). In-memory cache loaded once. `saveCurriculumAsync()` loads the store before writing (a cold fire-and-forget save could previously overwrite the local file with one course) and strips `undefined` before Firestore writes. `deleteCurriculum()` removes a course. One course = one Firestore document (1 MiB limit; warning logged above 900 KB). Concept ids, misconception ids and `conceptType` are assigned once at ingest and never changed — learner data is keyed on them (AGENT_GUIDE landmine #6).
 
 ### 4.2 Pre-generated lesson/diagram/photo cache (2026-09-27 — docs/CURRICULUM.md §8, D-2026-09-27-2)
 
@@ -54,8 +54,8 @@ Courses (one per board + grade + subject, id e.g. `igcse--g8--mathematics`) live
 lesson/diagram JSON, Cloud Storage (`pregen-images/<key>.<ext>`, public) for the generated photo —
 base64 in, URL stored, never inlined into the Firestore doc. Local-file fallback
 (`data/pregenerated/*.json`) when Firebase isn't configured, same format as before this store
-existed. Same static `import` of `src/firebase/admin.ts` as §4.1 (D-2026-10-03-1), so `npx tsx` scripts such as
-`migrate:cloud` now reach Firestore/Storage when credentials are configured. Every one of the three live REST endpoints that call Gemini for
+existed. Same `require('../firebase/admin')` caveat as §4.1 (production-CJS only; `npx tsx` dev
+falls back to the local file). Every one of the three live REST endpoints that call Gemini for
 lesson/diagram/photo content now cache-checks before calling and cache-saves the result:
 `/api/generate-lesson`, `/api/update-diagram`, `/api/generate-image` (the last of these had **no**
 caching at all before this — every photo request, including a repeat request for the same topic in

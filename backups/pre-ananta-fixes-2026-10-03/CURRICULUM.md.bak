@@ -244,14 +244,14 @@ no Firestore doc cap to worry about.
   2026-09-27 so they survive a Cloud Run redeploy/cold start instead of silently regenerating (and
   re-billing) on every new instance. The local-file fallback (`data/pregenerated/`) still exists for
   dev/tests without Firebase credentials configured, and IS still ephemeral there — that's expected.
-- `src/curriculum/pregenStore.ts` reaches Firestore/Storage through a static `import` of `src/firebase/admin.ts`,
-  like `ingest.ts` (D-2026-10-03-1; it used `require()` before, which silently fell back to local files under `npx tsx`).
+- `src/curriculum/pregenStore.ts` finds Firestore/Storage via the same `require('../firebase/admin')`
+  pattern as `ingest.ts` — same ESM/`npx tsx` caveat below applies to it too.
 - **The AI review is an automated check, not a guarantee.** It is a second, independent pass with a
   different task (verify, not extract) and its changes are reported, but it can miss errors.
   Measuring its catch rate against a hand-checked sample is open work.
-- **`src/curriculum/ingest.ts` finds Firestore through a static `import`** (changed 2026-10-03, D-2026-10-03-1). With
-  no Firebase credentials configured it still falls back to `data/curricula.json`; with credentials it now uses
-  Firestore under `npx tsx` too.
+- **`src/curriculum/ingest.ts` finds Firestore via `require()`**, which only resolves in the bundled
+  CommonJS server (production). Under `npx tsx server.ts` (ESM dev) it falls back to
+  `data/curricula.json`. Pre-existing behaviour; noted, not changed.
 - Existing Firestore `curricula` documents from before this change are not migrated — delete them
   (see §10).
 - **Stored Chapter 1 records are the deterministic *upgrade* of the pre-gate output, not regenerated material.** `npm run upgrade:pregen`

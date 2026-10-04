@@ -68,19 +68,22 @@ and withheld (never replaced by a generic fallback) if it fails — see
 | `npm run upgrade:pregen` | Deterministic in-place upgrade of stored records (writes a backup first) |
 | `npm run test:quality` / `test:gates` / `verify` | Gate tests / + picture and ingest tests / + tsc and scorecard |
 
-## Production (Cloud Run + Firebase)
+## Production (Firebase + Cloud Run)
 
-Ananta runs on one Google Cloud project: **Cloud Run** hosts the Node server (REST API + the Gemini Live voice
-WebSocket proxy), **Firebase Hosting** serves the static UI and forwards `/api/**` to Cloud Run, and
-**Firestore** + **Cloud Storage** hold curricula, lessons, photos and learner data. The voice WebSocket connects
-straight to Cloud Run (Hosting rewrites have a 60-second request limit).
+- **Hosting UI:** https://sceneflow-f9529.web.app  
+- **API:** Hosting rewrites `/api/**` → Cloud Run `dr-marcus-live`  
+- **Live voice WebSocket:** browser connects to Cloud Run  
+  `wss://dr-marcus-live-45388528859.us-central1.run.app/ws/live`  
+  (Hosting does not reliably upgrade WebSockets, so the client bypasses it for `/ws`)
 
-Full from-scratch setup, data migration and verification: [docs/ANANTA_MIGRATION_PLAN.md](docs/ANANTA_MIGRATION_PLAN.md).
+Deploy / update Live voice stack:
 
 ```bash
-export PROJECT_ID=<your-project-id> BUCKET=<your-storage-bucket>
-npm run deploy:live          # Cloud Run, then the web build (with the Cloud Run URL baked in), then Hosting
-npm run migrate:cloud -- --dry-run && npm run verify:migration   # local data/ -> Firestore + Storage
+npm run deploy:live
 ```
 
-Local voice still works with `PORT=3001 npm run dev`.
+Local voice still works with:
+
+```bash
+PORT=3001 npm run dev
+```

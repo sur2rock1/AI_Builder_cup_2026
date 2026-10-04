@@ -8,6 +8,22 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
   "hosting": {
     "public": "dist",
     "ignore": [
@@ -19,19 +35,13 @@
       {
         "source": "/api/**",
         "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-store"
-          }
+          { "key": "Cache-Control", "value": "no-store" }
         ]
       },
       {
         "source": "/ws/**",
         "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-store"
-          }
+          { "key": "Cache-Control", "value": "no-store" }
         ]
       }
     ],
@@ -39,14 +49,14 @@
       {
         "source": "/ws/**",
         "run": {
-          "serviceId": "ananta",
+          "serviceId": "dr-marcus-live",
           "region": "us-central1"
         }
       },
       {
         "source": "/api/**",
         "run": {
-          "serviceId": "ananta",
+          "serviceId": "dr-marcus-live",
           "region": "us-central1"
         }
       },

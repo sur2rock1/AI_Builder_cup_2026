@@ -36,7 +36,6 @@
 // ─────────────────────────────────────────────────────────────────
 import fs from 'fs';
 import path from 'path';
-import { admin } from '../firebase/admin';
 import type { AnyBoardVisual } from '../visual/types';
 import type { QualityIssue, RecordQuality } from '../quality/types';
 
@@ -79,13 +78,12 @@ function pregenDir(): string {
   return process.env.PREGEN_DATA_DIR || path.join(process.cwd(), 'data', 'pregenerated');
 }
 
-// ─── Firestore + Storage helpers. `admin` is a STATIC import: this project is ESM
-// ("type": "module"), where `require` does not exist under tsx, so a lazy require()
-// silently fell back to local files and made scripts/migrate-local-to-cloud.ts skip every
-// record. Admin is initialised by server.ts / scripts before any of these run; with no
-// app yet they return null ("not configured") and callers use the local files. ───
+// ─── Firestore + Storage helpers (lazy require — admin is initialised by
+// server.ts / scripts before any of these run; safe to import before that
+// too, since a failed require or no app just means "not configured yet"). ───
 function getFirestoreDb(): any {
   try {
+    const { admin } = require('../firebase/admin') as typeof import('../firebase/admin');
     const app = admin.apps?.[0];
     if (!app) return null;
     return admin.firestore(app);
@@ -96,6 +94,7 @@ function getFirestoreDb(): any {
 
 function getStorageBucket(): any {
   try {
+    const { admin } = require('../firebase/admin') as typeof import('../firebase/admin');
     const app = admin.apps?.[0];
     if (!app) return null;
     return admin.storage(app).bucket();
@@ -121,10 +120,7 @@ async function uploadImageToStorage(key: string, dataUri: string): Promise<strin
     const filePath = `pregen-images/${key}.${ext}`;
     const file = bucket.file(filePath);
     await file.save(buffer, { metadata: { contentType: mimeType }, resumable: false });
-    // With uniform bucket-level access (the default for new buckets) makePublic() throws even
-    // though the upload worked; public read then comes from the bucket's IAM rule
-    // (docs/ANANTA_MIGRATION_PLAN.md, Phase 2). Do not drop a good upload because of it.
-    try { await file.makePublic(); } catch { /* public access is granted by bucket IAM */ }
+    await file.makePublic();
     return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
   } catch (err: any) {
     console.warn(`[Pregen] Image upload to Cloud Storage failed for "${key}", keeping inline base64:`, err?.message);
