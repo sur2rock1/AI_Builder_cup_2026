@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
-# Deploy Ananta to Cloud Run (API + Gemini Live WebSocket proxy + the built web UI, all from one service).
-#   export PROJECT_ID=<your-project-id> REGION=<same region as your Firestore database> BUCKET=<your GCS bucket>
+# Deploy Ananta: Cloud Run first (API + Gemini Live WebSocket proxy), then Firebase Hosting (static UI).
+#   export PROJECT_ID=<your-project-id> BUCKET=<your-storage-bucket>
 #   npm run deploy:live
-# Optional: WITH_HOSTING=yes also puts Firebase Hosting in front (static CDN). Not needed: the Node server
-# already serves the web build, and Hosting adds a 60-second request limit on /api calls.
 set -euo pipefail
 
 : "${PROJECT_ID:?Set PROJECT_ID to your Google Cloud project id}"
-: "${REGION:?Set REGION (e.g. asia-southeast1 or us-central1) — it must match the region you created Firestore in}"
-: "${BUCKET:?Set BUCKET to the Cloud Storage bucket name that holds pregenerated photos}"
+: "${BUCKET:?Set BUCKET to the exact Cloud Storage bucket name (Firebase console -> Storage)}"
+REGION="${REGION:-us-central1}"
 SERVICE="${SERVICE:-ananta}"
-WITH_HOSTING="${WITH_HOSTING:-no}"
 # DEMO_MODE=true skips Firebase ID-token checks on learner routes (the client does not sign learners in yet).
 # Fine for simulated demo learners only: any caller who knows a studentId can read it, and GET /api/learners
 # lists every profile. Use DEMO_MODE=false only once real sign-in is wired up.
@@ -19,9 +16,9 @@ RUNTIME_SA="ananta-run@${PROJECT_ID}.iam.gserviceaccount.com"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "==> Project=$PROJECT_ID Region=$REGION Service=$SERVICE Bucket=$BUCKET DEMO_MODE=$DEMO_MODE Hosting=$WITH_HOSTING"
+echo "==> Project=$PROJECT_ID Region=$REGION Service=$SERVICE Bucket=$BUCKET DEMO_MODE=$DEMO_MODE"
 
-# The web bundle is built from firebase-config.json: it must belong to THIS project.
+# The web bundle must talk to THIS project, not whichever one firebase-config.json was copied from.
 CFG_PROJECT="$(node -p "require('./firebase-config.json').projectId")"
 if [ "$CFG_PROJECT" != "$PROJECT_ID" ]; then
   echo "firebase-config.json is for project '$CFG_PROJECT', not '$PROJECT_ID'."
@@ -31,14 +28,12 @@ if [ "$CFG_PROJECT" != "$PROJECT_ID" ]; then
   exit 1
 fi
 
-gcloud storage buckets describe "gs://$BUCKET" --project "$PROJECT_ID" >/dev/null 2>&1 || {
-  echo "Bucket gs://$BUCKET not found in $PROJECT_ID. See docs/ANANTA_CLOUD_RUN_PLAN.md, Phase B."; exit 1; }
 for S in GEMINI_API_KEY ADMIN_TOKEN; do
   gcloud secrets describe "$S" --project "$PROJECT_ID" >/dev/null 2>&1 || {
-    echo "Missing Secret Manager secret $S. See docs/ANANTA_CLOUD_RUN_PLAN.md, Phase C."; exit 1; }
+    echo "Missing Secret Manager secret $S. See docs/ANANTA_MIGRATION_PLAN.md, Phase 2."; exit 1; }
 done
 gcloud iam service-accounts describe "$RUNTIME_SA" --project "$PROJECT_ID" >/dev/null 2>&1 || {
-  echo "Missing service account $RUNTIME_SA. See docs/ANANTA_CLOUD_RUN_PLAN.md, Phase C."; exit 1; }
+  echo "Missing service account $RUNTIME_SA. See docs/ANANTA_MIGRATION_PLAN.md, Phase 2."; exit 1; }
 
 echo "==> Building & deploying Cloud Run service (a few minutes)..."
 gcloud run deploy "$SERVICE" \
@@ -63,19 +58,12 @@ gcloud run deploy "$SERVICE" \
 URL="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')"
 echo "==> Cloud Run URL: $URL"
 
-echo "==> Deploying Firestore security rules and indexes..."
-npx -y firebase-tools@latest deploy --only firestore:rules,firestore:indexes --project "$PROJECT_ID" --non-interactive
-
-if [ "$WITH_HOSTING" = "yes" ]; then
-  echo "==> Building web UI (voice WebSocket -> $URL) & deploying Firebase Hosting..."
-  VITE_LIVE_WS_BASE="$URL" npm run build:web
-  npx -y firebase-tools@latest deploy --only hosting --project "$PROJECT_ID" --non-interactive
-fi
-
-echo "==> Health check"
-curl -fsS "$URL/api/health" && echo || echo "(health check failed — read the Cloud Run logs)"
+echo "==> Building web UI (voice WebSocket -> $URL) & deploying Hosting, rules and indexes..."
+VITE_LIVE_WS_BASE="$URL" npm run build:web
+npx -y firebase-tools@latest deploy --only hosting,firestore:rules,firestore:indexes,storage --project "$PROJECT_ID" --non-interactive
 
 echo ""
 echo "Done."
-echo "  App:      $URL"
-echo "  Voice WS: ${URL/https:/wss:}/ws/live  (same address as the page)"
+echo "  UI:        https://${PROJECT_ID}.web.app"
+echo "  Cloud Run: $URL"
+echo "  Voice WS:  ${URL/https:/wss:}/ws/live  (browser connects directly)"
