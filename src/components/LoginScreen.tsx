@@ -48,6 +48,8 @@ export interface StudentProfile {
     completedAt?: number;
   };
   ageBand?: '5-7' | '8-12' | '13-17' | 'adult';
+  /** The name this child gave their tutor at the last login. */
+  tutorName?: string;
 }
 
 interface LoginScreenProps {
@@ -151,7 +153,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-start px-4 py-8">
+    <div className="min-h-app bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-start px-4 py-8">
       {/* Stars background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {[...Array(40)].map((_, i) => (
@@ -171,7 +173,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
             <BookOpen className="w-8 h-8 text-white" />
           </div>
           <div className="text-left">
-            <h1 className="text-3xl font-bold text-white tracking-tight">Dr. Marcus</h1>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Ananta</h1>
             <p className="text-indigo-300 text-sm font-medium">Your AI Learning Companion</p>
           </div>
         </div>

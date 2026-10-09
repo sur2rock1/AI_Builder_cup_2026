@@ -3,6 +3,8 @@
 _Status legend: ⬜ not started · 🟨 in progress · ✅ done · ♻️ existing code reused_
 _Last updated: 2026-09-28 (outcome-derivation logic deduplicated into one shared function with a branch-coverage test; fixing the test infra to run it surfaced a stale golden-snapshot test in the voice path, flagged not fixed — see D-2026-09-28-5 and FR-25 below. The Gemini call itself remains unverified from this sandbox.)_
 
+> **Audit corrections 2026-10-09 (override rows below):** FR-20 — park/escalate was removed from the live path (D-2026-09-30-9); retry cap now triggers TEACH_DIRECTLY; status ✅ for *teach-directly*, escalation UI is dead code. FR-14 (confidence capture) ⬜ — nothing populates `learnerConfidence`. FR-16 — T14 Profiler/validator built and running (log 2026-10-09: 1 claim accepted); T15 decay/review ⬜. FR-21 ⬜ — nothing writes `review.nextDueAt`. NFR-04 ⬜ — no Cloud Run deployment exists; `firebase-config.json` points to `sceneflow-f9529`. NFR-03 🟨 — `DEMO_MODE=true` default in deploy script. EV-01/02/03 ⬜ — no eval harness exists (`eval/` absent). New: FR-47 guided mode 🟨, FR-48 tutor name ✅ unit-tested only. `tests/live/run.mjs` red (7), `tests/guided/run.mjs` crashes. Details: docs/AUDIT_2026-10-09.md.
+
 ## 1. Requirement → design → build → verify → demo
 
 | Req | Summary | Spec | Tasks | Code (target) | Verified by | Demo beat | Status |

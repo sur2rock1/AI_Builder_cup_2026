@@ -25,7 +25,7 @@ import dotenv from 'dotenv';
 import { initFirebaseAdmin, admin } from '../src/firebase/admin';
 import { FirestoreLearnerRepository } from '../src/adaptive/repo/firestore';
 import { LearnerProfile, LearningEvidence } from '../src/adaptive/learnerModel';
-import { pregenExists, savePregenAsync, PregenRecord } from '../src/curriculum/pregenStore';
+import { savePregenAsync, PregenRecord } from '../src/curriculum/pregenStore';
 import type { CurriculumSubject } from '../src/adaptive/learnerModel';
 
 dotenv.config({ path: '.env' });
@@ -109,7 +109,10 @@ async function main() {
       for (const file of files) {
         const key = file.replace(/\.json$/, '');
         try {
-          if (!FORCE && await pregenExists([key])) {
+          // Check Firestore ITSELF: pregenExists() falls back to local files, which always exist here and
+          // made every record look "already cached" (nothing was copied) on the first real run.
+          const inCloud = !FORCE && (await admin.firestore(app).collection('pregen').doc(key).get()).exists;
+          if (inCloud) {
             console.log(`  ⏭  "${key}" — already cached in Firestore, skipping (use --force to overwrite)`);
             totals.skipped++;
             continue;

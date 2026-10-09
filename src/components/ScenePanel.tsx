@@ -8,6 +8,7 @@ import { SceneDef, SceneVertices } from '../scenes/pythagorasScenes';
 import type { BoardVisual, BoardVisual3D } from '../visual/types';
 import { BoardVisualView, StepState } from './BoardVisualView';
 import { Board3DView } from './Board3DView';
+import { useTutorName, TutorNameText } from '../persona/TutorNameContext';
 
 
 // ─────────────────────────────────────────────────────────────────
@@ -86,6 +87,7 @@ export const ScenePanel: React.FC<Props> = ({
   studentThinking, scene3d, pregenPhoto, pregenPhotoCaption, topicDiagram, conceptLabel, isLessonActive, notes, liveNotes = [],
   visual, visual3d, visualStep = 0, visual3dStep = 0, onVisualStepChange, onVisual3dStepChange, visualSpotlight,
 }) => {
+  const tutorName = useTutorName();
   // Photo resolution: scene photo → pregenPhoto (base64 from pregen cache) → illustration SVG.
   const [scenePhotoOk, setScenePhotoOk] = useState(false);
   useEffect(() => {
@@ -131,7 +133,7 @@ export const ScenePanel: React.FC<Props> = ({
     <div className="relative w-full h-full rounded-[26px] overflow-hidden border border-white/15 bg-[#0B1020]/55 backdrop-blur-xl shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
 
       {/* mode switch */}
-      <div className="absolute top-3.5 left-3.5 z-30 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md border border-white/12 p-1">
+      <div className="absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 z-30 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md border border-white/12 p-1 max-w-[calc(100%-1.25rem)] overflow-x-auto">
         {([
           { m: 'real', icon: ImageIcon, label: 'Real world' },
           { m: 'shape', icon: Triangle, label: 'Shape' },
@@ -139,9 +141,9 @@ export const ScenePanel: React.FC<Props> = ({
           { m: 'chalk', icon: PenLine, label: 'Chalkboard' },
         ] as const).filter(({ m }) => m !== '3d' || has3D || mode === '3d').map(({ m, icon: Icon, label }) => (
           <button key={m} onClick={() => onModeChange(m)}
-            className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`shrink-0 min-h-[34px] px-3 sm:px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               mode === m ? 'bg-white text-[#0B1020]' : 'text-white/70 hover:text-white'}`}>
-            <Icon className="w-3.5 h-3.5" />{label}
+            <Icon className="w-3.5 h-3.5" /><span className="hidden sm:inline">{label}</span><span className="sr-only sm:hidden">{label}</span>
           </button>
         ))}
       </div>
@@ -235,7 +237,7 @@ export const ScenePanel: React.FC<Props> = ({
       {/* the child's own reasoning, pinned to whatever view is showing */}
       {studentThinking && mode !== '3d' && mode !== 'chalk' && (
         // Over a board picture it sits low, so it never covers the step controls and caption.
-        <div className={`absolute right-4 z-20 max-w-[42%] ${mode === 'shape' && hasVisual ? 'bottom-4' : 'top-16'}`}>
+        <div className={`absolute right-2 sm:right-4 z-20 max-w-[72%] sm:max-w-[42%] ${mode === 'shape' && hasVisual ? 'bottom-2 sm:bottom-4' : 'top-14 sm:top-16'}`}>
           <div className="rounded-2xl bg-black/55 backdrop-blur-md border px-4 py-3"
                style={{ borderColor: studentThinking.verdict === 'sound' ? 'rgba(74,222,128,.5)'
                         : studentThinking.verdict === 'breaks_down' ? 'rgba(251,113,133,.55)' : 'rgba(255,255,255,.18)' }}>
@@ -251,7 +253,7 @@ export const ScenePanel: React.FC<Props> = ({
       {!revealed.includes('triangle') && !hasDiagram && !hasVisual && mode !== '3d' && mode !== 'chalk' && (
         <div className="absolute inset-x-0 bottom-5 z-20 flex justify-center">
           <span className="px-4 py-2 rounded-full bg-black/45 backdrop-blur-md text-[13px] text-white/75">
-            {isLessonActive ? 'Dr. Marcus is setting the scene…' : 'Start the session and we’ll begin'}
+            {isLessonActive ? `${tutorName} is setting the scene…` : 'Start the session and we’ll begin'}
           </span>
         </div>
       )}
@@ -579,7 +581,7 @@ const TopicPlaceholder: React.FC<{ label: string }> = ({ label }) => (
     <div className="relative z-10 text-center px-10">
       <div className="text-[12px] uppercase tracking-[0.22em] text-white/30 font-semibold mb-3">Real World Connection</div>
       <p className="text-[22px] font-semibold text-white/80 leading-snug max-w-sm">{label}</p>
-      <div className="mt-4 text-[13px] text-white/35">Ask Dr. Marcus to show you a real-world example</div>
+      <div className="mt-4 text-[13px] text-white/35">Ask <TutorNameText /> to show you a real-world example</div>
     </div>
   </div>
 );

@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--reading-writing-and-partitioning-4-digit-numbers",
+  "title": "Reading, writing and partitioning 4-digit numbers",
+  "beats": [
+    {
+      "id": "b1", "kind": "orient",
+      "say": "Welcome the child in one warm sentence, then say what today is about: they already know numbers with three digits; today there is one more column, and three jobs - read a 4-digit number, write it, and break it into parts. Two sentences at most, then move straight to the chart.",
+      "board": [
+        { "type": "heading", "text": "4-digit numbers" },
+        { "type": "point", "text": "Read it - write it - break it apart" }
+      ]
+    },
+    {
+      "id": "b2", "kind": "define",
+      "say": "A digit is one of the ten symbols 0 to 9; a number is built from digits. What a digit is worth depends on where it sits. Show the empty place value chart and ask the child to predict which column is worth the most before telling them.",
+      "board": [
+        { "type": "point", "text": "A digit is one of 0 1 2 3 4 5 6 7 8 9" },
+        { "type": "point", "text": "A number is built from digits" },
+        { "type": "picture", "ref": "main", "step": "s1" },
+        { "type": "slot", "id": "biggest", "label": "The column worth the most is the ___" }
+      ],
+      "ask": {
+        "prompt": "Look at the chart. Which column is worth the most - the left one or the right one?",
+        "slot": "biggest",
+        "lookFor": "The left one (thousands). A good answer says why: the places get bigger as you go left.",
+        "onMiss": "Do not tell them yet. Put one counter in the thousands column and one in the ones column and ask which pile you would rather have. Then re-ask."
+      }
+    },
+    {
+      "id": "b3", "kind": "show",
+      "say": "Build the number with place-value counters. A counter is worth different amounts in different trays - that is the whole idea. Place the thousand counters and the hundred counters first.",
+      "board": [
+        { "type": "point", "text": "Th - H - T - U = thousands, hundreds, tens, ones" },
+        { "type": "picture", "ref": "main", "step": "s2" },
+        { "type": "point", "text": "2 thousand-counters, 3 hundred-counters" }
+      ]
+    },
+    {
+      "id": "b4", "kind": "show",
+      "say": "Now the tens and the ones. Then read the digits off the chart, column by column, left to right.",
+      "board": [
+        { "type": "picture", "ref": "main", "step": "s4" },
+        { "type": "point", "text": "1 ten-counter, 4 one-counters" },
+        { "type": "work", "lines": ["2 Th, 3 H, 1 T, 4 U", "digits: 2, 3, 1, 4  ->  2314"] },
+        { "type": "slot", "id": "three_place", "label": "The digit 3 sits in the ___ place" }
+      ],
+      "ask": {
+        "prompt": "Reading the chart from left to right, which place does the digit 3 sit in?",
+        "slot": "three_place",
+        "lookFor": "Hundreds. The child should be able to point to the column, not only name it.",
+        "onMiss": "Ask them to name the four columns from the left, one at a time, then count along to the 3."
+      }
+    },
+    {
+      "id": "b5", "kind": "contrast",
+      "say": "The most common mix-up: treating a digit as only its face. In 6423 the 4 looks like a four, but it is worth something different. Put the two ideas side by side. Do not call it a mistake; just show the test: if the 4 meant four ones, the parts would add up to the wrong number.",
+      "board": [
+        { "type": "compare", "side": "left", "title": "Face value", "text": "what the digit looks like: 4" },
+        { "type": "compare", "side": "right", "title": "Place value", "text": "what it is worth in 6423: 4 hundreds" },
+        { "type": "picture", "ref": "contrast:confusing-face-and-place-value", "step": "s3" },
+        { "type": "slot", "id": "four_worth", "label": "In 6423, the 4 is worth ___" }
+      ],
+      "ask": {
+        "prompt": "In 6423, is the digit 4 worth 4, 40 or 400? What tells you?",
+        "slot": "four_worth",
+        "lookFor": "400, because the 4 is in the hundreds column (4 x 100). Listen for the reason, not just the number.",
+        "onMiss": "Go back to the chart: ask which column the 4 is in, and what ONE counter in that column is worth. Then re-ask."
+      }
+    },
+    {
+      "id": "b6", "kind": "rule",
+      "say": "Say the rule in the child's own words after you state it: a digit's value is the digit times the value of its place. Then write 6423 as the sum of its parts so they see the rule in use.",
+      "board": [
+        { "type": "rule", "text": "value of a digit = the digit × its place" },
+        { "type": "work", "lines": ["6423", "6000 + 400 + 20 + 3"] }
+      ]
+    },
+    {
+      "id": "b7", "kind": "exception",
+      "say": "Where the rule needs care: zero. When a column has nothing, zero holds the place open. Show 4040 with its empty hundreds and ones, and what happens if the zeros are left out.",
+      "board": [
+        { "type": "heading", "text": "Zero holds the place" },
+        { "type": "work", "lines": ["4040 = 4000 + 0 + 40 + 0"] },
+        { "type": "picture", "ref": "focus:zero-acts-as-a-placeholder", "step": "s4" },
+        { "type": "exception", "text": "leave the zeros out and 4040 shrinks to 44" },
+        { "type": "slot", "id": "hundreds_of_4040", "label": "four thousand and forty = ___" }
+      ],
+      "ask": {
+        "prompt": "Write 'four thousand and forty' in figures. How many digits does it have, and what is in the hundreds column?",
+        "slot": "hundreds_of_4040",
+        "lookFor": "4040 - four digits, with 0 in the hundreds column. A common slip is 440 or 4400.",
+        "onMiss": "Ask them to say the four columns out loud: how many thousands, hundreds, tens, ones? Fill the hundreds with 0 together."
+      }
+    },
+    {
+      "id": "b8", "kind": "method",
+      "say": "Now the method for breaking a number apart (expanded form): name the column, write that digit's full value, then join the values with plus signs. Work 4567 line by line, then ask about the 5.",
+      "board": [
+        { "type": "heading", "text": "Break it apart" },
+        { "type": "work", "lines": ["4567", "4 thousands = 4000", "5 hundreds = 500", "6 tens = 60", "7 ones = 7", "4567 = 4000 + 500 + 60 + 7"] },
+        { "type": "picture", "ref": "alt:step_by_step", "step": "s4" },
+        { "type": "slot", "id": "five_value", "label": "In 4567, the 5 is worth ___" }
+      ],
+      "ask": {
+        "prompt": "In 4567, what is the 5 worth?",
+        "slot": "five_value",
+        "lookFor": "500, from the hundreds column.",
+        "onMiss": "Ask which column the 5 is in and what each counter there is worth, then multiply."
+      }
+    },
+    {
+      "id": "b9", "kind": "apply",
+      "say": "Their turn, on a fresh chart: 3 thousands, 0 hundreds, 8 tens, 4 ones. Ask them to write the number AND break it apart. Let them work it out; do not give hints until they are stuck.",
+      "board": [
+        { "type": "picture", "ref": "apply", "step": "s3" },
+        { "type": "slot", "id": "standard_form", "label": "number = ___" }
+      ],
+      "ask": {
+        "prompt": "Look at this chart. What number is it, and how do you break it apart?",
+        "slot": "standard_form",
+        "lookFor": "3084 and 3000 + 0 + 80 + 4. The zero in the hundreds must be kept.",
+        "onMiss": "Name the columns from the left and ask what is in each. If the hundreds are dropped, return to 'zero holds the place'."
+      }
+    },
+    {
+      "id": "b10", "kind": "check",
+      "say": "Close with a fresh case that tests whether the idea transfers: the same digit in a different place. Ask for the reason, not only the number.",
+      "board": [
+        { "type": "heading", "text": "Your turn" },
+        { "type": "slot", "id": "five_in_5764", "label": "In 5764, the 5 is worth ___" }
+      ],
+      "ask": {
+        "prompt": "In 5764, what is the 5 worth? Why is that different from the 5 in 4567?",
+        "slot": "five_in_5764",
+        "lookFor": "5000, because it is in the thousands column now. The reason is the place, not the digit.",
+        "onMiss": "Put the number on the chart and ask which column the 5 sits in this time, then re-ask the reason."
+      }
+    }
+  ]
+}

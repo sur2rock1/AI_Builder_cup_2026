@@ -3,6 +3,7 @@ import { Sparkles, ArrowRight, Check } from 'lucide-react';
 import { authFetch } from '../firebase/auth';
 import { ageBandFromGrade } from '../persona/ageBands';
 import type { StudentProfile } from './LoginScreen';
+import { useTutorName } from '../persona/TutorNameContext';
 
 type Feeling = 'love' | 'ok' | 'worried' | 'skip';
 
@@ -41,6 +42,7 @@ const LANGUAGE_OPTIONS = ['English', 'Mandarin', 'Malay', 'Tamil', 'Other'];
  * grade already collected at signup (ageBandFromGrade) — never asked here.
  */
 export const Onboarding: React.FC<OnboardingProps> = ({ student, onDone }) => {
+  const tutorName = useTutorName();
   const [step, setStep] = useState(0);
   const [interests, setInterests] = useState<string[]>([]);
   const [subjects, setSubjects] = useState<CurriculumOption[]>([]);
@@ -100,14 +102,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ student, onDone }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center px-4 py-8">
+    <div className="min-h-app bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center px-4 py-8">
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-6">
           <div className="w-14 h-14 mx-auto bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-900/50 mb-3">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Hi {student.name}!</h1>
-          <p className="text-slate-400 text-sm mt-1">A few quick questions so Dr. Marcus can teach you better. Skip anything you like.</p>
+          <p className="text-slate-400 text-sm mt-1">A few quick questions so {tutorName} can teach you better. Skip anything you like.</p>
         </div>
 
         {/* progress dots */}

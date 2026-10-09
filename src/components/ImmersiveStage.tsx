@@ -8,6 +8,8 @@ import type { BoardVisual, BoardVisual3D } from '../visual/types';
 import type { StepState } from './BoardVisualView';
 import { FigureSpec, FigurePart, StudentThinking, LiveAssessment, BoardNote } from './TeachingCanvas';
 import type { LearnerSnapshot, Level } from '../adaptive/liveObserver';
+import { useTutorName } from '../persona/TutorNameContext';
+import { useIsNarrow } from '../utils/useMediaQuery';
 
 const LEVEL_TEXT: Record<Level, string> = {
   not_yet_seen: 'Just getting started',
@@ -42,6 +44,10 @@ export interface PresenterMedia {
 }
 
 interface Props {
+  /** Guided mode (src/guided): replaces the whole board panel. Omit for the standard board. */
+  boardOverride?: React.ReactNode;
+  /** Guided mode (src/guided): extra controls in the top bar. */
+  headerExtra?: React.ReactNode;
   conceptLabel: string;
   subject: string;
   grade: string;
@@ -91,13 +97,14 @@ interface Props {
 const MARKER = { ink: '#1F2430', blue: '#2563EB', red: '#DC2626', green: '#059669', amber: '#D97706' };
 
 export const ImmersiveStage: React.FC<Props> = ({
-  conceptLabel, subject, grade, figure, revealed, focusPart,
+  boardOverride, headerExtra, conceptLabel, subject, grade, figure, revealed, focusPart,
   studentThinking, assessment, notes, liveNotes, masteryScore, misconceptions,
   isLessonActive, isSpeaking, isThinking, learner, mouthOpenness, micLevel,
   panelMode, scene, scene3d, pregenPhoto, pregenPhotoCaption, topicDiagram, tutorLine, presenter, studentName,
   onPanelModeChange, onConfusion, onToggleLesson, onChangeTopic, onOpenProfile,
   visual, visual3d, visualStep, visual3dStep, onVisualStepChange, onVisual3dStepChange, visualSpotlight,
 }) => {
+  const tutorName = useTutorName();
   const shown = (p: FigurePart) => revealed.includes(p);
   const isFocus = (p: FigurePart) => focusPart === p;
 
@@ -120,81 +127,9 @@ export const ImmersiveStage: React.FC<Props> = ({
   const still = stillOk ? presenter?.still : undefined;
 
 
-  return (
-    <div className="w-full h-full flex flex-col bg-[#0C0F16] text-white overflow-hidden">
+  const narrow = useIsNarrow();
 
-      {/* ── The only chrome: breadcrumb, change, progress ────── */}
-      <div className="shrink-0 h-14 px-5 flex items-center justify-between bg-[#0C0F16] border-b border-white/[0.07]">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-[10px] shrink-0 grid place-items-center text-[15px]"
-               style={{ background: 'linear-gradient(135deg,#7C6CFF,#4ADE80)' }}>◆</div>
-          <div className="flex items-center gap-2.5 text-[13.5px] min-w-0">
-            <span className="text-white font-semibold">{subject || 'Maths'}</span>
-            <span className="text-white/25">•</span><span className="text-white/50">{grade}</span>
-            <span className="text-white/25">•</span>
-            <span className="text-white/85 truncate">{conceptLabel}</span>
-            <button onClick={onChangeTopic}
-              className="ml-1 px-2.5 py-1 rounded-lg bg-white/[0.07] hover:bg-white/[0.13] border border-white/10 text-[12px] text-white/70 cursor-pointer transition-colors shrink-0">
-              Change
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 shrink-0">
-          <div className="flex items-center gap-2">
-            <Target className="w-3.5 h-3.5 text-[#7C6CFF]" />
-            <span className="text-[11px] uppercase tracking-[0.14em] text-white/40 font-semibold">Understanding</span>
-            <div className="w-28 h-1.5 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-700"
-                   style={{ width: `${Math.max(3, masteryScore)}%`, background: 'linear-gradient(90deg,#4ADE80,#7C6CFF)' }} />
-            </div>
-          </div>
-          <button onClick={onOpenProfile}
-            className="px-3 py-1.5 rounded-lg bg-white/[0.07] hover:bg-white/[0.13] border border-white/10 text-[12.5px] text-white/75 cursor-pointer transition-colors">
-            {studentName || 'Progress'}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Stage + rail ───────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 flex">
-
-        {/* THE STAGE */}
-        <div className="flex-1 min-w-0 relative overflow-hidden">
-
-          {/* ── Stage layer ─────────────────────────────────────
-               With generated media: a single full-frame shot of the presenter in
-               a real place (still, or a looping clip per mood — same framing).
-               Without it: an ambient environment and a voice orb, so nothing on
-               screen ever looks like a missing image. */}
-          {clip ? (
-            <video key={clip} src={clip} poster={still} autoPlay loop muted playsInline
-                   className="absolute inset-0 w-full h-full object-cover" />
-          ) : still ? (
-            <img src={still} alt="Dr. Marcus Vance"
-                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
-                 style={{ transform: `scale(${1.02 + mouthOpenness * 0.006})` }} />
-          ) : (
-            <AmbientStage />
-          )}
-          <div className="absolute inset-0 pointer-events-none"
-               style={{ background: 'linear-gradient(90deg, rgba(6,9,18,.10) 0%, rgba(6,9,18,.0) 30%, rgba(6,9,18,.45) 100%)' }} />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#060912] to-transparent pointer-events-none" />
-
-          {!clip && !still && (
-            <div className="absolute left-[4%] top-[14%] w-[26%] flex flex-col items-center">
-              <VoiceOrb speaking={isSpeaking} level={mouthOpenness} active={isLessonActive} thinking={!!isThinking} />
-              <div className="mt-5 text-center">
-                <div className="text-[19px] font-semibold text-white">Dr. Marcus</div>
-                <div className="text-[13px] text-white/55 mt-0.5">
-                  {isThinking ? 'thinking about what you said…' : isSpeaking ? 'speaking…' : isLessonActive ? 'listening' : 'ready when you are'}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── The lens: real world → shape → 3D ───────────────── */}
-          <div className="absolute right-[2.5%] top-[5%] w-[66%] aspect-[16/10] max-h-[80%]">
-            <ScenePanel
+  const boardNode = boardOverride ?? <ScenePanel
               mode={panelMode}
               onModeChange={onPanelModeChange}
               scene={scene}
@@ -217,63 +152,44 @@ export const ImmersiveStage: React.FC<Props> = ({
               isLessonActive={isLessonActive}
               notes={notes}
               liveNotes={liveNotes}
-            />
-          </div>
+            />;
 
-          {/* what the tutor just said — as a subtitle under the picture */}
-          {isThinking && (
-            <div className="absolute right-[2.5%] w-[66%] bottom-[11%] z-10 flex justify-center pointer-events-none">
-              <p className="px-5 py-2.5 rounded-2xl bg-black/50 backdrop-blur-md text-[16px] text-white/85 flex items-center gap-2.5">
-                <span className="flex gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-bounce" style={{ animationDelay: '300ms' }} />
-                </span>
-                Dr. Marcus heard you — thinking about your answer
-              </p>
-            </div>
-          )}
-          {tutorLine && !isThinking && (
-            <div className="absolute right-[2.5%] w-[66%] bottom-[11%] z-10 flex justify-center pointer-events-none">
-              <p className="max-w-[88%] text-center text-[17px] leading-snug text-white/95 px-5 py-2.5 rounded-2xl bg-black/50 backdrop-blur-md line-clamp-3">
-                {tutorLine}
-              </p>
-            </div>
-          )}
-
-          {/* session controls */}
-          <div className="absolute left-0 right-0 bottom-0 px-5 py-3 flex items-center gap-3 bg-gradient-to-t from-[#0A0D15] to-transparent">
-            <button onClick={onToggleLesson}
-              className={`px-5 py-2.5 rounded-full text-[14px] font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
+  const startBtn = (extra = '') => (
+    <button onClick={onToggleLesson}
+              className={`${extra} px-5 py-2.5 rounded-full text-[14px] font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
                 isLessonActive ? 'bg-[#E0483C] hover:bg-[#C93A2F] text-white' : 'bg-[#7C6CFF] hover:bg-[#6A58F5] text-white'}`}>
               {isLessonActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               {isLessonActive ? 'End session' : 'Start session'}
             </button>
-            <div className="flex items-center gap-1 h-4">
+  );
+
+  const meter = (
+    <div className="flex items-center gap-1 h-4">
               {Array.from({ length: 9 }).map((_, i) => (
                 <span key={i} className="w-[3px] rounded-full transition-all duration-75"
                       style={{ height: isLessonActive && i < Math.round(micLevel * 9) ? '100%' : '25%',
                                background: isLessonActive && i < Math.round(micLevel * 9) ? '#4ADE80' : 'rgba(255,255,255,0.18)' }} />
               ))}
             </div>
-            <span className="text-[12px] text-white/40">{isLessonActive ? 'Listening — speak or interrupt anytime' : 'Mic off'}</span>
+  );
 
-            <div className="ml-auto flex items-center gap-2">
-              {[{ i: HelpCircle, t: "I don't get it", s: 'dont_understand' },
+  const chipButtons = (
+    <>
+    {[{ i: HelpCircle, t: "I don't get it", s: 'dont_understand' },
                 { i: Repeat, t: 'Another way', s: 'repeat_differently' },
                 { i: Gauge, t: 'Too fast', s: 'too_fast' },
                 { i: Hand, t: 'I guessed', s: 'guessed' }].map(({ i: Icon, t, s }) => (
                 <button key={s} onClick={() => onConfusion(s)} disabled={!isLessonActive}
-                  className="px-3 py-1.5 rounded-full bg-white/[0.07] hover:bg-white/[0.14] border border-white/10 text-[13px] text-white/80 flex items-center gap-1.5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                  className="shrink-0 whitespace-nowrap min-h-[40px] lg:min-h-0 px-3 py-1.5 rounded-full bg-white/[0.07] hover:bg-white/[0.14] border border-white/10 text-[13px] text-white/80 flex items-center gap-1.5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                   <Icon className="w-3 h-3 text-[#7C6CFF]" />{t}
                 </button>
               ))}
-            </div>
-          </div>
-        </div>
+            
+    </>
+  );
 
-        {/* ── Right rail: what we're working on (not a chat log) ── */}
-        <aside className="w-[310px] shrink-0 bg-[#10141D] border-l border-white/[0.07] flex flex-col overflow-y-auto">
+  const railBody = (
+    <>
           {assessment?.probeQuestion && (
             <section className="p-4 border-b border-white/[0.06]">
               <h3 className="text-[10px] uppercase tracking-[0.16em] text-[#7C6CFF] font-semibold mb-2">Think about this</h3>
@@ -365,7 +281,218 @@ export const ImmersiveStage: React.FC<Props> = ({
               </div>
             )}
           </section>
-        </aside>
+        </>
+  );
+
+  // ── Phones and portrait tablets: one scrolling column, controls pinned at the bottom ──
+  if (narrow) {
+    return (
+      <div className="w-full h-full flex flex-col bg-[#0C0F16] text-white overflow-hidden">
+        <div className="shrink-0 relative bg-[#0C0F16] border-b border-white/[0.07]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+          <div className="min-h-[52px] px-3 py-1.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-[10px] shrink-0 grid place-items-center text-[14px]"
+                   style={{ background: 'linear-gradient(135deg,#7C6CFF,#4ADE80)' }}>◆</div>
+              <div className="min-w-0 leading-tight">
+                <div className="text-[11.5px] text-white/50 truncate">{subject || 'Maths'} • {grade}</div>
+                <div className="text-[14px] text-white/90 font-medium truncate">{conceptLabel}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={onChangeTopic}
+                className="min-h-[40px] px-3 rounded-lg bg-white/[0.07] active:bg-white/[0.16] border border-white/10 text-[13px] text-white/75 cursor-pointer">
+                Change
+              </button>
+              <button onClick={onOpenProfile}
+                className="min-h-[40px] max-w-[110px] truncate px-3 rounded-lg bg-white/[0.07] active:bg-white/[0.16] border border-white/10 text-[13px] text-white/80 cursor-pointer">
+                {studentName || 'Progress'}
+              </button>
+            </div>
+          </div>
+          <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-white/10" aria-hidden>
+            <div className="h-full transition-all duration-700"
+                 style={{ width: `${Math.max(3, masteryScore)}%`, background: 'linear-gradient(90deg,#4ADE80,#7C6CFF)' }} />
+          </div>
+          {headerExtra && (
+            <div className="overflow-x-auto px-3 pb-2 pt-1.5 border-t border-white/[0.05]">
+              <div className="w-max">{headerExtra}</div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="relative overflow-hidden">
+            {clip ? (
+              <video key={clip} src={clip} poster={still} autoPlay loop muted playsInline
+                     className="absolute inset-0 w-full h-full object-cover" />
+            ) : still ? (
+              <img src={still} alt={tutorName} className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <AmbientStage />
+            )}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#060912]/10 to-[#060912]/60" />
+
+            <div className="relative z-10 px-3 pt-3 pb-4 flex flex-col gap-3">
+              <div className={`relative w-full mx-auto ${boardOverride ? 'aspect-[3/4] sm:aspect-[4/3]' : 'aspect-[4/5] sm:aspect-[4/3]'} landscape:aspect-[16/9]`}>
+                {boardNode}
+              </div>
+
+              {(!clip && !still) && (
+                <div className="flex items-center gap-3">
+                  <div className="shrink-0 relative" style={{ width: 76, height: 76 }}>
+                    <div style={{ transform: 'scale(0.36)', transformOrigin: 'top left', width: 210, height: 210 }}>
+                      <VoiceOrb speaking={isSpeaking} level={mouthOpenness} active={isLessonActive} thinking={!!isThinking} />
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[17px] font-semibold text-white leading-tight">{tutorName}</div>
+                    <div className="text-[13px] text-white/60 mt-0.5">
+                      {isThinking ? 'thinking about what you said…' : isSpeaking ? 'speaking…' : isLessonActive ? 'listening' : 'ready when you are'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isThinking ? (
+                <p className="px-4 py-2.5 rounded-2xl bg-black/50 backdrop-blur-md text-[15px] text-white/85">
+                  {tutorName} heard you — thinking about your answer…
+                </p>
+              ) : tutorLine ? (
+                <p className="text-[16px] leading-snug text-white/95 px-4 py-2.5 rounded-2xl bg-black/50 backdrop-blur-md line-clamp-5">
+                  {tutorLine}
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <aside className="bg-[#10141D] border-t border-white/[0.07] flex flex-col">{railBody}</aside>
+        </div>
+
+        <div className="shrink-0 bg-[#0A0D15] border-t border-white/[0.07] px-3 pt-2"
+             style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+          <div className="flex items-center gap-3">
+            {startBtn('min-h-[44px] shrink-0 whitespace-nowrap')}
+            <div className="shrink-0 hidden min-[420px]:block">{meter}</div>
+            <div className="flex-1 min-w-0 overflow-x-auto">
+              <div className="flex items-center gap-2 w-max pr-1">{chipButtons}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full flex flex-col bg-[#0C0F16] text-white overflow-hidden">
+
+      {/* ── The only chrome: breadcrumb, change, progress ────── */}
+      <div className="shrink-0 h-14 px-5 flex items-center justify-between bg-[#0C0F16] border-b border-white/[0.07]">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-[10px] shrink-0 grid place-items-center text-[15px]"
+               style={{ background: 'linear-gradient(135deg,#7C6CFF,#4ADE80)' }}>◆</div>
+          <div className="flex items-center gap-2.5 text-[13.5px] min-w-0">
+            <span className="text-white font-semibold">{subject || 'Maths'}</span>
+            <span className="text-white/25">•</span><span className="text-white/50">{grade}</span>
+            <span className="text-white/25">•</span>
+            <span className="text-white/85 truncate">{conceptLabel}</span>
+            <button onClick={onChangeTopic}
+              className="ml-1 px-2.5 py-1 rounded-lg bg-white/[0.07] hover:bg-white/[0.13] border border-white/10 text-[12px] text-white/70 cursor-pointer transition-colors shrink-0">
+              Change
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 shrink-0">
+          {headerExtra}
+          <div className="flex items-center gap-2">
+            <Target className="w-3.5 h-3.5 text-[#7C6CFF]" />
+            <span className="text-[11px] uppercase tracking-[0.14em] text-white/40 font-semibold">Understanding</span>
+            <div className="w-28 h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-700"
+                   style={{ width: `${Math.max(3, masteryScore)}%`, background: 'linear-gradient(90deg,#4ADE80,#7C6CFF)' }} />
+            </div>
+          </div>
+          <button onClick={onOpenProfile}
+            className="px-3 py-1.5 rounded-lg bg-white/[0.07] hover:bg-white/[0.13] border border-white/10 text-[12.5px] text-white/75 cursor-pointer transition-colors">
+            {studentName || 'Progress'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Stage + rail ───────────────────────────────────────── */}
+      <div className="flex-1 min-h-0 flex">
+
+        {/* THE STAGE */}
+        <div className="flex-1 min-w-0 relative overflow-hidden">
+
+          {/* ── Stage layer ─────────────────────────────────────
+               With generated media: a single full-frame shot of the presenter in
+               a real place (still, or a looping clip per mood — same framing).
+               Without it: an ambient environment and a voice orb, so nothing on
+               screen ever looks like a missing image. */}
+          {clip ? (
+            <video key={clip} src={clip} poster={still} autoPlay loop muted playsInline
+                   className="absolute inset-0 w-full h-full object-cover" />
+          ) : still ? (
+            <img src={still} alt={tutorName}
+                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
+                 style={{ transform: `scale(${1.02 + mouthOpenness * 0.006})` }} />
+          ) : (
+            <AmbientStage />
+          )}
+          <div className="absolute inset-0 pointer-events-none"
+               style={{ background: 'linear-gradient(90deg, rgba(6,9,18,.10) 0%, rgba(6,9,18,.0) 30%, rgba(6,9,18,.45) 100%)' }} />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#060912] to-transparent pointer-events-none" />
+
+          {!clip && !still && (
+            <div className="absolute left-[4%] top-[14%] w-[26%] flex flex-col items-center">
+              <VoiceOrb speaking={isSpeaking} level={mouthOpenness} active={isLessonActive} thinking={!!isThinking} />
+              <div className="mt-5 text-center">
+                <div className="text-[19px] font-semibold text-white">{tutorName}</div>
+                <div className="text-[13px] text-white/55 mt-0.5">
+                  {isThinking ? 'thinking about what you said…' : isSpeaking ? 'speaking…' : isLessonActive ? 'listening' : 'ready when you are'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── The lens: real world → shape → 3D ───────────────── */}
+          <div className="absolute right-[2.5%] top-[5%] w-[66%] aspect-[16/10] max-h-[80%]">
+            {boardNode}
+          </div>
+
+          {/* what the tutor just said — as a subtitle under the picture */}
+          {isThinking && (
+            <div className="absolute right-[2.5%] w-[66%] bottom-[11%] z-10 flex justify-center pointer-events-none">
+              <p className="px-5 py-2.5 rounded-2xl bg-black/50 backdrop-blur-md text-[16px] text-white/85 flex items-center gap-2.5">
+                <span className="flex gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </span>
+                {tutorName} heard you — thinking about your answer
+              </p>
+            </div>
+          )}
+          {tutorLine && !isThinking && (
+            <div className="absolute right-[2.5%] w-[66%] bottom-[11%] z-10 flex justify-center pointer-events-none">
+              <p className="max-w-[88%] text-center text-[17px] leading-snug text-white/95 px-5 py-2.5 rounded-2xl bg-black/50 backdrop-blur-md line-clamp-3">
+                {tutorLine}
+              </p>
+            </div>
+          )}
+
+          {/* session controls */}
+          <div className="absolute left-0 right-0 bottom-0 px-5 py-3 flex items-center gap-3 bg-gradient-to-t from-[#0A0D15] to-transparent">
+            {startBtn()}
+            {meter}
+            <span className="text-[12px] text-white/40">{isLessonActive ? 'Listening — speak or interrupt anytime' : 'Mic off'}</span>
+
+            <div className="ml-auto flex items-center gap-2">{chipButtons}</div>
+          </div>
+        </div>
+
+        {/* ── Right rail: what we're working on (not a chat log) ── */}
+        <aside className="w-[310px] shrink-0 bg-[#10141D] border-l border-white/[0.07] flex flex-col overflow-y-auto">{railBody}</aside>
       </div>
     </div>
   );

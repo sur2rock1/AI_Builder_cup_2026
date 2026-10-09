@@ -121,6 +121,8 @@ export interface LearnerProfile {
   // ── Extensions (docs/LEARNER_MODEL.md §3) ──
   ageBand?: AgeBand;
   onboarding?: Onboarding;
+  /** What this child calls their tutor (chosen at login; src/persona/tutorName.ts). Absent = default. */
+  tutorName?: string;
   strategyProfile?: StrategyProfile;
   affect?: AffectState;
   claims?: LearnerClaim[];

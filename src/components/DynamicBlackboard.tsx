@@ -34,6 +34,7 @@ import {
 import { Interactive3DVisual } from './Interactive3DVisual';
 import { PhotoRealisticVisual } from './PhotoRealisticVisual';
 import { Interactive2DDiagram } from './Interactive2DDiagram';
+import { useTutorName } from '../persona/TutorNameContext';
 
 interface DynamicBlackboardProps {
   blackboard: BlackboardState;
@@ -167,6 +168,7 @@ export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
   onAskVisualOrCommand,
   onGeneratePhoto,
 }) => {
+  const tutorName = useTutorName();
   const {
     activeTab,
     lessonData,
@@ -625,7 +627,7 @@ export const DynamicBlackboard: React.FC<DynamicBlackboardProps> = ({
                 <div className="mt-6 pt-4 border-t-2 border-dashed border-[#2d6244]">
                   <h4 className="text-xs uppercase tracking-wider font-bold text-amber-300 font-mono mb-3 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
-                    <span>Live Notes Written by Dr. Marcus in Session:</span>
+                    <span>Live Notes Written by {tutorName} in Session:</span>
                   </h4>
                   <div className="space-y-2">
                     {customLiveNotes.map((note, idx) => (

@@ -29,7 +29,7 @@ const ROLE_CONFIG: Record<GatewayRole, RoleConfig> = {
   },
   strong: {
     envVar: 'MODEL_STRONG',
-    candidates: ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'],
+    candidates: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'],
   },
   // The independent critic (src/quality/critic.ts): re-derives answers and checks facts
   // in a call that has never seen the drafting prompt. Set MODEL_REVIEW to a different
@@ -186,6 +186,32 @@ export function isTransientModelError(err: any): boolean {
   return /\b(429|500|502|503|504)\b|overload|too many|resource.?exhausted|rate.?limit|temporarily|high demand|unavailable|deadline of \d+ms exceeded/i.test(msg);
 }
 
+/**
+ * Out of credits or out of quota (402, or 429 saying quota/credits). Waiting 5-10 s on the same model does not help
+ * and each retry is another failed request, so the gateway moves straight to the next model.
+ * A 429 that is only a per-minute limit has no "quota"/"credits" wording and is still retried as transient.
+ */
+export function isQuotaError(err: any): boolean {
+  const msg = String(err?.message ?? err?.status ?? err?.code ?? '');
+  return /\b402\b|prepay|credits? (are )?depleted|exceeded your current quota|quota exceeded|per ?day|billing/i.test(msg);
+}
+
+/** Models that just reported "no quota" are skipped for a while, so every call doesn't re-try them first. */
+const QUOTA_COOLDOWN_MS = 10 * 60_000;
+const quotaCooldown = new Map<string, number>();
+const inCooldown = (m: string): boolean => (quotaCooldown.get(m) ?? 0) > Date.now();
+
+/** The real error in one line, e.g. `503 UNAVAILABLE: This model is currently experiencing high demand.` */
+export function briefError(err: any): string {
+  const raw = String(err?.message ?? err ?? '');
+  try {
+    const j = JSON.parse(raw.slice(raw.indexOf('{')));
+    const e = j?.error ?? j;
+    if (e?.message) return `${e.code ?? ''} ${e.status ?? ''}: ${String(e.message).split(/\. (?=[A-Z])/)[0]}`.replace(/\s+/g, ' ').trim().slice(0, 220);
+  } catch { /* not JSON */ }
+  return raw.replace(/\s+/g, ' ').slice(0, 220);
+}
+
 class DeadlineError extends Error {}
 
 async function withDeadline<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -211,7 +237,10 @@ export async function generateText(opts: GenerateOptions): Promise<{ text: strin
   assertCallBudget();
   const { role, call, apiKey, prompt, systemInstruction, timeoutMs = 8000 } = opts;
   const ai = new GoogleGenAI({ apiKey, vertexai: false });
-  const candidates = resolved[role] ? [resolved[role]!, ...candidatesFor(role)] : candidatesFor(role);
+  const allCandidates = resolved[role] ? [resolved[role]!, ...candidatesFor(role)] : candidatesFor(role);
+  // Skip models that recently ran out of quota - unless that leaves nothing to try.
+  const available = allCandidates.filter((m) => !inCooldown(m));
+  const candidates = available.length ? available : allCandidates;
   const tried = new Set<string>();
 
   let lastError: any = null;
@@ -253,11 +282,16 @@ export async function generateText(opts: GenerateOptions): Promise<{ text: strin
     } catch (err: any) {
       const ms = Date.now() - start;
       lastError = err;
-      if (!(err instanceof DeadlineError) && !isTransientModelError(err)) hardFailure = true;
+      if (!(err instanceof DeadlineError) && !isTransientModelError(err) && !isQuotaError(err)) hardFailure = true;
       { const e = { role, model, call, ok: false, ms, error: String(err?.message || err), usedFallback }; account(e); logSink(e); }
+      if (isQuotaError(err)) {
+        quotaCooldown.set(model, Date.now() + QUOTA_COOLDOWN_MS);
+        console.warn(`[gateway] ${call}: ${model} is out of quota/credits (${briefError(err)}) - trying the next model`);
+        break;
+      }
       if (attempt < retries && isTransientModelError(err)) {
         const wait = Math.min(60_000, 5_000 * 2 ** attempt);
-        console.warn(`[gateway] ${call}: ${model} transient error, retrying in ${wait / 1000}s (${attempt + 1}/${retries})`);
+        console.warn(`[gateway] ${call}: ${model} ${briefError(err)} - retrying in ${wait / 1000}s (${attempt + 1}/${retries})`);
         await new Promise((r) => setTimeout(r, wait));
         continue;
       }

@@ -32,6 +32,7 @@ Model**, to avoid implying fixed personality labels.
 LearnerProfile
 ├── identity            studentId, displayName, grade (label), board + gradeLevel (signup, 2026-09-26), ageBand, locale
 ├── onboarding          interests[], subjectFeelings{}, accessibility{}, languagePrefs
+├── tutorName           what this child calls their tutor (chosen at login, max 24 chars; absent = default)
 ├── subjects{}          per subject
 │   └── conceptStates{} per concept (EXISTING, extended)
 │       ├── BKT         pKnown, masteryScore, masteryLevel            (existing)
@@ -146,6 +147,7 @@ export interface SessionSummary {
 // not a Gemini judgment, so there is nothing for the claim validator (§5.2)
 // to validate. Surfaced directly in ParentPortal.tsx's "Needs Your Attention"
 // section rather than waiting on §5.2's Profiler pipeline to exist.
+// NOTE 2026-10-09: no longer written — PARK_AND_ESCALATE was removed from the live path (D-2026-09-30-9). Type, store function and Parent-Portal card are dead code.
 interface EscalationEvent {
   id: string; subjectId: string; conceptId: string; conceptLabel?: string;
   reason: 'retry_cap_reached'; retryCount: number; timestamp: number;

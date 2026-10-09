@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--measure--measuring-and-comparing-mass-weight",
+  "title": "Measuring and comparing mass (weight)",
+  "beats": [
+    {
+      "id": "b1", "kind": "orient",
+      "say": "Welcome the child in one warm sentence. Today is about how heavy things are: we measure it in grams and kilograms, read it off a scale, and compare two things fairly. Two sentences, then straight to the scale.",
+      "board": [
+        { "type": "heading", "text": "Mass: how heavy?" },
+        { "type": "point", "text": "Measured in grams (g) and kilograms (kg)" }
+      ]
+    },
+    {
+      "id": "b2", "kind": "define",
+      "say": "Mass tells us how heavy something is. Give a feel for the two units before any numbers: a small paperclip is about one gram; a one-litre carton of juice is about one kilogram. Then show the dial and ask the child to predict what one full turn stands for.",
+      "board": [
+        { "type": "point", "text": "1 g is about a small paperclip" },
+        { "type": "point", "text": "1 kg is about a 1-litre carton of juice" },
+        { "type": "picture", "ref": "main", "step": "s1" },
+        { "type": "slot", "id": "full_turn", "label": "One full turn of the dial = ___" }
+      ],
+      "ask": {
+        "prompt": "This kitchen scale dial goes all the way round. What mass do you think one full circle stands for?",
+        "slot": "full_turn",
+        "lookFor": "A guess is fine (1 kg or 1000 g are the targets). Note what they guess; do not correct it yet.",
+        "onMiss": "If they have no idea, ask what the biggest number printed on the dial is, then reveal that one turn is 1 kg."
+      }
+    },
+    {
+      "id": "b3", "kind": "show",
+      "say": "One full turn is one kilogram, which is exactly 1000 grams. Halfway round splits it into two equal parts of 500 grams; quarter turns give 250 grams. Build the dial step by step as you say it.",
+      "board": [
+        { "type": "rule", "text": "1 kg = 1000 g" },
+        { "type": "picture", "ref": "main", "step": "s4" },
+        { "type": "work", "lines": ["½ kg = 500 g", "¼ kg = 250 g"] },
+        { "type": "slot", "id": "half_kg", "label": "0.5 kg = ___ g" }
+      ],
+      "ask": {
+        "prompt": "The pointer rests halfway round, at 0.5 kg. How many grams is that?",
+        "slot": "half_kg",
+        "lookFor": "500 g - half of 1000.",
+        "onMiss": "Ask: how many grams in a whole kilogram? Then halve it."
+      }
+    },
+    {
+      "id": "b4", "kind": "contrast",
+      "say": "A very common mix-up: comparing numbers without comparing units. Put a 1 kg bag of flour next to a 500 g tub of butter. If you only look at the numbers, 500 looks bigger than 1. Let the child predict which side tilts down, then show why units must match first.",
+      "board": [
+        { "type": "compare", "side": "left", "title": "Looks bigger", "text": "500 g tub of butter: 500 > 1?" },
+        { "type": "compare", "side": "right", "title": "Is heavier", "text": "1 kg bag of flour = 1000 g" },
+        { "type": "picture", "ref": "contrast:confusing-kg-and-g-values", "step": "s3" },
+        { "type": "slot", "id": "heavier", "label": "Heavier: ___" }
+      ],
+      "ask": {
+        "prompt": "Which is heavier: a 1 kg bag of flour or a 500 g tub of butter? How do you know?",
+        "slot": "heavier",
+        "lookFor": "The flour, because 1 kg = 1000 g and 1000 g is more than 500 g. The reason is converting to the same unit first.",
+        "onMiss": "Ask them to change the kilogram into grams, then compare the two gram numbers."
+      }
+    },
+    {
+      "id": "b5", "kind": "rule",
+      "say": "State the comparing rule in one line and have the child say it back in their own words.",
+      "board": [
+        { "type": "rule", "text": "same unit first, then compare the numbers" }
+      ]
+    },
+    {
+      "id": "b6", "kind": "method",
+      "say": "Reading a scale that has fewer numbers than marks. The method: find the total difference between two labelled marks, divide by the number of equal spaces between them, then count the jumps. Work the 0 g to 200 g scale with 4 spaces line by line.",
+      "board": [
+        { "type": "heading", "text": "Reading a scale" },
+        { "type": "picture", "ref": "focus:to-read-a-scale-find", "step": "s3" },
+        { "type": "work", "lines": ["200 g − 0 g = 200 g", "200 g ÷ 4 spaces = 50 g per mark", "pointer on the 3rd mark: 3 × 50 g = 150 g"] },
+        { "type": "slot", "id": "third_mark", "label": "Third mark = ___ g" }
+      ],
+      "ask": {
+        "prompt": "Each jump is 50 grams. What mass does the pointer show on the third mark?",
+        "slot": "third_mark",
+        "lookFor": "150 g - three jumps of 50. Listen for counting jumps, not reading '3'.",
+        "onMiss": "Count the marks aloud together: 50, 100, 150."
+      }
+    },
+    {
+      "id": "b7", "kind": "exception",
+      "say": "Where this needs care: a tick mark is not always worth 1. Show 2 equal spaces between 0 g and 100 g. Let the child test 'each mark is 1' and see it clash with the scale ending at 100 g, then divide to find 50 g.",
+      "board": [
+        { "type": "exception", "text": "check the jump size - a mark may not be 1" },
+        { "type": "picture", "ref": "contrast:unmarked-interval-is-one", "step": "s4" },
+        { "type": "work", "lines": ["100 g ÷ 2 spaces = 50 g per mark"] },
+        { "type": "slot", "id": "first_mark", "label": "First mark after 0 g = ___" }
+      ],
+      "ask": {
+        "prompt": "There are 2 equal spaces between 0 g and 100 g. What mass is the first mark after 0? How did you work it out?",
+        "slot": "first_mark",
+        "lookFor": "50 g, found by dividing 100 by the 2 spaces. Not 1 g.",
+        "onMiss": "Ask: if each mark were 1 g, what would the second mark be, and does the scale really end there? Then divide."
+      }
+    },
+    {
+      "id": "b8", "kind": "method",
+      "say": "A balance scale is level when both sides have the same mass. Worked example: a 1 kg weight on the left; two 300 g weights and an apple on the right; the pans are level. Convert first, add what you know, subtract to find the apple. Ask for the apple's mass.",
+      "board": [
+        { "type": "heading", "text": "Balancing" },
+        { "type": "picture", "ref": "alt:worked_example", "step": "s3" },
+        { "type": "work", "lines": ["1 kg = 1000 g", "300 g + 300 g = 600 g", "1000 g − 600 g = apple"] },
+        { "type": "slot", "id": "apple", "label": "Apple = ___ g" }
+      ],
+      "ask": {
+        "prompt": "The pans are level. What is the mass of the apple, in grams?",
+        "slot": "apple",
+        "lookFor": "400 g. Check that they converted 1 kg to 1000 g before subtracting.",
+        "onMiss": "Ask what is on each side in grams, and what level means about the two totals."
+      }
+    },
+    {
+      "id": "b9", "kind": "apply",
+      "say": "Their turn on a fresh dial: it runs from 0 g to 500 g with five equal intervals and the pointer is on the second mark. Let them work out the jump size first. No hints until they are stuck.",
+      "board": [
+        { "type": "picture", "ref": "apply", "step": "s3" },
+        { "type": "slot", "id": "second_mark", "label": "Pointer = ___ g" }
+      ],
+      "ask": {
+        "prompt": "This scale goes from 0 g to 500 g with five equal spaces. What mass does the pointer show at the second mark?",
+        "slot": "second_mark",
+        "lookFor": "200 g: 500 ÷ 5 = 100 g per mark, then 2 × 100.",
+        "onMiss": "Ask for the jump size first (total ÷ spaces), then count the marks."
+      }
+    },
+    {
+      "id": "b10", "kind": "check",
+      "say": "Close with the reason behind the method. Ask why counting by 1 failed on a scale that ends at 100 g but counting by 50 worked. A good answer talks about the number of spaces and the total.",
+      "board": [
+        { "type": "heading", "text": "Your turn" },
+        { "type": "slot", "id": "why_jump", "label": "Why divide by the spaces? ___" }
+      ],
+      "ask": {
+        "prompt": "Why do we divide the total by the number of spaces to find the size of each jump?",
+        "slot": "why_jump",
+        "lookFor": "Because the equal spaces together must add up to the total difference, so each space is the total divided by how many there are.",
+        "onMiss": "Use the 0 g to 100 g, 2 spaces scale: two equal jumps must reach 100, so what is one jump?"
+      }
+    }
+  ]
+}

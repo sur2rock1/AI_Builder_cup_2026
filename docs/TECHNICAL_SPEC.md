@@ -1,6 +1,6 @@
 # Technical Specification — Adaptive AI Tutor
 
-_Status: v1.1 · 2026-09-30 (§3, §6, §10 extended with the content quality layer — D-2026-09-30-1…4) · Repo: `pythagoras-tutor`_
+_Status: v1.2 · 2026-10-09 (as-built differences added, see below) · v1.1 2026-09-30 (§3, §6, §10 extended with the content quality layer — D-2026-09-30-1…4) · Repo: `pythagoras-tutor`_
 
 ## 1. Current state (as-is audit, 2026-09-24)
 
@@ -19,6 +19,19 @@ proxy) · `@google/genai` · Firebase (Auth, Firestore, Storage, Hosting, Functi
 | **Models** | IDs `gemini-3.8-live`, `gemini-3.6-flash`, `gemini-3.8-flash`, `gemini-3.1-flash-*` unverified (PROJECT_STATE); several paths fall back silently to local generators | Verify + fail loudly (T01) |
 | **Uncommitted work** | ~14 modified/untracked files in git | Commit/branch before starting Sonnet tasks (T00) |
 | **Tests** | Offline stub tests for the assessor and live paths (`tests/`) | Extend with plan/model/persona tests |
+
+## 1a. As-built differences (audit 2026-10-09)
+The target architecture in §2–§3 was only partly built. Where this section and §2–§3 disagree, this section is correct.
+| Spec says | Reality |
+|---|---|
+| `server/session/orchestrator.ts` | Does not exist. Session orchestration, the Live WebSocket proxy and ~70 routes are in `server.ts` (1,888 lines); only `server/routes/tutor.ts` and two middlewares were extracted |
+| `src/adaptive/diagnostician.ts`, `segmenter.ts` | Do not exist. Diagnosis = `reasoningAssessor.ts` (+ `liveObserver.ts` for the live panel) |
+| `src/adaptive/review.ts` (spaced review, decay) | Not built (T15). Nothing writes `review.nextDueAt` |
+| `eval/` (EV-01…03) | Not built |
+| Deploy: Cloud Run + Firebase Hosting + Functions (§9) | Cloud Run only (D-2026-10-04-1); `functions/` is stale; **not deployed yet** |
+| Auth: Firebase ID token on all learner routes | `requireAuth` bypassed when `DEMO_MODE=true` (deploy-script default) |
+| Park-and-escalate | Removed from live path (D-2026-09-30-9) |
+| (not in spec) | Guided tutor mode `src/guided/*`; tutor-name feature `src/persona/tutorName.ts`; curriculum library; board-visual engine `src/visual/*` |
 
 ## 2. Target architecture
 
@@ -83,6 +96,7 @@ logging) · persona (`src/persona`) · plan (`src/plan`) · learner model (`src/
 | GET | `/api/learners/:id` | Profile (owner/parent only) |
 | DELETE | `/api/learners/:id` | Delete the profile + subcollections (NFR-03) |
 | POST | `/api/learners/:id/onboarding` | Save onboarding |
+| POST | `/api/learners/:id/tutor-name` | Save the name the child gave their tutor (`{name}`; cleaned by `sanitiseTutorName`, 400 if nothing usable; returns `{tutorName}`). The voice WebSocket reads it from the profile - it is never passed in the URL |
 | POST | `/api/learners/:id/claims/:claimId/dispute` | Learner/parent correction |
 | GET | `/api/learners/:id/events?conceptId=` | Evidence replay |
 | POST | `/api/session/start` | Compile the plan; returns `{sessionId, plan}` (existing, extended) |

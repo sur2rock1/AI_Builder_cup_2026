@@ -22,6 +22,7 @@ import { registerTutorRoutes, clearTutorTurnState } from './server/routes/tutor'
 import { compileTeachingPlan } from './src/plan/compile';
 import type { TeachingPlan } from './src/plan/types';
 import { composeSystemInstruction, composeKickoff, DEFAULT_PERSONA_NAME } from './src/persona/compose';
+import { sanitiseTutorName } from './src/persona/tutorName';
 import { ageBandFromGrade } from './src/persona/ageBands';
 import { subjectModeForCurriculum } from './src/persona/subjectModes';
 import { renderPlanForPrompt } from './src/plan/render';
@@ -56,6 +57,15 @@ import { reviewPhoto } from './src/quality/critic';
 import { publicLesson, verifiedPhoto, cleanReasoning } from './src/curriculum/serve';
 import { findVisualForFocus, boardContextBlock, toolSummary, matchScore } from './src/visual/tutorBrief';
 import { VISUAL_KEYS } from './src/visual/types';
+// Guided mode (src/guided) — additive; see src/guided/mode.ts
+import { resolveTutorMode } from './src/guided/mode';
+import { getGuidedScript, ALL_GUIDED_SCRIPTS } from './src/guided/registry';
+import { buildGuidedPayload } from './src/guided/payload';
+import { GuidedSession, isGuidedCall } from './src/guided/session';
+import { resolvePace, isPace } from './src/guided/pace';
+import { TranscriptLog } from './src/utils/transcriptLog';
+import { guidedBoardBlock, guidedKickoff } from './src/guided/prompt';
+import { guidedToolDeclarations } from './src/guided/tools';
 import os from 'os';
 import fs from 'fs';
 import { AdaptiveSessionState, TeachingStrategy, CurriculumConcept, CurriculumSubject } from './src/adaptive/learnerModel';
@@ -329,6 +339,28 @@ function visualRequestFor(ctx: VisualConceptContext, focus: string): { req: Visu
 // focus — and only on a miss is a new picture drawn, fact-checked and saved.
 // There is no generic fallback: if nothing can be drawn, the board keeps the
 // picture it already has rather than show a template.
+// ── Guided mode (src/guided) ─────────────────────────────────────
+// The server's default mode, and the prepared lesson script for a concept.
+app.get('/api/tutor-mode', (_req, res) => {
+  res.json({
+    default: resolveTutorMode(undefined, process.env.TUTOR_MODE),
+    guidedConcepts: ALL_GUIDED_SCRIPTS.map((s) => s.conceptId),
+  });
+});
+
+app.get('/api/guided-script', async (req, res) => {
+  const conceptId = String(req.query.conceptId || '');
+  const script = getGuidedScript(conceptId);
+  if (!script) return res.status(404).json({ error: 'No guided lesson for this concept.' });
+  try {
+    const record = await loadPregen(String(req.query.topic || ''), conceptId);
+    res.json(buildGuidedPayload(script, (record?.visuals ?? null) as Record<string, unknown> | null));
+  } catch (err: any) {
+    console.warn('[guided] could not load pictures for', conceptId, err?.message);
+    res.json(buildGuidedPayload(script, null));
+  }
+});
+
 app.post('/api/update-diagram', async (req, res) => {
   const { topic, grade, focus, conceptId } = req.body;
   const targetTopic = String(topic || '');
@@ -787,6 +819,22 @@ app.post('/api/learners/:studentId/onboarding', requireAuth, requireOwnership, a
     res.status(500).json({ error: err?.message || 'Failed to save onboarding' });
   }
 });
+// The child names their tutor at login (docs/TUTOR_PERSONA.md §2). Saved on the profile so the
+// next login pre-fills it. The name is cleaned here too: never trust the browser.
+app.post('/api/learners/:studentId/tutor-name', requireAuth, requireOwnership, async (req, res) => {
+  try {
+    const learner = await getLearner(req.params.studentId);
+    if (!learner) return (res as any).status(404).json({ error: 'Not found' });
+    const name = sanitiseTutorName(req.body?.name);
+    if (!name) return (res as any).status(400).json({ error: 'Please pick a different name (letters and numbers, up to 24 characters).' });
+    learner.tutorName = name;
+    learner.updatedAt = Date.now();
+    await getRepo().saveProfile(learner);
+    res.json({ tutorName: name });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to save tutor name' });
+  }
+});
 app.get('/api/learners/:studentId/events', requireAuth, requireOwnership, async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -1135,6 +1183,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   let studentId = '';
   let resolvedPlan: TeachingPlan | null = null;
   let resolvedLearnerName: string | undefined;
+  let resolvedTutorName: string | undefined; // the name this child gave their tutor
 
   if (sessionIdParam && !activeSession && !isGuest) {
     clientWs.send(JSON.stringify({ type: 'error', code: 'SESSION_NOT_FOUND', message: 'Unknown or expired sessionId. Start a session via POST /api/session/start first.' }));
@@ -1152,9 +1201,19 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
     const learnerForSession = await getLearner(studentId);
     grade = learnerForSession?.grade || grade;
     resolvedLearnerName = learnerForSession?.name;
+    resolvedTutorName = sanitiseTutorName(learnerForSession?.tutorName) || undefined;
     const latestPlan = await getRepo().getLatestPlan(studentId, subjectId);
     if (latestPlan) resolvedPlan = latestPlan.plan as TeachingPlan;
   }
+
+  // Guided mode: per-session switch (?mode=), server default (TUTOR_MODE), else standard.
+  // A concept with no guided script quietly runs as standard.
+  const requestedMode = url.searchParams.get('mode');
+  const guidedScript = process.env.PERSONA === 'legacy' || resolveTutorMode(requestedMode, process.env.TUTOR_MODE) !== 'guided'
+    ? null
+    : getGuidedScript(conceptId);
+  const guidedSession = guidedScript ? new GuidedSession(guidedScript, resolvePace(url.searchParams.get('pace'))) : null;
+  console.log(`[WebSocket] tutor mode: ${guidedSession ? 'guided' : 'standard'} (requested=${requestedMode || '-'}, default=${process.env.TUTOR_MODE || '-'}, concept=${conceptId || '-'})`);
 
   // Build curriculum intelligence context if we have a subject and concept
   const curriculumCtx = (subjectId && conceptId)
@@ -1182,6 +1241,9 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
 
   let liveSession: any = null;
   let observer: LiveObserver | null = null;
+  const transcriptLog = new TranscriptLog();
+  // Guided: how long the voice stays silent after a guided tool call (the cost of writing line by line).
+  let guidedVoiceClock: { at: number; tool: string } | null = null;
   let isClosed = false;
 
   // T11 (partial): per-connection plan-delta state. A fuller implementation
@@ -1454,7 +1516,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   const planBlockText = resolvedPlan ? renderPlanForPrompt(resolvedPlan, resolvedLearnerName) : undefined;
 
   const dynamicSystemInstruction = process.env.PERSONA === 'legacy'
-    ? `You are "${DEFAULT_PERSONA_NAME}", an inspiring, warm, and brilliant Senior Educator and AI Tutor teaching a student in ${grade} on the topic of "${topic}". You speak in a clear, encouraging, friendly mentor voice with genuine passion for learning.
+    ? `You are "${resolvedTutorName || DEFAULT_PERSONA_NAME}", an inspiring, warm, and brilliant Senior Educator and AI Tutor teaching a student in ${grade} on the topic of "${topic}". You speak in a clear, encouraging, friendly mentor voice with genuine passion for learning.
 
 PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
 1. You have an interactive real-time digital blackboard right next to you that updates dynamically.
@@ -1486,9 +1548,11 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
         subjectMode: subjectModeForPrompt as any,
         channel: 'voice',
         learnerName: resolvedLearnerName,
+        personaName: resolvedTutorName,
         planBlock: planBlockText,
         curriculumContext: curriculumCtx?.systemPromptBlock,
-        boardContext: boardContextText,
+        boardContext: guidedSession ? undefined : boardContextText,
+        boardBlockOverride: guidedScript ? guidedBoardBlock(guidedScript) : undefined,
         topic,
       });
 
@@ -1521,7 +1585,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
         inputAudioTranscription: {},
         outputAudioTranscription: {},
         systemInstruction: dynamicSystemInstruction,
-        tools: [{ functionDeclarations: process.env.PERSONA === 'legacy' ? dynamicFunctionDeclarations : ALL_TOOLS }],
+        tools: [{ functionDeclarations: process.env.PERSONA === 'legacy' ? dynamicFunctionDeclarations : (guidedSession ? guidedToolDeclarations() : ALL_TOOLS) }],
       },
       callbacks: {
         onopen: () => {
@@ -1529,12 +1593,17 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
         },
         onmessage: (message: LiveServerMessage) => {
           if (isClosed || clientWs.readyState !== WebSocket.OPEN) return;
+          transcriptLog.feed(message);
 
           // 1. Audio chunks from model
           const modelParts = message.serverContent?.modelTurn?.parts;
           if (modelParts && Array.isArray(modelParts)) {
             for (const part of modelParts) {
               if (part.inlineData?.data) {
+                if (guidedVoiceClock) {
+                  console.log(`[guided] voice resumed ${Date.now() - guidedVoiceClock.at}ms after ${guidedVoiceClock.tool}`);
+                  guidedVoiceClock = null;
+                }
                 clientWs.send(
                   JSON.stringify({
                     type: 'audio_out',
@@ -1582,6 +1651,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
           // 4. Tool Calls
           const functionCalls = message.toolCall?.functionCalls;
           if (functionCalls && Array.isArray(functionCalls) && functionCalls.length > 0) {
+            const guidedBudget = { lineWritten: false }; // guided: one board line per model message
             for (const call of functionCalls) {
               console.log(`[Tool Call] Executing: ${call.name}`, call.args);
 
@@ -1593,6 +1663,17 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
                   args: call.args || {},
                 })
               );
+
+              if (guidedSession && isGuidedCall(call.name)) {
+                // The server holds the board (src/guided/session.ts); the browser gets a snapshot
+                // and shows it in step with the voice.
+                const reply = guidedSession.handle(call.name, (call.args || {}) as Record<string, any>, guidedBudget);
+                console.log(`[guided] ${reply.log}`);
+                sendToolResponse(call, reply.response);
+                if (reply.changed) clientWs.send(JSON.stringify({ type: 'guided_state', state: guidedSession.state }));
+                guidedVoiceClock = { at: Date.now(), tool: call.name };
+                continue;
+              }
 
               if (call.name === 'assess_child_reasoning') {
                 // Diagnosis + evidence recording + plan delta (see
@@ -1674,6 +1755,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
 
     if (clientWs.readyState === WebSocket.OPEN) {
       clientWs.send(JSON.stringify({ type: 'session_ready' }));
+      clientWs.send(JSON.stringify({ type: 'tutor_mode', mode: guidedSession ? 'guided' : 'standard' }));
 
       // Send initial turn welcoming the student to the topic
       try {
@@ -1684,8 +1766,8 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
               parts: [
                 {
                   text: process.env.PERSONA === 'legacy'
-                    ? `The student has just entered the classroom to learn about "${topic}" at the ${grade} level. Greet them warmly as ${DEFAULT_PERSONA_NAME}, express excitement for exploring "${topic}", mention that you have prepared the digital blackboard, and ask what aspect they would like to explore first.`
-                    : composeKickoff(topic, Boolean(resolvedPlan)),
+                    ? `The student has just entered the classroom to learn about "${topic}" at the ${grade} level. Greet them warmly as ${resolvedTutorName || DEFAULT_PERSONA_NAME}, express excitement for exploring "${topic}", mention that you have prepared the digital blackboard, and ask what aspect they would like to explore first.`
+                    : (guidedSession ? guidedKickoff(topic) : composeKickoff(topic, Boolean(resolvedPlan))),
                 },
               ],
             },
@@ -1729,6 +1811,8 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
           turns: [{ role: 'user', parts: [{ text: msg.text }] }],
           turnComplete: true,
         });
+      } else if (msg.type === 'guided_pace') {
+        if (guidedSession && isPace(msg.pace)) { guidedSession.setPace(msg.pace); console.log(`[guided] pace -> ${msg.pace}`); }
       } else if (msg.type === 'tool_response') {
         console.log('[WebSocket] Tool execution confirmed:', msg.id);
       } else if (msg.type === 'close') {

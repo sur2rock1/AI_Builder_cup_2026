@@ -4,6 +4,37 @@
  * Output: 24 kHz mono 16-bit little-endian PCM queued for gapless playback
  */
 
+/** Safari (all iOS browsers) and Firefox cannot feed a mic stream into a 16 kHz context. */
+function needsNativeInputRate(): boolean {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iP(hone|ad|od)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari = /^((?!chrome|chromium|android|crios|fxios|edgios).)*safari/i.test(ua);
+  const isFirefox = /firefox|fxios/i.test(ua);
+  return isIOS || isSafari || isFirefox;
+}
+
+function makeContext(AudioCtx: typeof AudioContext, sampleRate?: number): AudioContext {
+  if (sampleRate) {
+    try { return new AudioCtx({ sampleRate }); } catch { /* fall through to the device default */ }
+  }
+  return new AudioCtx();
+}
+
+/** Box-filter decimation (averages each group of input samples) down to 16 kHz mono. */
+function downsampleTo16k(input: Float32Array, inRate: number): Float32Array {
+  const ratio = inRate / 16000;
+  const outLen = Math.floor(input.length / ratio);
+  const out = new Float32Array(outLen);
+  for (let i = 0; i < outLen; i++) {
+    const start = Math.floor(i * ratio);
+    const end = Math.min(input.length, Math.floor((i + 1) * ratio));
+    let sum = 0;
+    for (let k = start; k < end; k++) sum += input[k];
+    out[i] = end > start ? sum / (end - start) : input[start] ?? 0;
+  }
+  return out;
+}
+
 export class AudioManager {
   private inputContext: AudioContext | null = null;
   private outputContext: AudioContext | null = null;
@@ -16,6 +47,14 @@ export class AudioManager {
 
   private nextPlayTime = 0;
   private activeSources: AudioBufferSourceNode[] = [];
+
+  /** Resume audio after the tab was hidden / interrupted (iOS reports 'interrupted'). */
+  private onVisible = () => {
+    if (document.visibilityState !== 'visible') return;
+    for (const ctx of [this.inputContext, this.outputContext]) {
+      if (ctx && (ctx.state === 'suspended' || (ctx.state as string) === 'interrupted')) ctx.resume().catch(() => undefined);
+    }
+  };
 
   private onAudioInputChunk?: (base64PCM: string) => void;
   private onInputLevel?: (level: number) => void;
@@ -42,7 +81,27 @@ export class AudioManager {
    * Initializes both input (16kHz) and output (24kHz) audio contexts after user interaction
    */
   async start(): Promise<void> {
-    // 1. Request mic permission
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) throw new Error('This browser cannot play or record audio (no Web Audio support).');
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('Microphone access needs a secure page (https) and a current browser.');
+    }
+
+    // iOS Safari only lets audio start inside the tap that began the session. Create and resume the
+    // audio contexts BEFORE the first await (the microphone permission prompt); otherwise they stay
+    // "suspended" on iPhone/iPad and the tutor is silent.
+    const nativeInput = needsNativeInputRate();
+    this.inputContext = makeContext(AudioCtx, nativeInput ? undefined : 16000);
+    this.outputContext = makeContext(AudioCtx, 24000);
+    const resumes = [this.inputContext.resume(), this.outputContext.resume()];
+    try { // a one-sample silent buffer fully unlocks playback on iOS
+      const unlock = this.outputContext.createBufferSource();
+      unlock.buffer = this.outputContext.createBuffer(1, 1, 22050);
+      unlock.connect(this.outputContext.destination);
+      unlock.start(0);
+    } catch { /* not fatal */ }
+
+    // 1. Request mic permission. (sampleRate here is only a hint; browsers capture at their own rate.)
     this.mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
@@ -52,19 +111,12 @@ export class AudioManager {
         autoGainControl: true,
       },
     });
+    await Promise.all(resumes.map((p) => p.catch(() => undefined)));
+    if (this.inputContext.state === 'suspended') await this.inputContext.resume().catch(() => undefined);
+    if (this.outputContext.state === 'suspended') await this.outputContext.resume().catch(() => undefined);
 
-    // 2. Input AudioContext at 16kHz
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    this.inputContext = new AudioCtx({ sampleRate: 16000 });
-    if (this.inputContext.state === 'suspended') {
-      await this.inputContext.resume();
-    }
-
-    // 3. Output AudioContext at 24kHz for Gemini Live output
-    this.outputContext = new AudioCtx({ sampleRate: 24000 });
-    if (this.outputContext.state === 'suspended') {
-      await this.outputContext.resume();
-    }
+    // Phones suspend audio when the tab is hidden or a call arrives; pick it back up on return.
+    document.addEventListener('visibilitychange', this.onVisible);
 
     // Setup output analyser for lipsync
     this.outputAnalyser = this.outputContext.createAnalyser();
@@ -77,12 +129,28 @@ export class AudioManager {
     this.inputAnalyser.fftSize = 256;
     this.inputAnalyser.smoothingTimeConstant = 0.3;
 
-    this.inputSource = this.inputContext.createMediaStreamSource(this.mediaStream);
-    this.inputSource.connect(this.inputAnalyser);
+    try {
+      this.inputSource = this.inputContext.createMediaStreamSource(this.mediaStream);
+      this.inputSource.connect(this.inputAnalyser);
+    } catch (err) {
+      // Safari / Firefox refuse to connect a mic stream to a context with a different sample rate.
+      // Rebuild the input context at the device rate; the processor below resamples to 16 kHz.
+      console.warn('[AudioManager] 16 kHz input context not supported here; using the device rate.', err);
+      try { await this.inputContext.close(); } catch { /* ignore */ }
+      this.inputContext = makeContext(AudioCtx, undefined);
+      await this.inputContext.resume().catch(() => undefined);
+      this.inputAnalyser = this.inputContext.createAnalyser();
+      this.inputAnalyser.fftSize = 256;
+      this.inputAnalyser.smoothingTimeConstant = 0.3;
+      this.inputSource = this.inputContext.createMediaStreamSource(this.mediaStream);
+      this.inputSource.connect(this.inputAnalyser);
+    }
+    const inRate = this.inputContext.sampleRate;
+    const needResample = Math.abs(inRate - 16000) > 1;
 
     // Process input chunks using ScriptProcessorNode for maximum reliability across browsers
     // Buffer size 1024 or 2048 @ 16kHz = ~64ms - 128ms chunks (matches ~100ms requirement)
-    const bufferSize = 1024;
+    const bufferSize = needResample ? 2048 : 1024;
     const processor = this.inputContext.createScriptProcessor(bufferSize, 1, 1);
     this.inputProcessor = processor;
 
@@ -91,7 +159,8 @@ export class AudioManager {
     const targetChunkSamples = 1600; // 1600 samples @ 16kHz = exactly 100ms
 
     processor.onaudioprocess = (e: AudioProcessingEvent) => {
-      const inputData = e.inputBuffer.getChannelData(0);
+      const raw = e.inputBuffer.getChannelData(0);
+      const inputData = needResample ? downsampleTo16k(raw, inRate) : raw;
 
       // Compute RMS for mic level
       let sum = 0;
@@ -183,6 +252,12 @@ export class AudioManager {
     }
   }
 
+  /** Milliseconds of already-received tutor audio still to be played (0 when the queue is empty). */
+  msUntilQueuedAudioEnds(): number {
+    if (!this.outputContext) return 0;
+    return Math.max(0, (this.nextPlayTime - this.outputContext.currentTime) * 1000);
+  }
+
   /**
    * Alias for queueAudioChunk
    */
@@ -257,6 +332,7 @@ export class AudioManager {
    * Stop everything and release mic
    */
   stop(): void {
+    document.removeEventListener('visibilitychange', this.onVisible);
     this.flushPlayback();
 
     if (this.mediaStream) {

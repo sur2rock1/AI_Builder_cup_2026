@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { TutorState, TranscriptEntry } from '../types';
 import { Volume2, Sparkles, User, GraduationCap, Mic, MicOff } from 'lucide-react';
+import { useTutorName } from '../persona/TutorNameContext';
 
 interface AnimatedTutorProps {
   tutorState: TutorState;
@@ -17,6 +18,7 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
   currentTopic = 'Any Topic',
   currentGrade = 'Grade 8',
 }) => {
+  const tutorName = useTutorName();
   const [localBlink, setLocalBlink] = useState(false);
   const [eyeLook, setEyeLook] = useState({ x: 0, y: 0 });
   const [showOutput, setShowOutput] = useState(false);
@@ -89,7 +91,7 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
             }`}
           />
           <span className="text-xs tracking-wider uppercase font-bold text-[#4F46E5]">
-            {tutorState.name || 'Dr. Marcus Vance'}
+            {tutorName}
           </span>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F1F0FE] text-[#4F46E5] font-bold border border-[#C7C4F7]">
             AI TUTOR
@@ -340,7 +342,7 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
             <div className="absolute bottom-2 inset-x-2 px-2.5 py-1 rounded-md bg-white/90 backdrop-blur-sm border border-[#DDE1E8] flex items-center justify-between text-[11px] text-[#4F46E5] font-mono">
               <span className="flex items-center gap-1.5">
                 <Volume2 className="w-3.5 h-3.5 text-[#4F46E5] animate-pulse" />
-                <span>Dr. Marcus Talking</span>
+                <span>{tutorName} Talking</span>
               </span>
               <div className="flex items-center gap-0.5 h-3">
                 <span
@@ -410,7 +412,7 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
             <div className="flex items-center justify-between text-[#4F46E5] font-bold mb-1">
               <span className="flex items-center gap-1.5">
                 <Volume2 className="w-3.5 h-3.5 text-[#4F46E5]" />
-                <span>Dr. Marcus:</span>
+                <span>{tutorName}:</span>
               </span>
               <span className="text-[10px] text-[#8A93A3] font-normal">Real-time</span>
             </div>
@@ -423,7 +425,7 @@ export const AnimatedTutorCharacter: React.FC<AnimatedTutorProps> = ({
         {!showInput && !showOutput && (
           <div className="w-full p-3 rounded-xl bg-[#F8F9FB]/70 border border-[#E3E6EC] text-center text-xs text-[#8A93A3]">
             <p>
-              Click <strong className="text-emerald-300">Start Lesson</strong> below to start a live voice session on <strong className="text-[#4F46E5]">{currentTopic}</strong>. Dr. Marcus will speak, listen, and dynamically illustrate the concepts!
+              Click <strong className="text-emerald-300">Start Lesson</strong> below to start a live voice session on <strong className="text-[#4F46E5]">{currentTopic}</strong>. {tutorName} will speak, listen, and dynamically illustrate the concepts!
             </p>
           </div>
         )}
