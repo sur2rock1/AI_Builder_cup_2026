@@ -1,6 +1,21 @@
 # PROJECT STATE
 
-_Last updated: 2026-09-30_
+_Last updated: 2026-10-09 (audited — see docs/AUDIT_2026-10-09.md)_
+
+
+## STATUS 2026-10-09 (audited; supersedes the stale sections below where they disagree)
+- **Product name:** Ananta (code, README). Older sections say "Dr. Marcus" / "Adaptive AI Tutor"; the child now names the tutor (D-2026-10-07-1).
+- **Deadline:** 18 Oct 2026 (9 days). Grand Finale 4 Dec 2026, Singapore.
+- **Content:** curriculum library (IGCSE G8 Maths + Biology, Cambridge G4 Maths) — no longer empty or Pythagoras-only.
+- **Models:** FAST/STRONG roles resolved on the owner's machine (2026-09-26). 2026-10-09 logs show the primary flash models hitting the 20 s deadline in the Profiler and falling back to `gemini-3.1-flash-lite`. IMAGE role was quota-blocked on 2026-09-26; photo status since then not re-verified.
+- **Deployment: NOT DONE.** No Cloud Run URL exists in the repo or docs. `firebase-config.json` still points at `sceneflow-f9529` (not the owner's project) and `.firebaserc` is a placeholder; `deploy-cloudrun.sh` refuses to run until fixed. This is a mandatory competition requirement.
+- **Submission artefacts:** proposal PDF — not started; 3-minute video — not started.
+- **Evidence of effectiveness:** EV-01/02/03 (diagnosis accuracy, adapted-vs-base, persona adherence) NOT built. No measured result exists.
+- **Privacy/auth:** deployed builds default `DEMO_MODE=true` (no token checks; `GET /api/learners` lists all profiles). Not acceptable for real children's data.
+- **Tests:** `tsc` clean; `tests/live/run.mjs` fails 7 assertions (since 28 Sep); `tests/guided/run.mjs` crashes (stale test); `npm test` is red.
+- **In progress / uncommitted:** guided tutor mode (`src/guided/`, toggle `TUTOR_MODE`, default `standard`), tutor-name feature, 25 modified files.
+- **Removed behaviour:** PARK_AND_ESCALATE no longer runs in the live path (D-2026-09-30-9); Parent-Portal escalation card is dead code.
+- **Not built:** T12 confidence capture, T15 spaced review/decay, T19 latency spike, T24–T26 eval harnesses.
 
 ## Theme
 No education theme exists in the AI Builder Cup 2026 list (BFSI; Retail & Commerce;
@@ -823,3 +838,9 @@ Photo/3D/hints are decided at ingest (`presentation`, `ladderItems[].hints`), no
 Existing curricula need `npm run backfill:design` (2 calls for the current 2 courses) before the plan shows photo/3D/hints correctly.
 Safe procedure: `npm run backfill:design -- --dry-run` → `npm run backfill:design` → `npm run pregen:ch1:plan` → one concept with `--concept` → send the 💸 line → full chapter.
 Unmeasured: real cost and first-shot yield.
+
+
+## Update — 2026-10-07 (tutor name chosen by the child)
+- Built: after every login the child is asked what to call the tutor (default "Dr. Marcus", pre-filled with the last choice, saved on the profile as `tutorName`). All on-screen labels (stage, avatar, bottom bar, boards, scene panel, onboarding) and the voice tutor's prompt use the chosen name. See D-2026-10-07-1, docs/TUTOR_PERSONA.md §2, FR-09a.
+- Verified: unit checks (tests/tutor-name/run.mjs, 13) and `tsc --noEmit`. Not yet verified: in a browser, in a live voice session, on Firestore.
+- Closed: OQ-1 (persona name).

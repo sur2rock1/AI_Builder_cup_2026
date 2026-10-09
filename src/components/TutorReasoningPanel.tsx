@@ -58,7 +58,7 @@ export const TutorReasoningPanel: React.FC<Props> = ({ plan, log, isVisible, onT
       <button
         onClick={onToggle}
         style={{
-          position: 'fixed', left: 0, bottom: 96,
+          position: 'fixed', left: 0, bottom: 'calc(96px + env(safe-area-inset-bottom))',
           background: '#7c3aed', color: 'white', border: 'none', borderRadius: '0 10px 10px 0',
           padding: '12px 8px', cursor: 'pointer', zIndex: 100,
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
@@ -75,7 +75,7 @@ export const TutorReasoningPanel: React.FC<Props> = ({ plan, log, isVisible, onT
 
   return (
     <div style={{
-      position: 'fixed', left: 0, top: 0, bottom: 0, width: 340,
+      position: 'fixed', left: 0, top: 0, bottom: 0, width: 'min(340px, 100vw)', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)',
       background: '#0d1117', borderRight: '1px solid #1f2937',
       display: 'flex', flexDirection: 'column', zIndex: 99,
       fontFamily: 'system-ui, sans-serif', overflow: 'hidden',

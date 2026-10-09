@@ -231,13 +231,13 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
   const subjectData = selected && selectedSubject ? selected.subjects[selectedSubject] : null;
 
   if (loading) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center">
+    <div className="min-h-app bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col">
+    <div className="min-h-app bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col">
       {/* Header */}
       <div className="flex-shrink-0 px-4 pt-5 pb-4 border-b border-white/5">
         <div className="max-w-3xl mx-auto flex items-center gap-3">

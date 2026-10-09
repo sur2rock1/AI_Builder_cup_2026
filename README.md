@@ -1,12 +1,6 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Ananta — adaptive AI tutor (AI Builder Cup 2026)
 
-# Run and deploy your AI Studio app
-
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/e4c5c0b9-f2e3-4bc2-9d82-d7b1e2c73301
+A voice-first tutor that diagnoses *how* a child is reasoning (including right answers reached by a wrong method), keeps an evidence-based learner model, and re-teaches with a different representation. Built on Gemini Live + Gemini JSON diagnosis; target runtime is Cloud Run. Specs: `docs/` (start with `docs/AUDIT_2026-10-09.md` for current status). Repo folder is still named `pythagoras-tutor` for historical reasons.
 
 # Run Locally
 

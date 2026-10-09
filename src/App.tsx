@@ -45,6 +45,13 @@ import { getScene } from './scenes/genericScenes';
 import type { StepState } from './components/BoardVisualView';
 import type { BoardVisual, BoardVisual3D } from './visual/types';
 import { matchRevealTarget } from './visual/tutorBrief';
+// Guided mode (src/guided) — additive; standard mode never reaches it.
+import { useGuidedTutor } from './guided/useGuidedTutor';
+import { GuidedBoard } from './guided/GuidedBoard';
+import { TutorModeSwitch } from './guided/TutorModeSwitch';
+import { TutorNameScreen } from './components/TutorNameScreen';
+import { TutorNameProvider } from './persona/TutorNameContext';
+import { DEFAULT_TUTOR_NAME, tutorNameOrDefault } from './persona/tutorName';
 import { normalizeQuiz, isQuizShape } from './quality/quizTools';
 import type { QuizReasoning } from './types';
 
@@ -72,9 +79,9 @@ const PRESENTER: PresenterMedia = {
   // },
 };
 
-export const App: React.FC = () => {
+const AppInner: React.FC<{ tutorName: string; setTutorName: (n: string) => void }> = ({ tutorName, setTutorName }) => {
   // ─── Navigation / screen state ───────────────────────────────
-  type AppScreen = 'login' | 'onboarding' | 'subject-select' | 'tutor' | 'parent-portal' | 'admin';
+  type AppScreen = 'login' | 'tutor-name' | 'onboarding' | 'subject-select' | 'tutor' | 'parent-portal' | 'admin';
   const [screen, setScreen] = useState<AppScreen>('login');
   const [loggedInStudent, setLoggedInStudent] = useState<StudentProfile | null>(null);
 
@@ -86,6 +93,12 @@ export const App: React.FC = () => {
   const [learnerProfile, setLearnerProfile] = useState<LearnerProfileUI | null>(null);
   const [adaptiveSession, setAdaptiveSession] = useState<AdaptiveSessionUI | null>(null);
   const [currentConcept, setCurrentConcept] = useState<CurriculumConceptUI | null>(null);
+  const guided = useGuidedTutor(adaptiveSession?.currentConceptId);
+  // Guided mode: a pace change made during a live lesson reaches the tutor from its next beat.
+  useEffect(() => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'guided_pace', pace: guided.pace }));
+  }, [guided.pace]);
   const [lastAssessment, setLastAssessment] = useState<AssessmentResultUI | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
@@ -211,14 +224,14 @@ export const App: React.FC = () => {
     isBlinking: false,
     isNodding: false,
     eyebrowsRaised: false,
-    name: 'Dr. Marcus Vance',
-    title: 'Senior AI Educator',
+    name: tutorName,
+    title: 'AI Tutor',
   });
 
   // Voice & Transcripts State
   const [outputTranscript, setOutputTranscript] = useState<TranscriptEntry | null>({
     id: 'welcome-0',
-    text: `Hello! I am Dr. Marcus Vance, your real-time AI tutor. What topic or concept would you like to explore today? Type any topic on the fly or click "Start Voice Lesson" to ask me directly!`,
+    text: `Hello! I am ${tutorName}, your real-time AI tutor. What topic or concept would you like to explore today? Type any topic on the fly or click "Start Voice Lesson" to ask me directly!`,
     timestamp: Date.now(),
   });
   const [inputTranscript, setInputTranscript] = useState<TranscriptEntry | null>(null);
@@ -477,6 +490,8 @@ export const App: React.FC = () => {
   const handleToolCall = useCallback(
     (name: string, args: Record<string, any>, serverResult?: Record<string, any>) => {
       console.log(`[App] Handling Gemini Live tool call: ${name}`, args, serverResult);
+      // Guided mode: advance_beat / fill_slot grow the shared board. Standard calls fall through unchanged.
+      if (guided.handleToolCall(name, args)) return;
 
       /** Put a picture from /api/update-diagram on the board, starting at its first step.
        * On failure the board keeps the picture it has — never a generic stand-in. */
@@ -790,7 +805,7 @@ export const App: React.FC = () => {
           console.warn(`[App] Unhandled tool call: ${name}`);
       }
     },
-    [grade, topic, loadLesson, revealPart, showOnBoard, clientLog]
+    [grade, topic, loadLesson, revealPart, showOnBoard, clientLog, guided.handleToolCall]
   );
 
   // ─── Adaptive session handlers ─────────────────────────────
@@ -920,6 +935,8 @@ export const App: React.FC = () => {
         adaptiveSession?.subjectId,
         adaptiveSession?.currentConceptId,
         adaptiveSession?.sessionId,
+        guided.requested ?? undefined,
+        guided.pace,
       );
 
       const socket = new WebSocket(wsUrl);
@@ -994,6 +1011,10 @@ export const App: React.FC = () => {
             setVisualStep(0);
             setVisual3dStep(0);
             setVisualSpotlight([]);
+          } else if (msg.type === 'tutor_mode') {
+            guided.onTutorMode(msg.mode);
+          } else if (msg.type === 'guided_state') {
+            guided.onGuidedState(msg.state, audioMgr.msUntilQueuedAudioEnds());
           } else if (msg.type === 'interrupted') {
             audioMgr.flushPlayback();
           } else if (msg.type === 'tool_call') {
@@ -1175,11 +1196,28 @@ export const App: React.FC = () => {
   const handleLogin = (profile: StudentProfile) => {
     setLoggedInStudent(profile);
     setGrade(profile.grade);
-    // Only new/incomplete learners see onboarding — a returning learner who
-    // already finished it (learner.onboarding?.completedAt is set) goes
-    // straight to subject-select.
-    setScreen(profile.onboarding?.completedAt ? 'subject-select' : 'onboarding');
+    // Every login first asks what to call the tutor (pre-filled with the last choice),
+    // then: only new/incomplete learners see onboarding; returning ones go to subject-select.
+    setTutorName(tutorNameOrDefault(profile.tutorName));
+    setScreen('tutor-name');
   };
+
+  const handleTutorNamed = (name: string) => {
+    setTutorName(name);
+    setLoggedInStudent((prev) => (prev ? { ...prev, tutorName: name } : prev));
+    setScreen(loggedInStudent?.onboarding?.completedAt ? 'subject-select' : 'onboarding');
+  };
+
+  // Shared device: the next child to log in starts from the default name.
+  useEffect(() => { if (screen === 'login') setTutorName(DEFAULT_TUTOR_NAME); }, [screen, setTutorName]);
+
+  // Keep the welcome line and the avatar label in step with the chosen name.
+  useEffect(() => {
+    setTutorState((prev) => ({ ...prev, name: tutorName }));
+    setOutputTranscript((prev) => (prev?.id === 'welcome-0'
+      ? { ...prev, text: `Hello! I am ${tutorName}, your real-time AI tutor. What topic or concept would you like to explore today? Type any topic on the fly or click "Start Voice Lesson" to ask me directly!` }
+      : prev));
+  }, [tutorName]);
 
   const handleSubjectConceptSelect = async (
     subjectId: string, subjectLabel: string,
@@ -1250,6 +1288,17 @@ export const App: React.FC = () => {
     return <AdminLibrary onBack={() => setScreen(loggedInStudent ? 'subject-select' : 'login')} />;
   }
 
+  if (screen === 'tutor-name' && loggedInStudent) {
+    return (
+      <TutorNameScreen
+        studentName={loggedInStudent.name}
+        savedName={loggedInStudent.tutorName}
+        studentId={loggedInStudent.studentId}
+        onDone={handleTutorNamed}
+      />
+    );
+  }
+
   if (screen === 'onboarding' && loggedInStudent) {
     return (
       <Onboarding
@@ -1283,14 +1332,29 @@ export const App: React.FC = () => {
     );
   }
 
+  // Guided mode: Tutor + Pace controls (only for a concept that has a guided lesson). Shown in the stage's top bar.
+  const guidedControls = guided.hasLesson ? (
+    <TutorModeSwitch
+      value={guided.wanted}
+      onChange={guided.setRequestedMode}
+      locked={connectionStatus === 'connected' || connectionStatus === 'connecting'}
+      pace={guided.pace}
+      onPaceChange={guided.setPace}
+    />
+  ) : null;
+
   // ─── Main tutor screen ────────────────────────────────────────
   return (
     <div
       id="app-root"
-      className={`w-screen h-screen flex flex-col font-sans antialiased overflow-hidden select-none ${
+      className={`w-full h-app flex flex-col font-sans antialiased overflow-hidden select-none ${
         BOARD_SURFACE === 'immersive' ? 'bg-[#0C0F16] text-white' : 'bg-[#F6F7F9] text-[#161A22]'
       }`}
     >
+      {/* Guided mode: per-session switch, shown only for a concept that has a guided lesson. */}
+      {BOARD_SURFACE !== 'immersive' && guidedControls && (
+        <div className="fixed left-3 bottom-3 z-40 rounded-full bg-black/55 backdrop-blur p-1">{guidedControls}</div>
+      )}
       {/* GLOBAL TOP NAVIGATION — immersive supplies its own single bar. */}
       {BOARD_SURFACE !== 'immersive' && (
       <header
@@ -1378,6 +1442,10 @@ export const App: React.FC = () => {
         <section id="dynamic-blackboard-section" className="flex-1 h-full relative min-h-0">
           {BOARD_SURFACE === 'immersive' ? (
             <ImmersiveStage
+              headerExtra={guidedControls}
+              boardOverride={guided.active && guided.payload ? (
+                <GuidedBoard payload={guided.payload} board={guided.board} conceptLabel={currentConcept?.label || topic} />
+              ) : undefined}
               conceptLabel={liveAssessment?.concept?.label || currentConcept?.label || topic || 'Your lesson'}
               subject={blackboard.lessonData?.subject || 'Maths'}
               grade={grade}
@@ -1508,6 +1576,16 @@ export const App: React.FC = () => {
       />
       )}
     </div>
+  );
+};
+
+/** Holds the tutor's name (chosen by the child at login) above everything, so any component can show it. */
+export const App: React.FC = () => {
+  const [tutorName, setTutorName] = useState<string>(DEFAULT_TUTOR_NAME);
+  return (
+    <TutorNameProvider name={tutorName}>
+      <AppInner tutorName={tutorName} setTutorName={setTutorName} />
+    </TutorNameProvider>
   );
 };
 

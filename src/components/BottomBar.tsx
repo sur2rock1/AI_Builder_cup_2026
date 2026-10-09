@@ -1,6 +1,7 @@
 import React from 'react';
 import { ConnectionStatus } from '../types';
 import { Mic, MicOff, Sparkles, Play, Square } from 'lucide-react';
+import { useTutorName } from '../persona/TutorNameContext';
 
 interface BottomBarProps {
   isLessonActive: boolean;
@@ -17,6 +18,7 @@ export const BottomBar: React.FC<BottomBarProps> = ({
   currentTopic,
   onToggleLesson,
 }) => {
+  const tutorName = useTutorName();
   const bars = 8;
   const activeBars = Math.round(micLevel * bars);
 
@@ -65,7 +67,7 @@ export const BottomBar: React.FC<BottomBarProps> = ({
           />
           <span className="text-xs font-medium text-[#bad5c7]">
             {connectionStatus === 'connected'
-              ? 'Live Voice with Dr. Marcus Vance'
+              ? `Live Voice with ${tutorName}`
               : connectionStatus === 'connecting'
               ? 'Connecting to Voice Tutor...'
               : connectionStatus === 'reconnecting'

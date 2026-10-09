@@ -1,0 +1,206 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--equations-of-horizontal-and-vertical-lines",
+  "title": "Horizontal and Vertical Lines",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Today we identify equations for horizontal and vertical lines. These lines are special because one coordinate never changes.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Horizontal and Vertical Lines"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "Horizontal lines have a constant y.",
+          "say": "A horizontal line stays at the same height, so the y-value is constant.",
+          "style": "point"
+        },
+        {
+          "id": "l2",
+          "text": "Vertical lines have a constant x.",
+          "say": "A vertical line stays at the same across-position, so the x-value is constant.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "show",
+      "say": "Let's examine points on a horizontal line. Notice they all share the same height.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Horizontal Line Example"
+        },
+        {
+          "type": "picture",
+          "ref": "main",
+          "step": "s4"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l3",
+          "text": "Points: (-3, -3), (0, -3), (3, -3)",
+          "say": "Look at these three points. Every single one has a y-coordinate of negative three.",
+          "style": "work"
+        },
+        {
+          "id": "l4",
+          "text": "y = -3",
+          "say": "Since y is always negative three, the equation for this line is simply y equals negative three.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "contrast",
+      "say": "Some think horizontal lines are x equals c because they parallel the x-axis, but that is incorrect.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Clearing Confusion"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l5",
+          "text": "Wrong: x = -3",
+          "say": "If we wrote x equals negative three, we would get a vertical line, not a horizontal one.",
+          "style": "work"
+        },
+        {
+          "id": "l6",
+          "text": "Correct: y = constant",
+          "say": "We must use y because y is the coordinate that remains unchanged along the line.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "method",
+      "say": "Now let's find the gradient of a vertical line. We use two points to calculate it.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Vertical Line Gradient"
+        },
+        {
+          "type": "picture",
+          "ref": "contrast:vertical-gradient-zero",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l7",
+          "text": "Points: (2, 1) and (2, 5)",
+          "say": "We have two points on a vertical line. Both have an x-value of two.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "rise = 5 - 1 = 4",
+          "say": "The rise, or change in y, is 5 minus 1, which equals 4.",
+          "style": "work"
+        },
+        {
+          "id": "l9",
+          "text": "run = 2 - 2 = 0",
+          "say": "Exactly, the run is 0. There is no change in x.",
+          "style": "work",
+          "ask": {
+            "prompt": "The run is change in x. Since x is 2 for both, what is the run?",
+            "lookFor": "0",
+            "onMiss": "Calculate 2 minus 2."
+          }
+        },
+        {
+          "id": "l10",
+          "text": "m = 4 / 0 = undefined",
+          "say": "Division by zero is mathematically impossible, so the gradient is undefined.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "apply",
+      "say": "Let's apply this to a new line passing through (-5, 8) and (-5, -3).",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Practice Problem"
+        },
+        {
+          "type": "picture",
+          "ref": "apply",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l11",
+          "text": "x = -5",
+          "say": "Yes, because the x-coordinate is always negative five, the equation is x equals negative five.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is the equation of the line passing through (-5, 8) and (-5, -3)?",
+            "lookFor": "x = -5",
+            "onMiss": "Look at the x-coordinate of both points; what stays the same?"
+          }
+        },
+        {
+          "id": "l12",
+          "text": "Gradient = undefined",
+          "say": "Correct, the gradient of any vertical line is undefined.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is the gradient of this vertical line?",
+            "lookFor": "undefined",
+            "onMiss": "Remember we calculated division by zero for vertical lines earlier."
+          }
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "check",
+      "say": "One final check to see if you can distinguish these lines.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Final Challenge"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l13",
+          "text": "y = 4",
+          "say": "Perfect. A constant y-value defines a horizontal line.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is the equation of a horizontal line passing through (0, 4)?",
+            "lookFor": "y = 4",
+            "onMiss": "Horizontal lines have a constant y-value. What is the y-value in (0, 4)?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "gemini",
+    "model": "gemini-3.1-flash-lite",
+    "generatedAt": "2026-10-09T01:28:31.213Z",
+    "attempts": 1,
+    "criticCalls": 1,
+    "warnings": []
+  }
+}

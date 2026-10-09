@@ -14,6 +14,10 @@ export function liveWebSocketUrl(
   subjectId?: string,
   conceptId?: string,
   sessionId?: string,
+  /** Guided mode (src/guided): the tutor mode this session asked for. Omit to use the server default. */
+  tutorMode?: string,
+  /** Guided mode: slow | steady | quick. */
+  pace?: string,
 ): string {
   const params = new URLSearchParams({
     topic,
@@ -21,6 +25,8 @@ export function liveWebSocketUrl(
     ...(subjectId ? { subjectId } : {}),
     ...(conceptId ? { conceptId } : {}),
     ...(sessionId ? { sessionId } : { guest: '1' }),
+    ...(tutorMode ? { mode: tutorMode } : {}),
+    ...(pace ? { pace } : {}),
   });
   const queryString = params.toString();
 

@@ -271,7 +271,7 @@ export const LearnerProfilePanel: React.FC<Props> = ({
       <button
         onClick={onToggle}
         style={{
-          position: 'fixed', right: 0, bottom: 96,
+          position: 'fixed', right: 0, bottom: 'calc(96px + env(safe-area-inset-bottom))',
           background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px 0 0 10px',
           padding: '12px 8px', cursor: 'pointer', zIndex: 100,
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
@@ -286,7 +286,7 @@ export const LearnerProfilePanel: React.FC<Props> = ({
 
   return (
     <div style={{
-      position: 'fixed', right: 0, top: 0, bottom: 0, width: 320,
+      position: 'fixed', right: 0, top: 0, bottom: 0, width: 'min(320px, 100vw)', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)',
       background: '#0d1117', borderLeft: '1px solid #1f2937',
       display: 'flex', flexDirection: 'column', zIndex: 99,
       fontFamily: 'system-ui, sans-serif', overflow: 'hidden',

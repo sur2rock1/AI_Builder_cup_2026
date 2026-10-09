@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--graphs-of-linear-equations-in-the-form-ax-by-k",
+  "title": "Graphs of linear equations in the form ax + by = k",
+  "beats": [
+    {
+      "id": "b1", "kind": "orient",
+      "say": "Welcome the student in one warm sentence. Today: take an equation like 2x - 3y = 6 and turn it into a straight line on a grid, reliably. We will find points, draw the line, and learn two checks that catch mistakes. Two sentences, then to the grid.",
+      "board": [
+        { "type": "heading", "text": "Graphs of ax + by = k" },
+        { "type": "point", "text": "From an equation to a straight line" }
+      ]
+    },
+    {
+      "id": "b2", "kind": "define",
+      "say": "An equation of the form ax + by = k is a straight line. Show 2x - 3y = 6 on an empty grid and let the student suggest how to get points to draw before you show them.",
+      "board": [
+        { "type": "point", "text": "ax + by = k is a straight line" },
+        { "type": "picture", "ref": "main", "step": "s1" },
+        { "type": "slot", "id": "find_points", "label": "To graph 2x − 3y = 6 I would ___" }
+      ],
+      "ask": {
+        "prompt": "How could we find points to graph 2x - 3y = 6 on this grid?",
+        "slot": "find_points",
+        "lookFor": "Any sensible plan: choose x-values and work out y, or set x = 0 and y = 0. Note the plan they use; do not correct a valid one.",
+        "onMiss": "Ask: if x were 0, what would the equation say about y? Start from there."
+      }
+    },
+    {
+      "id": "b3", "kind": "method",
+      "say": "Step 1: the intercepts - where the line crosses each axis. Do the y-axis one together: set x = 0 and solve for y. Then hand the student the other one.",
+      "board": [
+        { "type": "heading", "text": "Step 1: the intercepts" },
+        { "type": "picture", "ref": "main", "step": "s2" },
+        { "type": "work", "lines": ["x = 0:  −3y = 6  →  y = −2", "point (0, −2)"] },
+        { "type": "slot", "id": "x_intercept", "label": "y = 0 gives x = ___" }
+      ],
+      "ask": {
+        "prompt": "Now you do the other one: put y = 0 into 2x - 3y = 6. What is x?",
+        "slot": "x_intercept",
+        "lookFor": "x = 3, giving the point (3, 0).",
+        "onMiss": "Ask what 3y becomes when y = 0, and what is left of the equation."
+      }
+    },
+    {
+      "id": "b4", "kind": "method",
+      "say": "Step 2: a third point as a check. Two points always make a line, even a wrong one; a third that lines up proves the working. Choose x = 6 and find y. Then ask why a third point is worth the effort.",
+      "board": [
+        { "type": "heading", "text": "Step 2: a check point" },
+        { "type": "picture", "ref": "main", "step": "s3" },
+        { "type": "work", "lines": ["point (3, 0)", "x = 6:  12 − 3y = 6  →  y = 2", "point (6, 2)"] },
+        { "type": "slot", "id": "why_three", "label": "A third point helps because ___" }
+      ],
+      "ask": {
+        "prompt": "Two points are enough to draw a line. So why do we bother finding a third?",
+        "slot": "why_three",
+        "lookFor": "If the third point lines up with the other two, the working is right; two points alone cannot show an arithmetic slip.",
+        "onMiss": "Ask: if you had miscalculated one point, would the line through two points show it? What would a third point do?"
+      }
+    },
+    {
+      "id": "b5", "kind": "rule",
+      "say": "Step 3: draw the line through all three points with a ruler. Then show that rearranging gives the gradient-intercept form: for ax + by = k, the gradient is -a/b and the y-intercept is k/b. Check it against our line.",
+      "board": [
+        { "type": "heading", "text": "Step 3: draw the line" },
+        { "type": "picture", "ref": "main", "step": "s4" },
+        { "type": "rule", "text": "ax + by = k  →  y = −(a/b)x + k/b" },
+        { "type": "work", "lines": ["2x − 3y = 6:  −3y = −2x + 6", "y = (2/3)x − 2"] }
+      ]
+    },
+    {
+      "id": "b6", "kind": "contrast",
+      "say": "The usual slip when rearranging: dividing by a negative and forgetting to change every sign. Show -3y = -2x + 6 and let the student say what happens to each term when dividing by -3 before you show it. Do not call it a mistake - show that the wrong answer fails the original equation.",
+      "board": [
+        { "type": "picture", "ref": "contrast:sign-error-rearranging-standard-form", "step": "s3" },
+        { "type": "work", "lines": ["−3y = −2x + 6"] },
+        { "type": "exception", "text": "divide every term on the right by −3" },
+        { "type": "slot", "id": "signs", "label": "÷ (−3) turns the right side into ___" }
+      ],
+      "ask": {
+        "prompt": "Divide both sides of -3y = -2x + 6 by -3. What happens to the signs of both terms on the right?",
+        "slot": "signs",
+        "lookFor": "Both change: -2x ÷ -3 = +(2/3)x, and 6 ÷ -3 = -2. So y = (2/3)x - 2.",
+        "onMiss": "Do the two divisions one at a time on the board and ask for each sign separately."
+      }
+    },
+    {
+      "id": "b7", "kind": "rule",
+      "say": "A point (p, q) is on the line exactly when its coordinates make the equation true: ap + bq = k. Show it on 3x - 2y = 6 with the point (4, 3). Then ask about a point that is NOT on it.",
+      "board": [
+        { "type": "rule", "text": "(p, q) is on the line  ⇔  ap + bq = k" },
+        { "type": "picture", "ref": "focus:a-point-p-q-lies", "step": "s5" },
+        { "type": "work", "lines": ["3x − 2y = 6", "(4, 3):  12 − 6 = 6  ✓"] },
+        { "type": "slot", "id": "test_point", "label": "(5, 4) on the line?  ___" }
+      ],
+      "ask": {
+        "prompt": "Is the point (5, 4) on the line 3x - 2y = 6? How do you know?",
+        "slot": "test_point",
+        "lookFor": "No: 3(5) - 2(4) = 15 - 8 = 7, which is not 6. The reasoning is substituting and checking.",
+        "onMiss": "Ask them to put x = 5 and y = 4 into the left side and say what number comes out."
+      }
+    },
+    {
+      "id": "b8", "kind": "contrast",
+      "say": "Another slip: when the axes use different scales, some students multiply the coordinates by the scale before plotting. The printed numbers on the axis already account for the scale. Show the table value x = 4, y = 2 and where the point lands.",
+      "board": [
+        { "type": "picture", "ref": "contrast:scale-confusion-plotting", "step": "s3" },
+        { "type": "exception", "text": "read the numbers on the axis, not centimetres" },
+        { "type": "slot", "id": "scale", "label": "To plot y = 2 I ___" }
+      ],
+      "ask": {
+        "prompt": "A table says x = 4 and y = 2, and the y-axis has 2 cm for each unit. Do you multiply the 2 by the scale, or read 2 straight off the axis?",
+        "slot": "scale",
+        "lookFor": "Read 2 straight off the axis - the printed numbers already include the scale.",
+        "onMiss": "Ask where the number 2 is printed on the y-axis, and to point at that mark."
+      }
+    },
+    {
+      "id": "b9", "kind": "apply",
+      "say": "Their turn on a fresh equation: 3x - 4y = 12. Ask them to rearrange it into y = mx + c and say the gradient and where it crosses the y-axis. No hints until they are stuck.",
+      "board": [
+        { "type": "picture", "ref": "apply", "step": "s3" },
+        { "type": "slot", "id": "rearranged", "label": "y = ___" }
+      ],
+      "ask": {
+        "prompt": "Rearrange 3x - 4y = 12 into y = mx + c. What are the gradient and the y-intercept?",
+        "slot": "rearranged",
+        "lookFor": "y = (3/4)x - 3: gradient 3/4, y-intercept -3 (and it crosses the x-axis at 4). Watch the sign when dividing by -4.",
+        "onMiss": "Ask them to isolate -4y first, then divide every term by -4, one term at a time."
+      }
+    },
+    {
+      "id": "b10", "kind": "check",
+      "say": "Close with a fresh question that uses the point-on-the-line idea: on the graph of 2x - 3y = 2, the point (1, q) lies on the line. Ask for q and for how they found it.",
+      "board": [
+        { "type": "heading", "text": "Your turn" },
+        { "type": "slot", "id": "q_value", "label": "On 2x − 3y = 2, the point (1, q) has q = ___" }
+      ],
+      "ask": {
+        "prompt": "The point (1, q) lies on the graph of 2x - 3y = 2. What is q, and how did you find it?",
+        "slot": "q_value",
+        "lookFor": "q = 0, by substituting x = 1: 2 - 3q = 2, so q = 0.",
+        "onMiss": "Ask what happens to the equation when x is replaced by 1, and what is left to solve."
+      }
+    }
+  ]
+}

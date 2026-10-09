@@ -194,7 +194,7 @@ interval progression, lapse reset, status transitions.
 | T17 | `compileTeachingPlan()` + persistence + tests TP-01…TP-08 | FR-17 | T10, T15, T05 | M | sonnet |
 | T18 | `renderPlanForPrompt()`; wire into `/session/start` + composer + kickoff | FR-18, FR-21 | T17, T07 | S | sonnet |
 | T19 | **Spike:** guidance injection into Live (options A/B/C, TS §5.3); measure latency; pick one | FR-19 | T11, T18 | M | sonnet+review |
-| T20 | `compilePlanDelta()` + limits enforcement (probe budget, retry cap, park & escalate) | FR-19, FR-20 | T19 | M | sonnet |
+| T20 | `compilePlanDelta()` + limits enforcement (probe budget, retry cap → teach directly; park & escalate removed 2026-09-30) | FR-19, FR-20 | T19 | M | sonnet |
 
 **T19 acceptance:** a written result appended to DECISIONS.md with measured added latency p50/p95
 and the interruption count across ≥ 10 exchanges per option; the chosen option implemented behind
@@ -255,7 +255,7 @@ Chapter 1 pictures are withheld by design.
 **Never cut:** T02, T11, T17, T23, T24 — they carry the Technical Merit and judge-question answers.
 
 ## Open questions (owner decisions)
-- **OQ-1** Persona name (keep "Dr. Marcus Vance" vs an age-neutral name).
+- **OQ-1** ~~Persona name~~ - RESOLVED 2026-10-07: the child names the tutor at login (default "Dr. Marcus"); see docs/TUTOR_PERSONA.md §2.
 - **OQ-2** Theme framing under Sustainability & Social Impact.
 - **OQ-3** Second subject for the "works across subjects" proof (suggest a science concept in text mode).
 - **OQ-4** Do the configured Gemini model IDs resolve? (T01 answers it.)

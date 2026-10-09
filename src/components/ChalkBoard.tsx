@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import { useTutorName } from '../persona/TutorNameContext';
 
 // ─────────────────────────────────────────────────────────────────
 // ChalkBoard — where the tutor writes out working step by step.
@@ -36,6 +37,7 @@ function splitLabel(line: string): { label?: string; text: string } {
 }
 
 export const ChalkBoard: React.FC<Props> = ({ title, lines, formula, liveNotes }) => {
+  const tutorName = useTutorName();
   const all = useMemo(() => [...lines, ...liveNotes].map(chalkify), [lines, liveNotes]);
   // Shrink the writing as the board fills up, the way a teacher writes smaller.
   const size = all.length <= 4 ? 30 : all.length <= 6 ? 26 : all.length <= 8 ? 23 : 21;
@@ -110,7 +112,7 @@ export const ChalkBoard: React.FC<Props> = ({ title, lines, formula, liveNotes }
             );
           })}
           {all.length === 0 && !title && (
-            <p className="text-white/35 text-[24px]">Dr. Marcus will write here as he explains.</p>
+            <p className="text-white/35 text-[24px]">{tutorName} will write here as you learn.</p>
           )}
         </div>
 

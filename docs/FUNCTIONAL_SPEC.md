@@ -1,6 +1,6 @@
 # Functional Specification — Adaptive AI Tutor
 
-_Status: v1.0 · 2026-09-24_
+_Status: v1.1 · 2026-10-09 (audited: FR-20 changed; FR-47/48 added; product name is Ananta — see docs/AUDIT_2026-10-09.md)_
 _Companion docs: TUTOR_PERSONA.md · LEARNER_MODEL.md · TEACHING_PLAN.md · TECHNICAL_SPEC.md · BUILD_PLAN.md · TRACEABILITY.md_
 
 ## 1. Product in one paragraph
@@ -39,7 +39,7 @@ Problem Alignment & Impact 25% · Innovation & Creativity 25% · UX & Solution D
 4. Every learner with that board + grade now sees the subject, chapter by chapter.
 
 ### J1 — First session (cold start)
-1. Learner signs up with name, **board and grade** (age band follows from the grade) → **onboarding** (≈3 min): 3 interests, how they feel about each of *their* subjects, accessibility options.
+1. Learner signs up with name, **board and grade** (age band follows from the grade) → **"Name your tutor"** (keep "Dr. Marcus" or type another name; asked again, pre-filled, at every login - FR-09a) → **onboarding** (≈3 min): 3 interests, how they feel about each of *their* subjects, accessibility options.
 2. Picks one of their subjects → a chapter → a concept (any concept; "Builds on" hints, no locks).
 3. Tutor opens (persona `OPEN_SESSION`), **probes prerequisites** (max 3), then teaches the first chunk with a visual + concise board notes.
 4. Check → "walk me through it" → diagnosis → next move. The learner card begins to fill with evidence.
@@ -79,6 +79,7 @@ Priority: **M** = must · **H** = high value · **N** = nice to have.
 ### Learner model
 | ID | Requirement | Pri | Acceptance criteria |
 |---|---|---|---|
+| FR-09a | After every login the learner is asked what to call the tutor; the name is pre-filled with their last choice (default "Dr. Marcus"), saved on their profile, and used on every screen label and in the voice tutor's prompt | M | `profile.tutorName`; `POST /api/learners/:id/tutor-name`; invalid/empty falls back to the default; tests/tutor-name/run.mjs |
 | FR-09 | Onboarding captures interests, feelings, age band, accessibility | M | Stored in `profile.onboarding`; used in the first plan |
 | FR-10 | Every learner answer is diagnosed (closed misconception catalogue, error class, ladder level) without blocking the voice | M | Diagnosis p95 < 4 s; voice never waits on it |
 | FR-11 | Append-only evidence events with IDs, session, plan version, move, representation | M | Firestore subcollection; events survive restarts |
@@ -99,13 +100,19 @@ Priority: **M** = must · **H** = high value · **N** = nice to have.
 | FR-45 | Photos are lesson-specific, vision-verified, labelled AI-generated; no stock fallback | H | `photo-gen.mjs` (5 checks); no image is shipped when the reviewer is unreachable |
 | FR-46 | Board pictures teach one idea each (planner: ≤ 4 pictures, 1–2 facts each) and open with a prediction question | H | Planner prompt + `predict.no-hook-question` lint; `quality.mjs` |
 
+### Added after v1.0 (retroactive, 2026-10-09)
+| ID | Requirement | Pri | Acceptance criteria / status |
+|---|---|---|---|
+| FR-47 | Guided tutor mode: tutor follows a prepared beat script and writes one growing board; switchable per session (`?tutor=guided`, `TUTOR_MODE`), falls back to standard when a concept has no script | H | `src/guided/*`, 4 scripts; `tests/guided/run.mjs` currently crashes (stale) — status 🟨, undocumented until this audit |
+| FR-48 | Child names the tutor at login; name saved on the profile and used in UI + prompt (cleaned, ≤24 chars) | N | `tests/tutor-name/run.mjs` 13/13; not verified in browser (D-2026-10-07-1) |
+
 ### Teaching plan
 | ID | Requirement | Pri | Acceptance criteria |
 |---|---|---|---|
 | FR-17 | Plan compiled deterministically at session start | M | TP-01…TP-08 pass |
 | FR-18 | Plan rendered into the tutor's instructions | M | Rendered block present in the composed prompt; snapshot test |
 | FR-19 | Plan updated after each exchange; guidance delivered to the tutor | M | Delta visible in the UI within 4 s; delivered to the voice session if spike T19 succeeds, else applied at the next tutor turn via text channel or next session |
-| FR-20 | Limits enforced (probe budget, retry cap, park-and-escalate) | M | P-09 passes; escalation record written |
+| FR-20 | Limits enforced (probe budget, retry cap → **teach directly**; park-and-escalate REMOVED 2026-09-30, D-2026-09-30-9) | M | P-09 passes; escalation record written |
 | FR-21 | Due spaced reviews run at session start | H | Review items asked first; review state updated |
 
 ### Views
