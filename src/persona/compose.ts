@@ -19,7 +19,7 @@ import { renderAgeBandSurface } from './ageBands';
 import { SubjectMode, renderSubjectModeSurface } from './subjectModes';
 import { Channel, renderChannelSurface } from './channels';
 
-export const DEFAULT_PERSONA_NAME = process.env.PERSONA_NAME || 'Dr. Marcus Vance'; // OQ-1, docs/TUTOR_PERSONA.md §2
+export const DEFAULT_PERSONA_NAME = process.env.PERSONA_NAME || 'Ananta'; // OQ-1, docs/TUTOR_PERSONA.md §2
 
 const VOICE_BOARD_BLOCK = `THE BOARD (voice channel)
 One idea on the board at a time. It follows your voice — you say it, then it appears.

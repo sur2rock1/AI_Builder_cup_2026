@@ -23,7 +23,7 @@ for (let i = 0; i < 3; i++) board = startBeat(board, script);
 
 const noop = () => {};
 const App: React.FC = () => (
-  <TutorNameProvider name="Dr. Marcus">
+  <TutorNameProvider name="Ananta">
     <div id="app-root" className="w-full h-app flex flex-col bg-[#0C0F16] text-white overflow-hidden">
       <main className="flex-1 min-h-0">
         <ImmersiveStage
