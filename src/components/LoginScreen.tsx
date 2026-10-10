@@ -174,7 +174,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
           </div>
           <div className="text-left">
             <h1 className="text-3xl font-bold text-white tracking-tight">Ananta</h1>
-            <p className="text-indigo-300 text-sm font-medium">Your AI Learning Companion</p>
+            <p className="text-indigo-300 text-sm font-medium">Where Every Question Opens Infinity</p>
           </div>
         </div>
         <p className="text-slate-400 text-sm max-w-xs mx-auto">

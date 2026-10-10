@@ -9,7 +9,7 @@
 // ─────────────────────────────────────────────────────────────────
 
 /** What the tutor is called until the child picks another name. */
-export const DEFAULT_TUTOR_NAME = 'Dr. Marcus';
+export const DEFAULT_TUTOR_NAME = 'Ananta';
 export const MAX_TUTOR_NAME_LENGTH = 24;
 
 /** A short list of words we will not accept as a name (kept small; the shape rule below is the real guard). */
