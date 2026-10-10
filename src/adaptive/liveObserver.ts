@@ -106,7 +106,7 @@ JSON shape:
 }
 
 async function callModel(apiKey: string, prompt: string): Promise<string> {
-  const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+  const ai = new GoogleGenAI({ apiKey, vertexai: false, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
   const order = [
     ...(resolvedModel ? [resolvedModel] : []),
     ...MODEL_CANDIDATES.filter(m => m !== resolvedModel && !failedModels.has(m)),

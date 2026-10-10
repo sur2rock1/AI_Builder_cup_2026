@@ -35,7 +35,7 @@ export type VoiceMode = 'classic' | 'adaptive';
 export const ALL_TOOLS: any[] = [
   {
     name: 'update_chalkboard_notes',
-    description: 'Writes or updates lecture notes, definitions, formulas, or bullet points on the digital chalkboard.',
+    description: 'Writes notes on the RIGHT of the lesson canvas. The picture on the left stays visible. Do NOT call switch_board_view after this.',
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -55,7 +55,7 @@ export const ALL_TOOLS: any[] = [
   },
   {
     name: 'write_live_note',
-    description: 'Appends an instant chalk bullet note to the board while actively explaining a specific detail.',
+    description: 'Adds one short note beside the current picture. Do NOT call switch_board_view — notes and picture share the same canvas.',
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -67,7 +67,7 @@ export const ALL_TOOLS: any[] = [
   {
     name: 'switch_board_view',
     description:
-      'Switches the digital blackboard view to focus the student on a specific visual mode requested by them or decided by you. Modes: 2d (schematic / concept diagram), 3d (interactive 3D spatial model), photo (photorealistic image / scientific camera visual), chalkboard (lecture notes), explorer (simulation sandbox), quiz (question).',
+      'RARE. The canvas already shows the picture AND the notes together. Do NOT call this with photo, chalkboard, 2d, or quiz — that hides the picture. Only use tab "3d" for a geometry model.',
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -82,7 +82,7 @@ export const ALL_TOOLS: any[] = [
   },
   {
     name: 'generate_photo_visual',
-    description: 'Generates a new photorealistic image or visual study on the blackboard when requested by the student.',
+    description: 'Adds a new picture to the left-hand series on the canvas (leaf, stomata, roots…). Notes stay on the right. Do NOT also call switch_board_view.',
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -254,12 +254,12 @@ export const CLASSIC_TOOL_NAMES = [
 export const CLASSIC_TOOLS = ALL_TOOLS.filter(t => CLASSIC_TOOL_NAMES.includes(t.name));
 
 /** Elicit + one probe. Same rules in the Live mouth (server.ts) and diagnose-voice. No extra tools. */
-export const CLASSIC_CROSS_CHECK = `CROSS-CHECK after every answer to a question you asked — whether they are right or wrong:
-- If they have not said how: ask "How did you work that out?" Then wait. Do not say whether they are right. Do not state the answer (never "it's 12", never read the correct option).
-- After they give a method: ask ONE short probe that would go differently if that method is broken (a new number, or "what if this side were…?"). Then silence.
-- At most TWO probes on the same idea in this lesson. Then re-teach with a different picture or example — still without giving the number.
-- "ok" / "got it" / "continue" are not answers. Keep driving the lesson.
-- A probe is one question only. Keep each spoken turn to 1–3 sentences.`;
+export const CLASSIC_CROSS_CHECK = `CROSS-CHECK only after a REAL answer (a number, a choice A/B/C, or a method). "ok", "yeah", "sure", "understood", "continue", "next", "okay then" are NOT answers — keep teaching, do not ask how they got it.
+- After a real answer with no method: one "How did you work that out?" Then wait. Never state the answer.
+- After they give a method: ONE short probe. Then teach the next idea (do not freeze).
+- At most TWO probes on the same idea. Then a different picture or example — still without giving the number.
+- Never ask "do you have any questions?" You decide what comes next.
+- Teach in beats: 4–8 sentences plus one board action, then at most one check. Do not stop every sentence.`;
 
 // ─── classic: original build + Phase 4 cross-check (tools / connection unchanged) ─
 export function classicSystemInstruction(topic: string, grade: string, learnerContext: string): string {
@@ -305,7 +305,7 @@ After covering all 6, summarise and pose a final challenge quiz.
 ━━━ STYLE ━━━
 • Speak with warmth, energy, and passion — like the best teacher the student has ever had
 • Use analogies ("Think of the hypotenuse like the slope of a ramp...")
-• Keep each spoken turn to 1–3 sentences. A probe is one question, then silence.
+• Teach in 4–8 sentence beats. A probe is one question, then silence. Do not stop on "ok".
 • Always address ${grade} vocabulary level${learnerContext ? '\n\n' + learnerContext : ''}`;
 }
 

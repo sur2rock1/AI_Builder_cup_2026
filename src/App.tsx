@@ -33,7 +33,8 @@ import {
 
 import type { LearnerSnapshot } from './adaptive/liveObserver';
 import { ImmersiveStage } from './components/ImmersiveStage';
-import { PanelMode } from './components/ScenePanel';
+import { PanelMode, BoardSurface as CanvasSurface } from './components/ScenePanel';
+import { isJunkFallbackUrl, lessonClipFor, lessonClipFromSeries, regionFor, type LessonClip, type VisualRegion } from './curriculum/topicVisual';
 import { getScene, PYTHAGORAS_SCENES } from './scenes/pythagorasScenes';
 
 // Which teaching surface to render.
@@ -70,6 +71,14 @@ export const App: React.FC = () => {
   const [focusPart, setFocusPart] = useState<FigurePart | null>(null);
   // Lesson opens on a real situation, then fades to the bare shape (concreteness fading).
   const [panelMode, setPanelMode] = useState<PanelMode>('real');
+  const [boardSurfaces, setBoardSurfaces] = useState<CanvasSurface[]>(['photo', 'diagram', 'video', 'chalk']);
+  const [visualUrl, setVisualUrl] = useState<string | undefined>(undefined);
+  const [pictureSeries, setPictureSeries] = useState<Array<{ url: string; caption?: string }>>([]);
+  const [sessionIntent, setSessionIntent] = useState('learn');
+  const [focusRegion, setFocusRegion] = useState<VisualRegion | null>(null);
+  const [lessonClip, setLessonClip] = useState<LessonClip | null>(null);
+  const [clipPlaying, setClipPlaying] = useState(false);
+  const [clipFrame, setClipFrame] = useState(0);
   // True while the server is checking an answer. Shown to the child so a short
   // pause reads as "Lumen is thinking about what I said", not as a hang.
   const [tutorThinking, setTutorThinking] = useState(false);
@@ -247,11 +256,15 @@ export const App: React.FC = () => {
         body: JSON.stringify({
           topic: activeTopic,
           prompt: customPrompt,
+          sessionId: sessionId || undefined,
         }),
       });
 
       const data = await res.json();
-      if (data && data.imageUrl) {
+      if (data && data.imageUrl && !isJunkFallbackUrl(data.imageUrl)) {
+        setVisualUrl(data.imageUrl);
+        setPictureSeries(prev => prev.some(p => p.url === data.imageUrl) ? prev : [...prev, { url: data.imageUrl, caption: data.caption }]);
+        setPanelMode('real');
         setBlackboard((prev) => {
           if (!prev.lessonData) return prev;
           return {
@@ -310,6 +323,22 @@ export const App: React.FC = () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!clipPlaying || !lessonClip?.frames?.length) return;
+    const frame = lessonClip.frames[Math.min(clipFrame, lessonClip.frames.length - 1)];
+    const ms = Math.max(2500, (frame?.seconds || 5) * 1000);
+    const t = window.setTimeout(() => {
+      setClipFrame(i => {
+        if (i + 1 >= lessonClip.frames.length) {
+          setClipPlaying(false);
+          return i;
+        }
+        return i + 1;
+      });
+    }, ms);
+    return () => window.clearTimeout(t);
+  }, [clipPlaying, clipFrame, lessonClip]);
 
   // Handle Tool Calls from Gemini Live Voice Model
   const handleToolCall = useCallback(
@@ -396,9 +425,9 @@ export const App: React.FC = () => {
           const coreRule = args.coreRuleOrFormula || undefined;
           const title = args.title || undefined;
 
-          setBoardNote({ title, lines: bulletPoints.map(String), formula: coreRule });
-          // Writing on the board: switch to the chalkboard, on a fresh page.
-          setPanelMode('chalk');
+          const englishLines = bulletPoints.map(String).filter(l => !/[¿¡ñáéíóúü]/i.test(l));
+          setBoardNote({ title, lines: englishLines.length ? englishLines : bulletPoints.map(String), formula: coreRule });
+          // Canvas keeps the picture and the notes together — do not swap the board away.
           setBlackboard(prev => ({ ...prev, customLiveNotes: [] }));
           if (coreRule) revealPart('formula');
 
@@ -424,32 +453,68 @@ export const App: React.FC = () => {
 
         case 'write_live_note': {
           const note = args.note;
-          if (note) {
+          if (note && !/[¿¡ñáéíóúü]/i.test(String(note))) {
             setBlackboard((prev) => ({
               ...prev,
-              activeTab: 'chalkboard',
-              customLiveNotes: [...prev.customLiveNotes, String(note)],
+              customLiveNotes: [...prev.customLiveNotes, String(note)].slice(-3),
             }));
-            setPanelMode('chalk');
           }
           break;
         }
 
         case 'switch_board_view': {
-          let tab = args.tab as BlackboardTab;
+          let tab = args.tab as BlackboardTab | 'video';
           if ((tab as any) === 'diagram') tab = '2d';
           if (['2d', '3d', 'photo', 'chalkboard', 'explorer', 'quiz'].includes(tab)) {
-            setBlackboard((prev) => ({ ...prev, activeTab: tab }));
+            setBlackboard((prev) => ({ ...prev, activeTab: tab as BlackboardTab }));
           }
-          // Six legacy tabs collapse onto three views: real world, shape, 3D.
-          setPanelMode(tab === '3d' ? '3d' : tab === 'photo' ? 'real' : tab === 'chalkboard' ? 'chalk' : 'shape');
+          if (tab === 'video') setPanelMode('video');
+          // photo / chalkboard stay on the same canvas — picture left, notes right.
+          break;
+        }
+
+        case 'focus_visual_region': {
+          const region = regionFor(String(args.label || args.part || 'leaf'));
+          if (typeof args.x === 'number') region.x = Number(args.x);
+          if (typeof args.y === 'number') region.y = Number(args.y);
+          if (typeof args.zoom === 'number') region.zoom = Number(args.zoom);
+          if (args.label) region.label = String(args.label);
+          setFocusRegion(region);
+          setPanelMode('real');
+          break;
+        }
+
+        case 'generate_video_visual': {
+          const prompt = String(args.prompt || args.title || '');
+          const clip = pictureSeries.length >= 2
+            ? lessonClipFromSeries(topic || 'this lesson', pictureSeries, prompt)
+            : (args.clip as LessonClip) || lessonClipFor(topic || 'this lesson', prompt);
+          setLessonClip(clip);
+          setClipFrame(0);
+          setClipPlaying(true);
+          setBoardNote(prev => prev || { title: clip.title, lines: clip.frames.map(f => f.caption) });
+          break;
+        }
+
+        case 'control_video': {
+          const action = String(args.action || 'play');
+          if (action === 'pause') setClipPlaying(false);
+          else if (action === 'next') setClipFrame(i => i + 1);
+          else setClipPlaying(true);
+          setPanelMode('video');
           break;
         }
 
         case 'generate_photo_visual': {
           setPanelMode('real');
-          const prompt = args.prompt;
-          handleGeneratePhoto(prompt);
+          setBlackboard(prev => ({ ...prev, isGeneratingPhoto: true, activeTab: 'photo' }));
+          if (args.imageUrl && !isJunkFallbackUrl(String(args.imageUrl))) {
+            setVisualUrl(String(args.imageUrl));
+            setPictureSeries(prev => prev.some(p => p.url === args.imageUrl) ? prev : [...prev, { url: String(args.imageUrl) }]);
+            setBlackboard(prev => ({ ...prev, isGeneratingPhoto: false }));
+          } else if (!args.generating) {
+            handleGeneratePhoto(args.prompt);
+          }
           break;
         }
 
@@ -497,7 +562,6 @@ export const App: React.FC = () => {
               lines: [`Question: ${question}`, ...opts.map((o, i) => `${'ABCDEFGH'[i] || i + 1})  ${o}`)],
             });
             setBlackboard(prev => ({ ...prev, customLiveNotes: [] }));
-            setPanelMode('chalk');
           }
 
           if (question && Array.isArray(options)) {
@@ -564,7 +628,7 @@ export const App: React.FC = () => {
           console.warn(`[App] Unhandled tool call: ${name}`);
       }
     },
-    [grade, topic, loadLesson, revealPart]
+    [grade, topic, loadLesson, revealPart, pictureSeries]
   );
 
   // ─── Adaptive session handlers ─────────────────────────────
@@ -690,7 +754,12 @@ export const App: React.FC = () => {
 
       // 2. Connect WebSocket to Gemini Live with topic and grade query params
       const activeTopic = topic || 'any topic the student asks for on the fly';
-      const wsUrl = liveWebSocketUrl(activeTopic, grade);
+      const wsUrl = liveWebSocketUrl(activeTopic, grade, {
+        studentId: loggedInStudent?.studentId,
+        sessionId: sessionId || undefined,
+        intent: sessionIntent,
+        subjectId: adaptiveSession?.subjectId,
+      });
 
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;
@@ -722,6 +791,20 @@ export const App: React.FC = () => {
           } else if (msg.type === 'session_ready') {
             setConnectionStatus('connected');
             setLearnerSnap(null); setLiveMastery(0); setLiveMisconceptions([]); setLiveAssessment(null);
+            const extras = msg as { boardPack?: CanvasSurface[]; mediaPrompts?: unknown[] };
+            if (Array.isArray(extras.boardPack) && extras.boardPack.length) {
+              setBoardSurfaces(extras.boardPack);
+              setPanelMode(extras.boardPack.includes('photo') ? 'real' : extras.boardPack.includes('chalk') ? 'chalk' : extras.boardPack[0] === 'diagram' ? 'shape' : extras.boardPack[0] === 'model' ? '3d' : 'real');
+            }
+            setVisualUrl(undefined);
+            setPictureSeries([]);
+            const firstPrompt = Array.isArray(extras.mediaPrompts) ? extras.mediaPrompts.find(p => typeof p === 'string' && p) : null;
+            if (firstPrompt) handleGeneratePhoto(String(firstPrompt));
+          } else if (msg.type === 'visual_ready' && msg.imageUrl && !isJunkFallbackUrl(String(msg.imageUrl))) {
+            setVisualUrl(String(msg.imageUrl));
+            setPictureSeries(prev => prev.some(p => p.url === msg.imageUrl) ? prev : [...prev, { url: String(msg.imageUrl) }]);
+            setPanelMode('real');
+            setBlackboard(prev => ({ ...prev, isGeneratingPhoto: false, activeTab: 'photo' }));
           } else if (msg.type === 'interrupted') {
             audioMgr.flushPlayback();
           } else if (msg.type === 'tool_call') {
@@ -911,9 +994,10 @@ export const App: React.FC = () => {
 
   const handleSubjectConceptSelect = async (
     subjectId: string, subjectLabel: string,
-    conceptId: string, conceptLabel: string, studentGrade: string
+    conceptId: string, conceptLabel: string, studentGrade: string, nextIntent?: string
   ) => {
     if (!loggedInStudent) return;
+    if (nextIntent) setSessionIntent(nextIntent);
     try {
       const res = await fetch('/api/session/start', {
         method: 'POST',
@@ -1009,7 +1093,7 @@ export const App: React.FC = () => {
     <div
       id="app-root"
       className={`w-screen h-screen flex flex-col font-sans antialiased overflow-hidden select-none ${
-        BOARD_SURFACE === 'immersive' ? 'bg-[#0C0F16] text-white' : 'bg-[#F6F7F9] text-[#161A22]'
+        BOARD_SURFACE === 'immersive' ? 'bg-[#fcf9f3] text-[#1c1c18]' : 'bg-[#F6F7F9] text-[#161A22]'
       }`}
     >
       {/* GLOBAL TOP NAVIGATION — immersive supplies its own single bar. */}
@@ -1100,33 +1184,34 @@ export const App: React.FC = () => {
           {BOARD_SURFACE === 'immersive' ? (
             <ImmersiveStage
               conceptLabel={liveAssessment?.concept?.label || currentConcept?.label || topic || 'Your lesson'}
-              subject={blackboard.lessonData?.subject || 'Maths'}
+              subject={blackboard.lessonData?.subject && blackboard.lessonData.subject !== 'Maths'
+                ? blackboard.lessonData.subject
+                : (topic || 'Lesson')}
               grade={grade}
-              figure={figure}
-              revealed={revealed}
-              focusPart={focusPart}
-              studentThinking={studentThinking}
-              assessment={liveAssessment}
               notes={boardNote}
               liveNotes={blackboard.customLiveNotes}
               masteryScore={liveMastery}
-              misconceptions={liveMisconceptions}
               isLessonActive={connectionStatus === 'connected' || connectionStatus === 'reconnecting'}
               isSpeaking={tutorState.isSpeaking}
               isThinking={tutorThinking}
               learner={learnerSnap}
               mouthOpenness={tutorState.mouthOpenness}
               micLevel={micLevel}
-              panelMode={panelMode}
-              scene={getScene(sceneId)}
-              scene3d={blackboard.lessonData?.scene3d}
               tutorLine={outputTranscript?.text}
               studentName={loggedInStudent?.name}
               onChangeTopic={() => setScreen('subject-select')}
               onOpenProfile={() => setProfilePanelOpen(p => !p)}
-              onPanelModeChange={setPanelMode}
               onConfusion={handleConfusion}
               onToggleLesson={toggleVoiceLesson}
+              visualUrl={visualUrl}
+              generating={blackboard.isGeneratingPhoto}
+              focusRegion={focusRegion}
+              pictureSeries={pictureSeries}
+              clip={lessonClip}
+              clipPlaying={clipPlaying}
+              clipFrame={clipFrame}
+              onToggleClip={() => setClipPlaying(p => !p)}
+              onSelectPicture={(url) => { setClipPlaying(false); setVisualUrl(url); }}
             />
           ) : BOARD_SURFACE === 'canvas' ? (
             <TeachingCanvas

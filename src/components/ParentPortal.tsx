@@ -91,6 +91,9 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, onSignOut, o
   const [adding, setAdding] = useState(false);
   const [addErr, setAddErr] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [replay, setReplay] = useState<{
+    topic: string; startedAt: number; turns: Array<{ role: string; text: string; seq: number }>;
+  } | null>(null);
 
   const applyList = (list: FullLearner[]) => {
     setLearners(list);
@@ -111,6 +114,29 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, onSignOut, o
         setLoading(false);
       }).catch(() => setLoading(false));
   }, [initialStudentId]);
+
+  useEffect(() => {
+    if (!selected?.studentId) { setReplay(null); return; }
+    let cancelled = false;
+    authFetch(`/api/sessions?studentId=${encodeURIComponent(selected.studentId)}`)
+      .then(r => r.json())
+      .then(j => {
+        const first = (j.sessions || [])[0];
+        if (!first) { if (!cancelled) setReplay(null); return null; }
+        return authFetch(`/api/sessions/${encodeURIComponent(first.sessionId)}/turns`)
+          .then(r => r.json())
+          .then(t => {
+            if (cancelled) return;
+            setReplay({
+              topic: first.topic,
+              startedAt: first.startedAt,
+              turns: t.turns || [],
+            });
+          });
+      })
+      .catch(() => { if (!cancelled) setReplay(null); });
+    return () => { cancelled = true; };
+  }, [selected?.studentId]);
 
   const handleSignOut = async () => {
     if (onSignOut) { onSignOut(); return; }
@@ -310,6 +336,22 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, onSignOut, o
                       {sub.subjectLabel || sid}
                     </button>
                   ))}
+                </div>
+              )}
+
+              {replay && replay.turns.length > 0 && (
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                  <h3 className="text-slate-300 text-xs font-semibold uppercase tracking-wider mb-2">Last lesson</h3>
+                  <p className="text-white text-sm font-medium mb-1">{replay.topic}</p>
+                  <p className="text-slate-500 text-xs mb-3">{relativeTime(replay.startedAt)}</p>
+                  <div className="space-y-2 max-h-56 overflow-y-auto">
+                    {replay.turns.map(t => (
+                      <div key={t.seq} className="text-sm">
+                        <span className="text-slate-500 text-xs uppercase mr-2">{t.role}</span>
+                        <span className="text-slate-200">{t.text}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

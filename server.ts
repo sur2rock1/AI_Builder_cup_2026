@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import { WebSocketServer, WebSocket } from 'ws';
 import { LiveObserver } from './src/adaptive/liveObserver';
 import { GoogleGenAI, Modality, Type, LiveServerMessage } from '@google/genai';
+import { studioAi } from './src/live/studioAi';
+import { topicFallbackImage, isJunkFallbackUrl, lessonClipFor, regionFor } from './src/curriculum/topicVisual';
 import { createDynamicLesson } from './src/utils/lessonGenerator';
 import multer from 'multer';
 import {
@@ -23,11 +25,16 @@ import {
   VoiceMode, liveConfigFor, classicSystemInstruction, adaptiveSystemInstruction,
   classicKickoff, adaptiveKickoff, CLASSIC_CROSS_CHECK,
 } from './src/live/liveConfig';
+import {
+  CaptionBuffer, ensureLiveSession, persistCaptionTurns, endLiveSession,
+  listSessionsForLearner, listTurns, getSession as getCaptionSession, recordShownMedia, lastLessonRecap,
+} from './src/live/sessionCaptions';
 import { nextUnmasteredConcept, renameCurriculum } from './src/curriculum/ingest';
 import { getJob, publicJob } from './src/curriculum/extractShared';
 import { startSourceIngestJob } from './src/curriculum/sourceIngest';
 import { confirmAndGenerate } from './src/curriculum/programGenerate';
-import { ensureExampleProgram, getProgramCurriculum, listProgramsForLearner } from './src/curriculum/programStore';
+import { ensureExampleProgram, getProgramCurriculum, getSharedProgram, listEnrollments, listProgramsForLearner, listSharedCurricula, loadSharedProgram, writeSharedCurriculum, enrollLearner } from './src/curriculum/programStore';
+import { boardPackFor } from './src/curriculum/boardPack';
 import { classifyFile } from './src/curriculum/sourceExtract';
 import os from 'os';
 import fs from 'fs';
@@ -94,12 +101,7 @@ app.post('/api/generate-lesson', async (req, res) => {
   }
 
   try {
-    const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: { 'User-Agent': 'aistudio-build' },
-      },
-    });
+    const ai = studioAi(apiKey);
 
     const prompt = `You are a master pedagogical curriculum designer. Generate a comprehensive, highly engaging, age-appropriate interactive lesson for a student in "${targetGrade}" on the topic "${targetTopic}".
 Return a JSON object strictly following this JSON schema:
@@ -283,7 +285,7 @@ Rules:
 - Focus specifically on: "${focus || topic}"`;
 
   try {
-    const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+    const ai = studioAi(apiKey);
     let text = '';
     for (const modelName of ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest']) {
       try {
@@ -306,87 +308,62 @@ Rules:
   }
 });
 
-// Real-time AI Image Generation Endpoint for Photos & Realistic Visuals
-app.post('/api/generate-image', async (req, res) => {
-  const { prompt: userPrompt, topic } = req.body || {};
+async function generateLessonImage(topic: string, userPrompt?: string): Promise<{ imageUrl: string; promptUsed: string; generated: boolean }> {
   const imagePrompt =
     userPrompt ||
-    `A high-resolution, photorealistic, scientific educational photo depicting ${topic || 'science subject'}, sharp focus, authentic natural lighting, realistic textures, macro/telephoto lens, no text overlays, cinematic clarity`;
-
+    `Photorealistic educational photo of ${topic}, a child would recognise this, sharp focus, natural light, no text overlay`;
+  const fallback = topicFallbackImage(topic, imagePrompt);
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.json({
-      success: true,
-      imageUrl: `https://picsum.photos/seed/${encodeURIComponent(String(topic || 'education').toLowerCase())}/1280/720`,
-      caption: `Visual Representation of ${topic || 'Topic'}`,
-      promptUsed: imagePrompt,
-    });
-  }
+  if (!apiKey) return { imageUrl: fallback, promptUsed: imagePrompt, generated: false };
 
   try {
-    const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: { 'User-Agent': 'aistudio-build' },
-      },
-    });
-
-    // Try nano banana image generation with candidate models
-    const imageCandidateModels = ['gemini-3.1-flash-image', 'gemini-3.1-flash-lite-image'];
-    let foundBase64: string | null = null;
-
+    const ai = studioAi(apiKey);
+    const imageCandidateModels = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image', 'gemini-3.1-flash-lite-image'];
     for (const imgModel of imageCandidateModels) {
       try {
         const imgResponse = await ai.models.generateContent({
           model: imgModel,
-          contents: {
-            parts: [{ text: imagePrompt }],
-          },
-          config: {
-            imageConfig: {
-              aspectRatio: '16:9',
-            },
-          },
+          contents: { parts: [{ text: imagePrompt }] },
+          config: { imageConfig: { aspectRatio: '16:9' } },
         });
-
         const parts = imgResponse.candidates?.[0]?.content?.parts || [];
         for (const part of parts) {
           if (part.inlineData?.data) {
-            foundBase64 = part.inlineData.data;
-            break;
+            return {
+              imageUrl: `data:image/png;base64,${part.inlineData.data}`,
+              promptUsed: imagePrompt,
+              generated: true,
+            };
           }
         }
-        if (foundBase64) break;
       } catch (imgErr: any) {
-        console.warn(`[API /api/generate-image] Model ${imgModel} returned error, trying next candidate...`, imgErr?.message);
+        console.warn(`[generate-image] ${imgModel} failed:`, imgErr?.message);
       }
     }
-
-    if (foundBase64) {
-      return res.json({
-        success: true,
-        imageUrl: `data:image/png;base64,${foundBase64}`,
-        caption: `AI Generated Real-Time Photographic Study: ${topic || 'Subject'}`,
-        promptUsed: imagePrompt,
-      });
-    }
-
-    // If no inlineData returned, provide high-quality fallback
-    return res.json({
-      success: true,
-      imageUrl: `https://picsum.photos/seed/${encodeURIComponent(String(topic || 'education').toLowerCase())}/1280/720`,
-      caption: `Visual Study: ${topic || 'Topic'}`,
-      promptUsed: imagePrompt,
-    });
   } catch (err: any) {
-    console.error('[API /api/generate-image] Image generation failed, using fallback:', err?.message);
-    return res.json({
-      success: true,
-      imageUrl: `https://picsum.photos/seed/${encodeURIComponent(String(topic || 'education').toLowerCase())}/1280/720`,
-      caption: `Visual Study: ${topic || 'Topic'}`,
-      promptUsed: imagePrompt,
-    });
+    console.warn('[generate-image] pipeline failed:', err?.message);
   }
+  return { imageUrl: fallback, promptUsed: imagePrompt, generated: false };
+}
+
+app.post('/api/generate-image', async (req, res) => {
+  const { prompt: userPrompt, topic, sessionId } = req.body || {};
+  const result = await generateLessonImage(String(topic || 'science'), userPrompt);
+  if (sessionId && !isJunkFallbackUrl(result.imageUrl)) {
+    void recordShownMedia(String(sessionId), {
+      kind: 'image',
+      title: result.generated ? 'Generated picture' : 'Topic picture',
+      prompt: result.promptUsed.slice(0, 400),
+      ...(result.imageUrl.startsWith('http') ? { url: result.imageUrl } : {}),
+    }).catch(() => {});
+  }
+  res.json({
+    success: true,
+    imageUrl: result.imageUrl,
+    caption: result.generated ? `Picture: ${topic || 'lesson'}` : `Picture of ${topic || 'this idea'}`,
+    promptUsed: result.promptUsed,
+    generated: result.generated,
+  });
 });
 
 // Generalized Tools for Gemini Live Interactive Voice Session
@@ -394,7 +371,7 @@ app.post('/api/generate-image', async (req, res) => {
 const dynamicFunctionDeclarations = [
   {
     name: 'update_chalkboard_notes',
-    description: 'Writes or updates lecture notes, definitions, formulas, or bullet points on the digital chalkboard.',
+    description: 'Writes notes on the RIGHT of the lesson canvas. The picture on the left stays visible. Do NOT call switch_board_view after this.',
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -414,7 +391,7 @@ const dynamicFunctionDeclarations = [
   },
   {
     name: 'write_live_note',
-    description: 'Appends an instant chalk bullet note to the board while actively explaining a specific detail.',
+    description: 'Adds one short note beside the current picture. Do NOT call switch_board_view — notes and picture share the same canvas.',
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -426,13 +403,13 @@ const dynamicFunctionDeclarations = [
   {
     name: 'switch_board_view',
     description:
-      'Switches the digital blackboard view to focus the student on a specific visual mode requested by them or decided by you. Modes: 2d (schematic / concept diagram), 3d (interactive 3D spatial model), photo (photorealistic image / scientific camera visual), chalkboard (lecture notes), explorer (simulation sandbox), quiz (question).',
+      'RARE. The canvas already shows the picture AND the notes together. Do NOT call this with photo, chalkboard, 2d, video, or quiz — that hides the picture. Only use tab "3d" for a geometry model.',
     parameters: {
       type: Type.OBJECT,
       properties: {
         tab: {
           type: Type.STRING,
-          enum: ['2d', '3d', 'photo', 'chalkboard', 'explorer', 'quiz'],
+          enum: ['2d', '3d', 'photo', 'chalkboard', 'explorer', 'quiz', 'video'],
           description: 'The visual blackboard view tab to display',
         },
       },
@@ -441,13 +418,50 @@ const dynamicFunctionDeclarations = [
   },
   {
     name: 'generate_photo_visual',
-    description: 'Generates a new photorealistic image or visual study on the blackboard when requested by the student.',
+    description: 'Adds a new picture to the left-hand series on the canvas (leaf, stomata, roots…). Notes stay on the right. Do NOT also call switch_board_view.',
     parameters: {
       type: Type.OBJECT,
       properties: {
         prompt: { type: Type.STRING, description: 'Detailed prompt for the realistic photo or visual' },
       },
       required: ['prompt'],
+    },
+  },
+  {
+    name: 'generate_video_visual',
+    description: 'Play a short clip over the left picture. Do NOT call switch_board_view. Use when the child asks for a video, or when a moving story (sap rising, stomata opening) helps more than a still.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: { type: Type.STRING, description: 'What the clip should show, in child language' },
+        title: { type: Type.STRING, description: 'Short title for the clip' },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'focus_visual_region',
+    description: 'Zoom and ring a part of the current picture while you explain (stomata, veins, roots, chlorophyll).',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        label: { type: Type.STRING, description: 'What to name the zoom, e.g. Tiny doors for air' },
+        x: { type: Type.NUMBER, description: 'Optional 0-100 x percent' },
+        y: { type: Type.NUMBER, description: 'Optional 0-100 y percent' },
+        zoom: { type: Type.NUMBER, description: 'Optional zoom 1.2-3' },
+      },
+      required: ['label'],
+    },
+  },
+  {
+    name: 'control_video',
+    description: 'Play, pause, or step the clip if the child interrupts.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: { type: Type.STRING, enum: ['play', 'pause', 'next'] },
+      },
+      required: ['action'],
     },
   },
   {
@@ -515,7 +529,7 @@ const upload = multer({
   },
 });
 
-// GET /api/curricula — this household's Firestore programs only (no global builtin list).
+// GET /api/curricula — shared catalog (curricula/*) plus this household's enrollments.
 app.get('/api/curricula', async (req, res) => {
   let extra: ReturnType<typeof getProgramCurriculum>[] = [];
   const header = String(req.headers.authorization || '');
@@ -526,15 +540,23 @@ app.get('/api/curricula', async (req, res) => {
       const role = await accountRole(decoded.uid);
       const household = role === 'parent' ? listLearners(decoded.uid, true) : listLearners(decoded.uid, false);
       await Promise.all(household.map(l => ensureExampleProgram(l.studentId, l.grade)));
-      const programs = (await Promise.all(household.map(l => listProgramsForLearner(l.studentId)))).flat();
-      extra = programs.map(p => p.curriculum).filter(Boolean);
+      const householdPrograms = (await Promise.all(household.map(l => listProgramsForLearner(l.studentId)))).flat();
+      await Promise.all(householdPrograms.map(p => writeSharedCurriculum(p)));
+      const shared = await listSharedCurricula();
+      extra = [...shared, ...householdPrograms].map(p => p.curriculum).filter(Boolean);
+      const enrolledIds = new Set<string>();
+      for (const l of household) {
+        (await listEnrollments(l.studentId)).forEach(id => enrolledIds.add(id));
+      }
+      householdPrograms.forEach(p => { if (p.curriculum?.id) enrolledIds.add(p.curriculum.id); });
+      (req as any)._enrolledIds = [...enrolledIds];
     } catch { /* empty list if token is bad */ }
   }
   const seen = new Set<string>();
-  const unique = extra.filter(c => {
-    if (!c?.id || seen.has(c.id)) return false;
+  const unique = extra.flatMap(c => {
+    if (!c?.id || seen.has(c.id)) return [];
     seen.add(c.id);
-    return true;
+    return [c];
   });
   const normalised = unique.map(c => ({
     subjectId: c.id,
@@ -550,7 +572,7 @@ app.get('/api/curricula', async (req, res) => {
       chapter: con.chapter || null,
     })),
   }));
-  res.json({ curricula: normalised });
+  res.json({ curricula: normalised, enrolledIds: (req as any)._enrolledIds || [] });
 });
 
 function parseSourceUrls(body: any): string[] {
@@ -875,13 +897,15 @@ app.post('/api/household/children', async (req, res) => {
 });
 
 // ─── Adaptive session endpoints ─────────────────────────────────
-app.post('/api/session/start', (req, res) => {
+app.post('/api/session/start', async (req, res) => {
   const { studentId, name, grade, subjectId } = req.body;
   if (!studentId || !subjectId)
     return (res as any).status(400).json({ error: 'studentId and subjectId required' });
   const learner = getOrCreateLearner(studentId, name || 'Student', grade || 'Secondary 2 (Grade 8)');
-  const curriculum = curriculumFor(subjectId);
+  const shared = await loadSharedProgram(subjectId);
+  const curriculum = shared?.curriculum || curriculumFor(subjectId);
   if (!curriculum) return (res as any).status(404).json({ error: 'Curriculum not found' });
+  if (shared) void enrollLearner(studentId, curriculum.id, shared.programId);
   ensureSubject(studentId, subjectId, curriculum.label, curriculum.grade, curriculum.source);
 
   const masteredIds = Object.values(learner.subjects[subjectId]?.conceptStates || {})
@@ -989,6 +1013,58 @@ app.post('/api/session/:sessionId/end', (req, res) => {
   res.json({ ok: true, durationMinutes: durationMins });
 });
 
+app.get('/api/sessions', async (req, res) => {
+  try {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    const studentId = String(req.query.studentId || '').trim();
+    if (!studentId) return (res as any).status(400).json({ error: 'studentId required' });
+    const role = await accountRole(user.uid);
+    const household = role === 'parent' ? listLearners(user.uid, true) : listLearners(user.uid, false);
+    if (!household.some(l => l.studentId === studentId)) {
+      return (res as any).status(403).json({ error: 'That learner is not in your household.' });
+    }
+    const sessions = await listSessionsForLearner(studentId);
+    res.json({
+      sessions: sessions.slice(0, 20).map(s => ({
+        sessionId: s.sessionId, learnerId: s.learnerId, topic: s.topic, grade: s.grade,
+        intent: s.intent, status: s.status, startedAt: s.startedAt, endedAt: s.endedAt,
+      })),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to list sessions' });
+  }
+});
+
+app.get('/api/sessions/:sessionId/turns', async (req, res) => {
+  try {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    const sessionId = String(req.params.sessionId || '').trim();
+    const stored = getCaptionSession(sessionId);
+    const turns = await listTurns(sessionId);
+    const learnerId = stored?.learnerId || (await listSessionsLookupLearner(sessionId));
+    if (!learnerId) return (res as any).status(404).json({ error: 'Session not found' });
+    const role = await accountRole(user.uid);
+    const household = role === 'parent' ? listLearners(user.uid, true) : listLearners(user.uid, false);
+    if (!household.some(l => l.studentId === learnerId)) {
+      return (res as any).status(403).json({ error: 'That lesson is not in your household.' });
+    }
+    res.json({ sessionId, turns });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to load captions' });
+  }
+});
+
+async function listSessionsLookupLearner(sessionId: string): Promise<string | null> {
+  try {
+    const doc = await admin.firestore().collection('sessions').doc(sessionId).get();
+    return String(doc.data()?.learnerId || '') || null;
+  } catch {
+    return null;
+  }
+}
+
 // GET learner context for voice tutor system prompt
 app.get('/api/learner-context/:studentId/:subjectId', (req, res) => {
   const { studentId, subjectId } = req.params;
@@ -1065,17 +1141,24 @@ server.on('upgrade', (request, socket, head) => {
 // Live transcripts arrive as `inputTranscription` / `outputTranscription`
 // (@google/genai 2.x). They are forwarded as whole-turn subtitles and fed to
 // the learner observer. Tool calls are logged as board events for context.
-function observeMessage(message: LiveServerMessage, observer: LiveObserver | null, clientWs: WebSocket) {
+function observeMessage(
+  message: LiveServerMessage,
+  observer: LiveObserver | null,
+  clientWs: WebSocket,
+  captions?: { sessionId: string; buf: CaptionBuffer } | null,
+) {
   if (!observer) return;
   const sc: any = message.serverContent;
   const childText = sc?.inputTranscription?.text;
   const tutorText = sc?.outputTranscription?.text;
   if (childText) {
     observer.add('child', childText);
+    captions?.buf.add('child', childText);
     clientWs.send(JSON.stringify({ type: 'input_transcript', text: observer.currentText('child') }));
   }
   if (tutorText) {
     observer.add('tutor', tutorText);
+    captions?.buf.add('tutor', tutorText);
     clientWs.send(JSON.stringify({ type: 'output_transcript', text: observer.currentText('tutor') }));
   }
   for (const call of message.toolCall?.functionCalls || []) {
@@ -1083,9 +1166,23 @@ function observeMessage(message: LiveServerMessage, observer: LiveObserver | nul
     const detail = [a.title, a.note, a.text, a.question, a.topic, a.concept, a.tab,
       Array.isArray(a.bulletPoints) ? a.bulletPoints.join(' | ') : ''].filter(Boolean).join(' — ');
     observer.add('board', `${call.name}${detail ? ': ' + String(detail).slice(0, 300) : ''}`);
+    if (captions && (call.name === 'generate_photo_visual' || call.name === 'switch_board_view' || call.name === 'update_chalkboard_notes' || call.name === 'generate_video_visual' || call.name === 'focus_visual_region')) {
+      const media: { kind: string; title?: string; prompt?: string } = { kind: String(call.name) };
+      const title = String(a.title || a.tab || '').trim();
+      const prompt = String(a.prompt || a.focus || detail || '').trim().slice(0, 400);
+      if (title) media.title = title;
+      if (prompt) media.prompt = prompt;
+      void recordShownMedia(captions.sessionId, media).catch(() => {});
+    }
   }
   if (sc?.interrupted) observer.boundary();
-  if (sc?.turnComplete) observer.exchangeDone();
+  if (sc?.turnComplete) {
+    const parts = captions?.buf.flush() || [];
+    if (captions && parts.length) {
+      void persistCaptionTurns(captions.sessionId, parts).catch(() => {});
+    }
+    observer.exchangeDone();
+  }
 }
 
 wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
@@ -1093,6 +1190,38 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const topic = url.searchParams.get('topic') || 'the requested subject';
   const grade = url.searchParams.get('grade') || 'the student level';
+  const studentId = String(url.searchParams.get('studentId') || '').trim();
+  const liveSessionId = String(url.searchParams.get('sessionId') || '').trim()
+    || `live_${Date.now().toString(36)}`;
+  const intent = String(url.searchParams.get('intent') || 'learn').trim();
+  const subjectId = String(url.searchParams.get('subjectId') || '').trim();
+  const sharedProgram = subjectId ? await loadSharedProgram(subjectId) : getSharedProgram(subjectId);
+  if (studentId && sharedProgram?.curriculum?.id) {
+    void enrollLearner(studentId, sharedProgram.curriculum.id, sharedProgram.programId);
+  }
+  const lessonPack = (sharedProgram?.boardPack?.length ? sharedProgram.boardPack : boardPackFor(topic)) as string[];
+  const mediaPrompts = (sharedProgram?.multimediaContent || [])
+    .filter(m => m.kind === 'image' || m.kind === 'infographic')
+    .map(m => m.prompt)
+    .filter(Boolean)
+    .slice(0, 4);
+  const lessonOutline = (sharedProgram?.lessons || []).slice(0, 6).map((l, i) =>
+    `${i + 1}. ${l.title}${l.breakdown?.length ? ' — ' + l.breakdown.slice(0, 3).join('; ') : ''}`
+  ).join('\n');
+  const hasModel = lessonPack.includes('model');
+  const hasPhoto = lessonPack.includes('photo');
+  const hasDiagram = lessonPack.includes('diagram');
+  const hasChalk = lessonPack.includes('chalk');
+  const hasVideo = lessonPack.includes('video');
+  const videoScript = (sharedProgram?.multimediaContent || []).find(m => m.kind === 'videoScript')?.prompt || '';
+  const recap = studentId ? await lastLessonRecap(studentId, topic, liveSessionId) : '';
+  const captionBuf = new CaptionBuffer();
+  const captions = studentId ? { sessionId: liveSessionId, buf: captionBuf } : null;
+  if (captions) {
+    void ensureLiveSession({
+      sessionId: liveSessionId, learnerId: studentId, topic, grade, intent, subjectId,
+    }).catch(() => {});
+  }
 
   console.log(`[WebSocket] Live session started for Topic: "${topic}", Grade: "${grade}"`);
 
@@ -1116,29 +1245,32 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
 
   const dynamicSystemInstruction = `You are "Lumen", an inspiring, warm, and brilliant Senior Educator and AI Tutor teaching a student in ${grade} on the topic of "${topic}". You speak in a clear, encouraging, friendly mentor voice with genuine passion for learning.
 
+LANGUAGE: Speak and write ONLY in English. Do not switch to Spanish or any other language, even if last-session notes or recap contain another language. Follow the child only if they clearly speak that language in THIS turn. Board notes stay English.
+
 PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
 1. You have an interactive real-time digital blackboard right next to you that updates dynamically.
-2. ON-THE-FLY VISUAL MODES: The student may ask you at any moment to view concepts in:
-   - "2d" (2D interactive schematic / concept diagram): call switch_board_view with tab: '2d'
-   - "3d" (interactive 3D spatial simulation / orbit / molecular / geometric model): call switch_board_view with tab: '3d'
-   - "photo" / "picture" / "camera" (photorealistic observational visual): call switch_board_view with tab: 'photo' or call generate_photo_visual with a detailed prompt!
-   - "notes" / "formulas" / "chalkboard": call switch_board_view with tab: 'chalkboard'
-   - "simulator" / "experiment": call switch_board_view with tab: 'explorer'
-   - "quiz" / "test": call switch_board_view with tab: 'quiz' or pose_quiz
-3. TOPIC SWITCHING: If the student asks to learn a different topic (e.g. "Teach me about black holes now"), enthusiastically call set_topic with the new topic and immediately welcome them to it!
-4. LIVE CHALKBOARD NOTES:
-   - Call "update_chalkboard_notes" or "write_live_note" to put notes on the chalkboard so the student can follow along visually.
-   - Call "highlight_concept" when pointing to a specific part of the diagram or system.
-5. Teach in concise, dialogue-driven conversational turns (1–3 sentences maximum). Never give long uninterrupted monologues.
-6. Encourage the student warmly, praise good questions, and tailor your vocabulary directly to a student in ${grade}.
-7. CHOOSE THE RIGHT VIEW AS YOU TEACH, and switch as the explanation moves on (switch_board_view):
-   - 'photo' = a real-world situation (e.g. a ladder against a wall) — when introducing an idea or linking it to real life.
-   - '2d' = the clean shape — when naming parts or reasoning about the figure.
-   - '3d' = the spatial model — when depth or turning the shape helps.
-   - 'chalkboard' = step-by-step working, calculations, rules and definitions. Whenever you work something out step by step, write it with update_chalkboard_notes (one step per bullet) — the board switches to the chalkboard by itself.
-   - When you give the student a problem to solve, ALWAYS write the problem on the chalkboard first (update_chalkboard_notes, title "Your turn", the question as the first bullet), then ask it. As the student tells you their working, write each of their steps with write_live_note.
-8. NEVER GO QUIET BEFORE A BOARD ACTION. Before update_chalkboard_notes, pose_quiz or generate_photo_visual, first say one short natural phrase out loud — e.g. "Let me write that on the board for you…" or "Let's work through it step by step…" — then call the tool, then carry on explaining.
-9. ${CLASSIC_CROSS_CHECK}`;
+2. AVAILABLE BOARD SURFACES FOR THIS LESSON: ${lessonPack.join(', ') || 'photo, chalk'}.
+   ONE CANVAS. Picture series on the LEFT, chalkboard notes on the RIGHT, always together. Never hide one to show the other.
+   ${hasPhoto ? "- New picture / diagram: call generate_photo_visual only. It is added to the series. Do NOT call switch_board_view." : ''}
+   ${hasDiagram ? "- A labelled diagram is just another generate_photo_visual (ask for a simple labelled diagram). Do NOT switch to 2d." : ''}
+   ${hasModel ? "- 3d / model: only for geometry. switch_board_view({tab:'3d'}) is the only allowed switch." : '- Do NOT offer Shape or 3D. Those are for geometry lessons only.'}
+   ${hasChalk ? "- Notes: call update_chalkboard_notes or write_live_note. They appear beside the picture. Do NOT call switch_board_view." : ''}
+   ${hasVideo ? "- video: call generate_video_visual only. It plays as a short story using the pictures already on the left. Do NOT switch_board_view. Pause with control_video if they interrupt." : ''}
+   - NEVER call switch_board_view with photo, chalkboard, 2d, explorer, or quiz. That flips the canvas and the child loses the picture.
+   - quiz: pose_quiz only after a real answer or a worked example — never after "ok" / "yeah". The question is written on the notes rail.
+3. TOPIC SWITCHING: If the student asks to learn a different topic, enthusiastically call set_topic and keep teaching.
+4. ZOOM THE PICTURE: When naming a part of a leaf/cell/shape, call focus_visual_region({label}) so the left picture zooms that part (stomata, veins, roots, chlorophyll).
+5. Teach in beats. One idea = a few spoken sentences plus one canvas action (new picture, zoom, or notes). If they say "ok" — keep teaching, do not quiz.
+6. Encourage the student warmly and tailor vocabulary to ${grade}.
+7. ${hasVideo ? 'VIDEO: If they say they want a video, you MUST call generate_video_visual immediately. Do not assign it as homework. Keep explaining in English while the clip plays on the left.' : ''}
+8. NEVER GO QUIET BEFORE A CANVAS ACTION. Say one short phrase, call the tool, keep explaining. Picture and notes stay side by side.
+9. ${CLASSIC_CROSS_CHECK}
+10. VISUALS: If the child asks for a picture you MUST call generate_photo_visual (and only that). Never say you showed a picture unless you called the tool. Keep earlier pictures in the series — do not replace the story, add the next frame.
+Ready picture prompts: ${mediaPrompts.join(' | ') || 'invent a concrete photo the child would recognise'}.
+${videoScript ? `Ready video outline: ${videoScript.slice(0, 280)}` : ''}
+${recap ? `\nLAST TIME WITH THIS CHILD:\n${recap}\nOpen by recapping that in two sentences and asking whether to continue from there. Do not restart the whole lesson.` : ''}
+
+${lessonOutline ? `TEACH THIS PROGRAM IN ORDER (do not skip to a quiz):\n${lessonOutline}` : ''}`;
 
   try {
     // Force Gemini Developer API for Live. With GOOGLE_GENAI_USE_ENTERPRISE /
@@ -1233,14 +1365,37 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
             for (const call of functionCalls) {
               console.log(`[Tool Call] Executing: ${call.name}`, call.args);
 
+              const args = { ...(call.args as Record<string, unknown> || {}) };
+              if (call.name === 'generate_photo_visual') {
+                args.generating = true;
+              }
+              if (call.name === 'generate_video_visual') {
+                args.clip = lessonClipFor(topic, String(args.prompt || videoScript || ''));
+                args.title = args.title || (args.clip as { title?: string }).title;
+              }
+              if (call.name === 'focus_visual_region' && args.label) {
+                Object.assign(args, regionFor(String(args.label)));
+              }
               clientWs.send(
                 JSON.stringify({
                   type: 'tool_call',
                   id: call.id,
                   name: call.name,
-                  args: call.args || {},
+                  args,
                 })
               );
+              if (call.name === 'generate_photo_visual') {
+                const prompt = String(args.prompt || '');
+                void generateLessonImage(topic, prompt).then(result => {
+                  if (clientWs.readyState !== WebSocket.OPEN) return;
+                  clientWs.send(JSON.stringify({
+                    type: 'visual_ready',
+                    imageUrl: result.imageUrl,
+                    prompt: result.promptUsed,
+                    generated: result.generated,
+                  }));
+                }).catch(() => {});
+              }
 
               // Immediately respond with { result: "ok" } so tutor continues speaking
               try {
@@ -1263,7 +1418,7 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
 
           // 5. Learner panel side-channel — reads what already arrived, sends
           //    extra messages to the browser only. Cannot affect the voice.
-          try { observeMessage(message, observer, clientWs); } catch (obsErr) {
+          try { observeMessage(message, observer, clientWs, captions); } catch (obsErr) {
             console.warn('[LiveObserver] ignored:', obsErr);
           }
         },
@@ -1301,7 +1456,7 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
     });
 
     if (clientWs.readyState === WebSocket.OPEN) {
-      clientWs.send(JSON.stringify({ type: 'session_ready' }));
+      clientWs.send(JSON.stringify({ type: 'session_ready', boardPack: lessonPack, mediaPrompts }));
 
       // Send initial turn welcoming the student to the topic
       try {
@@ -1311,7 +1466,9 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
               role: 'user',
               parts: [
                 {
-                  text: `The student has just entered the classroom to learn about "${topic}" at the ${grade} level. Greet them warmly as Lumen, express excitement for exploring "${topic}", mention that you have prepared the digital blackboard, and ask what aspect they would like to explore first.`,
+                  text: recap
+                    ? `The same child is back for "${topic}". LAST TIME: ${recap.slice(0, 500)} Speak English only. Greet them by name in one sentence, recap what you already covered in two English sentences, and ask if they want to continue from there or replay the picture. Do not restart from "what is photosynthesis". Do not quiz yet. If they ask for a picture or video, call the matching tool.`
+                    : `The student has just entered to learn "${topic}" at ${grade}. Speak English only. Greet in one sentence. If a first picture helps, call generate_photo_visual only — do not switch_board_view. Write the first idea on the notes with update_chalkboard_notes. Then teach. Do not quiz yet.`,
                 },
               ],
             },
@@ -1369,6 +1526,11 @@ PEDAGOGICAL RULES & REAL-TIME BLACKBOARD INTERACTION:
   clientWs.on('close', () => {
     isClosed = true;
     console.log('[WebSocket] Client disconnected');
+    if (captions) {
+      const leftover = captions.buf.flush();
+      if (leftover.length) void persistCaptionTurns(captions.sessionId, leftover).catch(() => {});
+      void endLiveSession(captions.sessionId, 'abandoned').catch(() => {});
+    }
     if (liveSession) {
       try {
         liveSession.close();
@@ -1435,6 +1597,9 @@ async function startServer() {
     const lan = lanIPv4();
     console.log(`[Server] Lumen UI → http://localhost:${port}`);
     if (lan) console.log(`[Server] On this machine’s network → http://${lan}:${port}`);
+    void listSharedCurricula().then(list => {
+      console.log(`[Curricula] Shared catalog hydrated: ${list.length}`);
+    }).catch(() => {});
   });
 }
 

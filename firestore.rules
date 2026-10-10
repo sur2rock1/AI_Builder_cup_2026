@@ -36,6 +36,15 @@ service cloud.firestore {
         allow read: if canSeeLearner(learnerId);
         allow write: if false;
       }
+      match /enrollments/{curriculumId} {
+        allow read: if canSeeLearner(learnerId);
+        allow write: if false;
+      }
+    }
+
+    match /curricula/{curriculumId} {
+      allow read: if isSignedIn();
+      allow write: if false;
     }
 
     match /users/{userId} {
@@ -43,15 +52,15 @@ service cloud.firestore {
     }
 
     match /sessions/{sessionId} {
-      allow read: if isSignedIn()
-        && resource.data.ownerUid == request.auth.uid;
-      allow create: if isSignedIn()
-        && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if isSignedIn()
-        && resource.data.ownerUid == request.auth.uid
-        && request.resource.data.ownerUid == request.auth.uid;
-      allow delete: if isSignedIn()
-        && resource.data.ownerUid == request.auth.uid;
+      allow read: if canSeeLearner(resource.data.learnerId);
+      allow write: if false;
+
+      match /turns/{turnId} {
+        allow read: if canSeeLearner(
+          get(/databases/$(database)/documents/sessions/$(sessionId)).data.learnerId
+        );
+        allow write: if false;
+      }
     }
 
     match /{document=**} {

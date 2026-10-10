@@ -49,19 +49,21 @@ export interface ProgramQuiz {
 }
 
 export interface MultimediaRef {
-  kind: 'videoScript' | 'infographic' | 'audioScript' | 'exercise';
+  kind: 'videoScript' | 'infographic' | 'audioScript' | 'exercise' | 'image';
   title: string;
   prompt: string;
 }
 
 export interface LearningProgram {
   programId: string;
-  learnerId: string;
+  learnerId?: string;
   materialId: string;
+  curriculumId?: string;
   curriculum: CurriculumSubject;
   lessons: ProgramLesson[];
   quizzes: ProgramQuiz[];
   multimediaContent: MultimediaRef[];
+  boardPack?: Array<'photo' | 'diagram' | 'model' | 'chalk' | 'video'>;
   progressTracking: { byLesson: Record<string, 'not_started' | 'done'> };
   createdAt: number;
 }

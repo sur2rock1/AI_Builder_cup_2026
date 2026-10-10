@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image as ImageIcon, Triangle, Box, PenLine } from 'lucide-react';
+import { Image as ImageIcon, Triangle, Box, PenLine, Film, Pause, Play } from 'lucide-react';
+import type { LessonClip, VisualRegion } from '../curriculum/topicVisual';
 import { ChalkBoard } from './ChalkBoard';
 import { Interactive3DVisual } from './Interactive3DVisual';
 import { Scene3DData } from '../types';
@@ -17,7 +18,8 @@ import { SceneDef, SceneVertices } from '../scenes/pythagorasScenes';
 //   a (C→B) green · b (C→A) amber · c (A→B, the hypotenuse) pink
 // ─────────────────────────────────────────────────────────────────
 
-export type PanelMode = 'real' | 'shape' | '3d' | 'chalk';
+export type PanelMode = 'real' | 'shape' | '3d' | 'chalk' | 'video';
+export type BoardSurface = 'photo' | 'diagram' | 'model' | 'chalk' | 'video';
 
 const COL = { a: '#4ADE80', b: '#FBBF24', c: '#F472B6', ink: '#E8ECF8' };
 
@@ -34,11 +36,21 @@ interface Props {
   isLessonActive: boolean;
   notes?: BoardNote | null;
   liveNotes?: string[];
+  surfaces?: BoardSurface[];
+  visualUrl?: string;
+  generating?: boolean;
+  focusRegion?: VisualRegion | null;
+  clip?: LessonClip | null;
+  clipPlaying?: boolean;
+  clipFrame?: number;
+  onToggleClip?: () => void;
 }
 
 export const ScenePanel: React.FC<Props> = ({
   mode, onModeChange, scene, figure, revealed, focusPart,
   studentThinking, scene3d, conceptLabel, isLessonActive, notes, liveNotes = [],
+  surfaces = ['photo', 'diagram', 'video', 'chalk'], visualUrl, generating,
+  focusRegion, clip, clipPlaying, clipFrame = 0, onToggleClip,
 }) => {
   // Use the generated photo only if it actually exists; otherwise the illustration.
   const [photoOk, setPhotoOk] = useState(false);
@@ -67,11 +79,12 @@ export const ScenePanel: React.FC<Props> = ({
       {/* mode switch */}
       <div className="absolute top-3.5 left-3.5 z-30 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md border border-white/12 p-1">
         {([
-          { m: 'real', icon: ImageIcon, label: 'Real world' },
-          { m: 'shape', icon: Triangle, label: 'Shape' },
-          { m: '3d', icon: Box, label: '3D' },
-          { m: 'chalk', icon: PenLine, label: 'Chalkboard' },
-        ] as const).map(({ m, icon: Icon, label }) => (
+          { m: 'real' as PanelMode, s: 'photo' as BoardSurface, icon: ImageIcon, label: 'Picture' },
+          { m: 'shape' as PanelMode, s: 'diagram' as BoardSurface, icon: Triangle, label: surfaces.includes('model') ? 'Shape' : 'Diagram' },
+          { m: 'video' as PanelMode, s: 'video' as BoardSurface, icon: Film, label: 'Video' },
+          { m: '3d' as PanelMode, s: 'model' as BoardSurface, icon: Box, label: '3D' },
+          { m: 'chalk' as PanelMode, s: 'chalk' as BoardSurface, icon: PenLine, label: 'Chalkboard' },
+        ]).filter(t => surfaces.includes(t.s)).map(({ m, icon: Icon, label }) => (
           <button key={m} onClick={() => onModeChange(m)}
             className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               mode === m ? 'bg-white text-[#0B1020]' : 'text-white/70 hover:text-white'}`}>
@@ -83,25 +96,53 @@ export const ScenePanel: React.FC<Props> = ({
       {/* ── REAL WORLD ─────────────────────────────────────────── */}
       {mode === 'real' && (
         <div className="absolute inset-0 animate-fadeIn">
-          {photoOk ? (
+          {visualUrl ? (
+            <div className="absolute inset-0 overflow-hidden">
+              <img
+                src={visualUrl}
+                alt={conceptLabel}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out"
+                style={focusRegion ? {
+                  transform: `scale(${focusRegion.zoom})`,
+                  transformOrigin: `${focusRegion.x}% ${focusRegion.y}%`,
+                } : undefined}
+              />
+              {focusRegion && (
+                <>
+                  <div className="absolute w-28 h-28 rounded-full border-2 border-[#ffb95f] shadow-[0_0_30px_rgba(255,185,95,0.55)] pointer-events-none"
+                       style={{ left: `${focusRegion.x}%`, top: `${focusRegion.y}%`, transform: 'translate(-50%, -50%)' }} />
+                  <div className="absolute left-5 bottom-5 max-w-[70%] rounded-2xl bg-black/60 backdrop-blur-md border border-[#ffb95f]/40 px-4 py-2.5">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[#ffb95f] font-semibold">Look here</p>
+                    <p className="text-[15px] text-white font-medium">{focusRegion.label}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : surfaces.includes('model') && photoOk ? (
             <img src={scene.photo} alt={scene.title} className="absolute inset-0 w-full h-full object-cover" />
-          ) : (
+          ) : surfaces.includes('model') ? (
             <div className="absolute inset-0"><scene.Illustration /></div>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+                 style={{ background: 'radial-gradient(80% 70% at 50% 40%, #1B3A2A 0%, #0B1020 75%)' }}>
+              <div className="w-16 h-16 rounded-full border-2 border-emerald-400/40 border-t-emerald-300 animate-spin" />
+              <p className="text-white/80 text-[15px] font-medium px-8 text-center">
+                {generating ? `Lumen is drawing ${conceptLabel}…` : `Picture of ${conceptLabel} will appear here`}
+              </p>
+            </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/25" />
 
-          {showOverlay ? (
+          {surfaces.includes('model') && showOverlay && !visualUrl ? (
             <TraceOverlay v={v} names={scene.names} val={val} shown={shown} focusPart={focusPart} />
-          ) : (
-            // Photo exists but not yet calibrated: show the shape as an inset rather
-            // than drawing lines that miss the ladder by 40 pixels.
+          ) : surfaces.includes('model') && !visualUrl ? (
             <div className="absolute right-4 bottom-4 w-[34%] aspect-[16/10] rounded-2xl bg-[#0B1020]/80 backdrop-blur-md border border-white/15 p-2">
               <ShapeFigure figure={figure} names={scene.names} val={val} shown={shown} focusPart={focusPart} compact />
             </div>
-          )}
+          ) : null}
 
           <div className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/12 text-[12.5px] text-white/85 font-medium">
-            {scene.title}
+            {surfaces.includes('model') && !visualUrl ? scene.title : conceptLabel}
           </div>
         </div>
       )}
@@ -113,8 +154,52 @@ export const ScenePanel: React.FC<Props> = ({
           <div className="absolute inset-0 opacity-40"
                style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,.14) 1px, transparent 1px)', backgroundSize: '26px 26px' }} />
           <div className="absolute inset-0 pt-14 pb-4 px-6">
-            <ShapeFigure figure={figure} names={scene.names} val={val} shown={shown} focusPart={focusPart} />
+            {surfaces.includes('model') ? (
+              <ShapeFigure figure={figure} names={scene.names} val={val} shown={shown} focusPart={focusPart} />
+            ) : visualUrl ? (
+              <img src={visualUrl} alt={conceptLabel} className="w-full h-full object-contain rounded-2xl" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white/50 text-sm px-8 text-center">
+                Lumen will draw a picture of {conceptLabel} here.
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* ── VIDEO CLIP (Lumen-controlled storyboard) ───────────── */}
+      {mode === 'video' && (
+        <div className="absolute inset-0 animate-fadeIn bg-[#0a0e14]">
+          {clip?.frames?.length ? (
+            <>
+              <img
+                src={clip.frames[Math.min(clipFrame, clip.frames.length - 1)].imageUrl}
+                alt={clip.title}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
+                style={clip.frames[Math.min(clipFrame, clip.frames.length - 1)].zoom ? {
+                  transform: `scale(${clip.frames[Math.min(clipFrame, clip.frames.length - 1)].zoom!.scale})`,
+                  transformOrigin: `${clip.frames[Math.min(clipFrame, clip.frames.length - 1)].zoom!.x}% ${clip.frames[Math.min(clipFrame, clip.frames.length - 1)].zoom!.y}%`,
+                } : undefined}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+              <div className="absolute left-5 right-5 bottom-5 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-[#c0c1ff] font-semibold">{clip.title}</p>
+                  <p className="text-[16px] text-white font-medium mt-1">{clip.frames[Math.min(clipFrame, clip.frames.length - 1)].caption}</p>
+                  <p className="text-[12px] text-white/50 mt-1">{Math.min(clipFrame, clip.frames.length - 1) + 1} / {clip.frames.length}</p>
+                </div>
+                <button onClick={onToggleClip}
+                  className="px-4 py-2 rounded-full bg-[#6366f1] text-white text-[13px] font-semibold flex items-center gap-2">
+                  {clipPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  {clipPlaying ? 'Pause' : 'Play'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-white/60 text-sm px-8 text-center">
+              Ask Lumen to play a short clip of {conceptLabel}.
+            </div>
+          )}
         </div>
       )}
 
@@ -147,7 +232,7 @@ export const ScenePanel: React.FC<Props> = ({
         </div>
       )}
 
-      {!revealed.includes('triangle') && mode !== '3d' && mode !== 'chalk' && (
+      {surfaces.includes('model') && !revealed.includes('triangle') && !visualUrl && mode !== '3d' && mode !== 'chalk' && (
         <div className="absolute inset-x-0 bottom-5 z-20 flex justify-center">
           <span className="px-4 py-2 rounded-full bg-black/45 backdrop-blur-md text-[13px] text-white/75">
             {isLessonActive ? 'Lumen is setting the scene…' : 'Start the session and we’ll begin'}

@@ -19,6 +19,7 @@ Parents create a child login; kids sign in themselves. A family can add PDFs, no
 - **Teaching board** — Real world → Shape (2D) → 3D → Chalkboard. The Pythagoras pack is the current example fade; Phase 10 makes the board subject-agnostic.
 - **Learner model** — closed misconception catalogue, two-observation ledger, Bayesian Knowledge Tracing (`src/adaptive/`). A confirmed broken method can move mastery *down* after a correct answer.
 - **Live observer** — transcripts update the learner panel without blocking speech (`src/adaptive/liveObserver.ts`).
+- **Captions** — on `turnComplete`, joined child + tutor text is written to `sessions/{id}/turns`. Parent dashboard can replay after a refresh. Caption text is never sent to analytics.
 - **Any-topic board** — `POST /api/generate-lesson` builds a board from Gemini (local fallback if the key/model fails).
 - **Parent dashboard** — mastery, standing misconceptions, time on task for linked children.
 
@@ -242,7 +243,9 @@ Health: `GET /api/health`.
 | `GET` | `/api/curriculum/jobs/:id` | Dual-rail progress + preview / program (no raw extract) |
 | `POST` | `/api/curriculum/confirm` | After preview: write material, generate program |
 | `POST` | `/api/curriculum/rename` | Rename a saved graph |
-| `GET` | `/ws/live?topic=&grade=` | Gemini Live proxy |
+| `GET` | `/api/sessions?studentId=` | Household list of Live caption sessions |
+| `GET` | `/api/sessions/:id/turns` | Joined captions (`role`, `text`, `at`, `seq`) |
+| `GET` | `/ws/live?topic=&grade=&studentId=` | Gemini Live proxy; persists captions when `studentId` is set |
 
 `/api` errors are JSON (oversized uploads used to return HTML).
 

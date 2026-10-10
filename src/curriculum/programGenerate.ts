@@ -3,7 +3,8 @@ import {
   mergeIntoCurriculum, pickSuggestedTitle, slug, uniq,
 } from './extractShared';
 import { getCurriculum } from './ingest';
-import { hashText, writeMaterial, writeProgram } from './programStore';
+import { hashText, writeMaterial, writeProgram, writeSharedCurriculum, enrollLearner } from './programStore';
+import { boardPackFor } from './boardPack';
 import type { LearningMaterial, LearningProgram, ProgramLesson, ProgramQuiz, MultimediaRef } from './programTypes';
 
 export async function confirmAndGenerate(job: IngestJob, label: string, studentId: string): Promise<LearningProgram> {
@@ -62,19 +63,24 @@ export async function confirmAndGenerate(job: IngestJob, label: string, studentI
   const lessons = generated.lessons.length ? generated.lessons : fallbackLessons(curriculum.concepts.map(c => c.label), age.sessionMinutes);
   const quizzes = generated.quizzes.length ? generated.quizzes : fallbackQuizzes(lessons);
   const multimedia = generated.multimedia.length ? generated.multimedia : fallbackMultimedia(title, preview.keyConcepts);
+  const boardPack = boardPackFor(title, preview.keyConcepts.join(' '));
 
   const programId = `prog_${Date.now().toString(36)}`;
   const program: LearningProgram = {
     programId,
     learnerId,
     materialId,
+    curriculumId: curriculum.id,
     curriculum,
     lessons,
     quizzes,
     multimediaContent: multimedia,
+    boardPack,
     progressTracking: { byLesson: Object.fromEntries(lessons.map(l => [l.id, 'not_started' as const])) },
     createdAt: Date.now(),
   };
+  await writeSharedCurriculum(program, material);
+  await enrollLearner(learnerId, curriculum.id, program.programId);
   await writeProgram(program);
 
   job.program = {
@@ -133,14 +139,16 @@ Return ONLY JSON:
     }
   ],
   "multimedia": [
-    { "kind": "videoScript", "title": "…", "prompt": "outline only, not a generated video" }
+    { "kind": "image", "title": "…", "prompt": "photorealistic still Lumen can generate in-lesson (leaf, stomata, kitchen sink, …)" },
+    { "kind": "infographic", "title": "…", "prompt": "one labelled diagram the child can point to" },
+    { "kind": "videoScript", "title": "…", "prompt": "30-second controlled clip outline — pause if the child interrupts" }
   ]
 }
 
 Rules:
 - 3 to 8 lessons. minutes must stay in this age band (not adult 60-min modules).
 - Quizzes: mix mcq / tf / open, language at THIS age. Immediate-feedback explanations.
-- Multimedia is SCRIPTS and OUTLINES only (videoScript, infographic, audioScript, exercise). No video files.
+- Multimedia: at least two kind=image prompts ready for generate_photo_visual, plus one infographic and one videoScript outline. No video files.
 - Do not invent later-year proofs or career-prep tracks.`;
 
   try {
@@ -195,9 +203,9 @@ function normalizeQuiz(raw: any, i: number): ProgramQuiz {
 }
 
 function normalizeMedia(raw: any): MultimediaRef {
-  const kind = ['videoScript', 'infographic', 'audioScript', 'exercise'].includes(raw?.kind)
-    ? raw.kind : 'exercise';
-  return { kind, title: String(raw?.title || 'Activity').slice(0, 80), prompt: String(raw?.prompt || '') };
+  const kind = ['videoScript', 'infographic', 'audioScript', 'exercise', 'image'].includes(raw?.kind)
+    ? raw.kind : 'image';
+  return { kind, title: String(raw?.title || 'Picture').slice(0, 80), prompt: String(raw?.prompt || '') };
 }
 
 function arr(v: any): string[] {
@@ -229,10 +237,11 @@ function fallbackQuizzes(lessons: ProgramLesson[]): ProgramQuiz[] {
 }
 
 function fallbackMultimedia(title: string, concepts: string[]): MultimediaRef[] {
+  const bits = concepts.slice(0, 3).join(', ') || title;
   return [
-    { kind: 'videoScript', title: `${title} in 60 seconds`, prompt: `Narrate ${concepts.slice(0, 3).join(', ')} at this child's age.` },
-    { kind: 'infographic', title: `${title} picture`, prompt: 'One diagram the child can point to.' },
-    { kind: 'audioScript', title: `Recap ${title}`, prompt: '30-second spoken recap.' },
+    { kind: 'image', title: `${title} in real life`, prompt: `Photorealistic close-up a Primary child would recognise for ${bits}. No text overlay.` },
+    { kind: 'infographic', title: `${title} diagram`, prompt: `Simple labelled diagram of ${bits} for a 10-year-old. Few words.` },
+    { kind: 'videoScript', title: `${title} in 30 seconds`, prompt: `Narrate ${bits} at this child's age. Pause if they interrupt.` },
     { kind: 'exercise', title: 'Try it', prompt: 'One hands-on check before the next lesson.' },
   ];
 }
