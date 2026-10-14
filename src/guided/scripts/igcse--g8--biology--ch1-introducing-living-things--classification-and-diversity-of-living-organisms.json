@@ -1,0 +1,406 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--biology--ch1-introducing-living-things--classification-and-diversity-of-living-organisms",
+  "title": "Classification and diversity of living organisms",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: there are millions of living things; scientists sort them into groups by their features, like sorting a huge pile of socks. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Sorting out millions of species"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "millions of species  →  groups",
+          "say": "Imagine you have to organise every living thing on Earth. Millions of different species! Scientists sort them into groups based on features they share. That sorting is called classification, and today we meet the main groups.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "The five kingdoms with one key feature each. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The big groups: kingdoms"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "Animals  -  many cells, eat other organisms",
+          "say": "The biggest groups are called kingdoms. Animals are made of many cells and take in food by eating other organisms.",
+          "style": "point"
+        },
+        {
+          "id": "l3",
+          "text": "Plants  -  many cells, make food by photosynthesis",
+          "say": "Plants are made of many cells and make their own food using light.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "Fungi  -  absorb food from dead or living matter",
+          "say": "Fungi, like mushrooms and moulds, absorb food from dead or living matter around them.",
+          "style": "point"
+        },
+        {
+          "id": "l5",
+          "text": "Protoctista  -  mostly single-celled, with a nucleus",
+          "say": "Protoctista are mostly single-celled, like amoeba, and have a nucleus.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "Prokaryotes  -  bacteria, no nucleus",
+          "say": "And prokaryotes, the bacteria, are single cells with no nucleus.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Animals split into vertebrates (backbone) and invertebrates (none). Arthropods are the biggest invertebrate group: hard exoskeleton, segmented body, jointed legs. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Animals: with and without a backbone"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l7",
+          "text": "Vertebrates  =  have a backbone      Invertebrates  =  no backbone",
+          "say": "The animal kingdom splits first into two. Vertebrates have a backbone. Invertebrates do not.",
+          "style": "rule"
+        },
+        {
+          "id": "l8",
+          "text": "Arthropods: hard outer skeleton, body in segments, jointed legs",
+          "say": "One huge invertebrate group is the arthropods. They have a hard outer skeleton called an exoskeleton, a body made of segments, and jointed legs.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "show",
+      "say": "The four arthropod groups with a counting rule: insects 3 body parts and 6 legs; arachnids 2 body parts and 8 legs; crustaceans mostly aquatic with 2 pairs of antennae; myriapods many segments each with legs. Mark the numbers IN PLACE. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Four arthropod groups"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l9",
+          "text": "Insects:  3 body parts, 6 legs",
+          "say": "Insects have three body parts and six legs, like a beetle or a bee.",
+          "style": "point"
+        },
+        {
+          "id": "l10",
+          "text": "Arachnids:  2 body parts, 8 legs",
+          "say": "Arachnids have two body parts and eight legs, like a spider.",
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "Crustaceans:  mostly aquatic, 2 pairs of antennae",
+          "say": "Crustaceans, like crabs and prawns, mostly live in water and have two pairs of antennae.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "Myriapods:  many segments, legs on each segment",
+          "say": "And myriapods, like centipedes, have lots of body segments, each with legs.",
+          "style": "point"
+        },
+        {
+          "id": "l13",
+          "text": "COUNT body parts and legs",
+          "say": "So when you meet an arthropod, count the body parts and the legs. It tells you the group.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "show",
+      "say": "The five vertebrate classes with distinguishing features: fish (gills, scales, fins), amphibians (moist skin, aquatic larvae), reptiles (dry scaly skin, leathery eggs), birds (feathers, beaks, hard-shelled eggs), mammals (hair or fur, milk). No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Five classes of vertebrate"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l14",
+          "text": "Fish:  gills, scales, fins",
+          "say": "Fish breathe with gills and have scales and fins.",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "Amphibians:  moist skin, larvae live in water",
+          "say": "Amphibians have moist skin, and their young, the larvae, live in water.",
+          "style": "point"
+        },
+        {
+          "id": "l16",
+          "text": "Reptiles:  dry scaly skin, leathery eggs",
+          "say": "Reptiles have dry, scaly skin and lay eggs with leathery shells.",
+          "style": "point"
+        },
+        {
+          "id": "l17",
+          "text": "Birds:  feathers, beaks, hard-shelled eggs",
+          "say": "Birds have feathers and beaks, and lay hard-shelled eggs.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "Mammals:  hair or fur, feed young on milk",
+          "say": "And mammals have hair or fur, and feed their young on milk.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "show",
+      "say": "Plants: mosses, ferns, conifers, flowering plants. Then monocots vs dicots: one vs two seed leaves, parallel vs net veins, petals in multiples of 3 vs 4 or 5. Mark the contrasting features. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Plants and flowering plants"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l19",
+          "text": "Mosses  -  no true roots      Ferns  -  spores      Conifers  -  naked seeds in cones",
+          "say": "Plants have groups too. Mosses have no true roots. Ferns reproduce using spores. Conifers make their seeds in cones.",
+          "style": "point"
+        },
+        {
+          "id": "l20",
+          "text": "Flowering plants  -  seeds inside fruits",
+          "say": "And flowering plants make seeds inside fruits. They split into two groups.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "Monocotyledon:  1 seed leaf,  parallel veins,  petals in 3s",
+          "say": "Monocotyledons start with one seed leaf, have leaves with parallel veins, and their flower parts come in threes, or multiples of three.",
+          "style": "rule"
+        },
+        {
+          "id": "l22",
+          "text": "Dicotyledon:  2 seed leaves,  net veins,  petals in 4s or 5s",
+          "say": "Dicotyledons start with two seed leaves, have leaves with a net of veins, and their flower parts come in fours or fives.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "contrast",
+      "say": "A friend says spiders are insects, and that dolphins are fish. Test spiders by counting; test dolphins by what they breathe and feed their young. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea: spiders and dolphins"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l23",
+          "text": "spider:  2 body parts, 8 legs",
+          "say": "A friend of mine says a spider is an insect. Let's count. A spider has two body parts and eight legs.",
+          "style": "point"
+        },
+        {
+          "id": "l24",
+          "text": "Insects have 3 body parts and 6 legs  →  a spider is an ARACHNID",
+          "say": "An insect has three body parts and six legs. A spider doesn't match, so it's an arachnid.",
+          "style": "rule"
+        },
+        {
+          "id": "l25",
+          "text": "dolphin:  lives in the sea, has fins",
+          "say": "The same friend says a dolphin is a fish, because it lives in the sea and has fins. Let's look inside.",
+          "style": "point"
+        },
+        {
+          "id": "l26",
+          "text": "A dolphin breathes air with LUNGS and feeds its calf MILK  →  a MAMMAL",
+          "say": "A dolphin breathes air through lungs, and feeds its young on milk. Fish breathe with gills. So a dolphin is a mammal. Where it lives isn't what counts, its features are.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "contrast",
+      "say": "A friend says fungi are plants because they stay in one place. Test: plants make food using light; mushrooms cannot. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea: fungi are plants"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l27",
+          "text": "mushroom   and   daisy:  both stay in one place",
+          "say": "A friend of mine says a mushroom is a plant, because both stay still in the soil.",
+          "style": "point"
+        },
+        {
+          "id": "l28",
+          "text": "Plants make food using light.  Mushrooms cannot.",
+          "say": "Let's test. Plants make their own food with light, using chlorophyll. A mushroom has no chlorophyll.",
+          "style": "point"
+        },
+        {
+          "id": "l29",
+          "text": "Fungi absorb food from dead matter  →  their OWN kingdom",
+          "say": "A mushroom absorbs food from dead matter around it. Different way of feeding, so a different kingdom. Staying still isn't what decides it.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "apply",
+      "say": "Do two TOGETHER. An animal with an exoskeleton, 2 body parts and 8 legs; and a plant with parallel veins. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's classify together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l30",
+          "text": "exoskeleton, 2 body parts, 8 legs",
+          "say": "Now you help me. Here's an animal with an exoskeleton, two body parts and eight legs.",
+          "style": "point"
+        },
+        {
+          "id": "l31",
+          "text": "Arachnid",
+          "say": "Yes, it matches the arachnids.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which arthropod group is it?",
+            "board": "Group:",
+            "lookFor": "An arachnid.",
+            "onMiss": "Ask: count the body parts and legs, and compare with insects (3 and 6)."
+          }
+        },
+        {
+          "id": "l32",
+          "text": "grass leaf:  parallel veins,  1 seed leaf",
+          "say": "Next, a grass plant, whose leaf has parallel veins and whose seed has one seed leaf.",
+          "style": "point"
+        },
+        {
+          "id": "l33",
+          "text": "Monocotyledon",
+          "say": "Yes.",
+          "style": "work",
+          "ask": {
+            "prompt": "Is it a monocotyledon or a dicotyledon?",
+            "board": "Mono- or di-?",
+            "lookFor": "A monocotyledon (parallel veins, one seed leaf).",
+            "onMiss": "Ask: parallel veins and one seed leaf: which group?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b10",
+      "kind": "apply",
+      "say": "The child works alone: a flower with 5 petals and net veins; and an animal with feathers and a beak. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l34",
+          "text": "flower: 5 petals, net-like veins      animal: feathers and a beak",
+          "say": "Your turn to lead. Two specimens.",
+          "style": "point"
+        },
+        {
+          "id": "l35",
+          "text": "Dicotyledon",
+          "say": "First, the flower.",
+          "style": "work",
+          "ask": {
+            "prompt": "Monocotyledon or dicotyledon? What is your evidence?",
+            "board": "Mono- or di-?",
+            "lookFor": "A dicotyledon: net veins and petals in fives.",
+            "onMiss": "Ask: net veins and petals in 4s or 5s belong to which group?"
+          }
+        },
+        {
+          "id": "l36",
+          "text": "Bird",
+          "say": "Second, the animal.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which vertebrate class has feathers and a beak?",
+            "board": "Class:",
+            "lookFor": "Birds.",
+            "onMiss": "Ask: which class has feathers?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b11",
+      "kind": "check",
+      "say": "Explain why a dolphin is a mammal and not a fish. Reward reasoning.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Say it in your own words"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l37",
+          "text": "dolphin",
+          "say": "One last, a reasoning question.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why is a dolphin a mammal and not a fish, even though it lives in the sea and has fins?",
+            "board": "Why a mammal?",
+            "lookFor": "It breathes air with lungs and feeds its young on milk; classification uses body features, not where it lives.",
+            "onMiss": "Ask: what does a dolphin breathe with? How does it feed its calf?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

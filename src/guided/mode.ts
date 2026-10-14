@@ -8,7 +8,7 @@
 // Resolution order (first one that is valid wins):
 //   1. the session's own request  (page URL ?tutor=guided, or the on-screen switch)
 //   2. the server default         (TUTOR_MODE environment variable)
-//   3. 'standard'
+//   3. 'guided'  (DEFAULT_TUTOR_MODE)
 //
 // Guided mode is additive: if a concept has no guided script, the session
 // quietly runs as 'standard'. Removing src/guided/ and its few hook lines
@@ -20,7 +20,12 @@
 export const TUTOR_MODES = ['standard', 'guided'] as const;
 export type TutorMode = typeof TUTOR_MODES[number];
 
-export const DEFAULT_TUTOR_MODE: TutorMode = 'standard';
+/** Guided is the product's default (decision 2026-10-14). 'standard' stays in the codebase, reachable with
+ *  ?tutor=standard or TUTOR_MODE=standard, and is hidden from the UI (see SHOW_MODE_TOGGLE). */
+export const DEFAULT_TUTOR_MODE: TutorMode = 'guided';
+
+/** The on-screen Standard/Guided toggle is hidden. Set true to bring it back; nothing else changes. */
+export const SHOW_MODE_TOGGLE = false;
 
 export function isTutorMode(v: unknown): v is TutorMode {
   return typeof v === 'string' && (TUTOR_MODES as readonly string[]).includes(v);

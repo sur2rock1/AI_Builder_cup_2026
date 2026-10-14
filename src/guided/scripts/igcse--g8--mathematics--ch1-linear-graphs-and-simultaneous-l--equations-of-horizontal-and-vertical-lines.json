@@ -6,147 +6,201 @@
     {
       "id": "b1",
       "kind": "orient",
-      "say": "Welcome the student in one warm sentence. Today: two special straight lines - flat ones and upright ones. We will find what their equations look like and why one of them has a gradient and the other does not. Two sentences, then straight to the grid.",
+      "say": "Open like a teacher: two lines whose equations are shockingly short. Curious, friendly. No questions.",
       "board": [
         {
           "type": "heading",
-          "text": "Horizontal and vertical lines"
-        },
+          "text": "Lines with tiny equations"
+        }
+      ],
+      "lines": [
         {
-          "type": "point",
-          "text": "Their equations - and their gradients"
+          "id": "l1",
+          "text": "x = 2     y = −3",
+          "say": "Today we meet two lines with really short equations. One says x equals two, and the other says y equals minus three. They look too simple to be lines at all. But they are, and understanding them clears up a lot of confusion about gradients later.",
+          "style": "point"
         }
       ]
     },
     {
       "id": "b2",
       "kind": "define",
-      "say": "Start by letting them notice, not by telling. Plot three points on the grid - (2, -1), (2, 0) and (2, 3) - and ask what they all have in common before naming anything.",
+      "say": "Plot-and-spot: the points (2,-1), (2,0), (2,3) share the same x. Mark the 2s IN PLACE, then name the line x = 2. The picture shows the points. No questions.",
       "board": [
+        {
+          "type": "heading",
+          "text": "A vertical line"
+        },
         {
           "type": "picture",
           "ref": "main",
           "step": "s1"
-        },
-        {
-          "type": "slot",
-          "id": "in_common",
-          "label": "All three points share ___"
         }
       ],
-      "ask": {
-        "prompt": "Look at the points (2, -1), (2, 0) and (2, 3). What do they all have in common?",
-        "slot": "in_common",
-        "lookFor": "The same x-coordinate, 2. A good answer also notices the y-values differ.",
-        "onMiss": "Ask them to read out the x-coordinate of each point, one at a time."
-      }
+      "lines": [
+        {
+          "id": "l2",
+          "text": "(2, −1)   (2, 0)   (2, 3)",
+          "say": "Look at these three points. Before I say anything, look at their coordinates, and see what they have in common.",
+          "picture": {
+            "ref": "main",
+            "step": "s1"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l3",
+          "text": "({{2|circle.y}}, −1)   ({{2|circle.y}}, 0)   ({{2|circle.y}}, 3)",
+          "say": "The x-coordinate is the same every time. It's a two. The y-coordinates are all different, but x never changes.",
+          "style": "point",
+          "annotates": "l2"
+        },
+        {
+          "id": "l4",
+          "text": "Every point has x = 2",
+          "say": "So if you stand on any point of this line, your x-coordinate is two. Every single point.",
+          "picture": {
+            "ref": "main",
+            "step": "s2"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l5",
+          "text": "The line is  {{x = 2|box.y}}",
+          "say": "That's why this line is named x equals two. Its equation just tells you what x always is. It's a vertical line, standing straight up and down.",
+          "style": "rule"
+        },
+        {
+          "id": "l6",
+          "text": "x = a  is a VERTICAL line",
+          "say": "In general, x equals any number a is a vertical line. The equation names the one x-value every point shares.",
+          "style": "rule"
+        }
+      ]
     },
     {
       "id": "b3",
-      "kind": "define",
-      "say": "Draw the line through them. Every point on it has x = 2, however high or low you go, so the line is named x = 2. A vertical line is x = a. Say what it is, and what it is not: x does not change, y can be anything.",
+      "kind": "show",
+      "say": "Now the flat one. Points (-2,-3), (0,-3), (4,-3). Mark the -3s in place, name y = -3. Mirror the vertical beat. No questions.",
       "board": [
         {
-          "type": "picture",
-          "ref": "main",
-          "step": "s2"
+          "type": "heading",
+          "text": "A horizontal line"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l7",
+          "text": "(−2, −3)   (0, −3)   (4, −3)",
+          "say": "Now a different set of points. Negative two, minus three. Zero, minus three. Four, minus three. What stays the same this time?",
+          "style": "point"
         },
         {
-          "type": "rule",
-          "text": "vertical line:  x = a"
+          "id": "l8",
+          "text": "(−2, {{−3|circle.p}})   (0, {{−3|circle.p}})   (4, {{−3|circle.p}})",
+          "say": "This time it's the y-coordinate that never changes: always minus three. The x-coordinates wander about, minus two, zero, four.",
+          "style": "point",
+          "annotates": "l7"
         },
         {
-          "type": "point",
-          "text": "every point on it has the same x"
+          "id": "l9",
+          "text": "Every point has y = −3",
+          "say": "So every point on this line has y equal to minus three.",
+          "style": "point"
+        },
+        {
+          "id": "l10",
+          "text": "The line is  {{y = −3|box.g}}",
+          "say": "The line is named y equals minus three. It runs flat across the page, parallel to the x-axis, like a calm horizon.",
+          "style": "rule"
+        },
+        {
+          "id": "l11",
+          "text": "y = c  is a HORIZONTAL line",
+          "say": "In general, y equals a number c is a horizontal line.",
+          "style": "rule"
         }
       ]
     },
     {
       "id": "b4",
-      "kind": "define",
-      "say": "Now the flat one. Across level ground the rise is zero, so the gradient is 0, and every point has the same y - here y = -3. A horizontal line is y = c.",
+      "kind": "show",
+      "say": "Gradient of each. Vertical: from (2,-1) to (2,3): rise 4, run 0, 4 / 0 is undefined. Horizontal: from (-2,-3) to (4,-3): rise 0, run 6, gradient 0. Use the first picture step to show the vertical line while working. No questions.",
       "board": [
+        {
+          "type": "heading",
+          "text": "Their gradients"
+        },
         {
           "type": "picture",
           "ref": "main",
-          "step": "s4"
+          "step": "s2"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l12",
+          "text": "(2, −1) to (2, 3)",
+          "say": "Let's find the gradient of the vertical line. Rise over run. Take two points on it, (2, −1) and (2, 3).",
+          "picture": {
+            "ref": "main",
+            "step": "s3"
+          },
+          "style": "point"
         },
         {
-          "type": "rule",
-          "text": "horizontal line:  y = c,  gradient 0"
+          "id": "l13",
+          "text": "rise = 3 − (−1) = 4",
+          "say": "The rise is how far we go up: from minus one up to three, that's four.",
+          "style": "work"
+        },
+        {
+          "id": "l14",
+          "text": "run = 2 − 2 = 0",
+          "say": "The run is how far we go across. Both x-values are two, so we go nowhere sideways: zero.",
+          "style": "work"
+        },
+        {
+          "id": "l15",
+          "text": "gradient = 4 ÷ 0  →  UNDEFINED",
+          "say": "So the gradient is four divided by zero, and nobody can divide by zero. We say the gradient is undefined.",
+          "style": "rule"
+        },
+        {
+          "id": "l16",
+          "text": "(−2, −3) to (4, −3)",
+          "say": "Now the horizontal line. Take (−2, −3) and (4, −3).",
+          "style": "point"
+        },
+        {
+          "id": "l17",
+          "text": "rise = −3 − (−3) = 0",
+          "say": "The rise is zero, because we stay at the same height.",
+          "style": "work"
+        },
+        {
+          "id": "l18",
+          "text": "run = 4 − (−2) = 6",
+          "say": "The run is six, from minus two across to four.",
+          "style": "work"
+        },
+        {
+          "id": "l19",
+          "text": "gradient = 0 ÷ 6 = 0",
+          "say": "Zero divided by six is just zero. A flat line has gradient zero.",
+          "style": "rule"
         }
       ]
     },
     {
       "id": "b5",
-      "kind": "analogy",
-      "say": "Make the gradient feel real. Walking on flat ground has no steepness at all: gradient 0. A sheer vertical cliff is different - you go up without moving sideways at all. Put the two side by side and ask what the run is as you climb the cliff.",
-      "board": [
-        {
-          "type": "compare",
-          "side": "left",
-          "title": "Flat ground",
-          "text": "rise 0, gradient 0, y = 3"
-        },
-        {
-          "type": "compare",
-          "side": "right",
-          "title": "Sheer cliff",
-          "text": "straight up - how far across?"
-        },
-        {
-          "type": "picture",
-          "ref": "alt:real_world_analogy",
-          "step": "s4"
-        },
-        {
-          "type": "slot",
-          "id": "cliff_run",
-          "label": "Climbing the cliff, the run is ___"
-        }
-      ],
-      "ask": {
-        "prompt": "Climbing the cliff from (-3, -2) up to (-3, 2) - how far do you move sideways?",
-        "slot": "cliff_run",
-        "lookFor": "Zero. You go up but not across.",
-        "onMiss": "Ask for the x-coordinate at the bottom and the top, then the difference."
-      }
-    },
-    {
-      "id": "b6",
       "kind": "contrast",
-      "say": "A very common slip: a horizontal line runs along the x-axis, so people name it x = something. Test it with them: the line x = 3 passes through (3, 1) and (3, -1) - that is the upright line. Name a line by the coordinate that stays fixed.",
-      "board": [
-        {
-          "type": "picture",
-          "ref": "contrast:horizontal-line-named-x",
-          "step": "s3"
-        },
-        {
-          "type": "exception",
-          "text": "name a line by the coordinate that stays the same"
-        },
-        {
-          "type": "slot",
-          "id": "horizontal_eq",
-          "label": "horizontal line through (0, 3):  ___"
-        }
-      ],
-      "ask": {
-        "prompt": "What is the equation of the horizontal line through (0, 3)? What stays the same all along it?",
-        "slot": "horizontal_eq",
-        "lookFor": "y = 3, because every point on it has y = 3. A reply of x = 3 is the common slip.",
-        "onMiss": "Ask: on that flat line, does x change as you move along it? Does y? Then name the one that stays fixed."
-      }
-    },
-    {
-      "id": "b7",
-      "kind": "contrast",
-      "say": "The other slip: thinking a vertical line has gradient 0. Work it out line by line with two points on x = 2, so the learner sees where every number comes from and why the answer is undefined, not 0.",
+      "say": "A friend says a vertical line has gradient 0 because it 'doesn't slope'. Test it on (2,1) and (2,5). The picture steps through. Detective tone, no questions.",
       "board": [
         {
           "type": "heading",
-          "text": "Gradient of a vertical line"
+          "text": "A friend's idea"
         },
         {
           "type": "picture",
@@ -156,159 +210,261 @@
       ],
       "lines": [
         {
-          "id": "pts",
-          "style": "work",
-          "text": "Two points:  (2, 1)  and  (2, 5)",
-          "say": "Let's take two points on the line x = 2: the point two-comma-one and the point two-comma-five."
+          "id": "l20",
+          "text": "(2, 1) to (2, 5)",
+          "say": "A friend of mine says: a vertical line has gradient zero, because zero means no slope. Let's test it. Take (2, 1) and (2, 5).",
+          "style": "point"
         },
         {
-          "id": "p1",
-          "style": "work",
-          "text": "(2, 1)  →  x = 2,  y = 1",
-          "say": "In a point, the first number is x and the second is y. So in two-comma-one, x is 2 and y is 1."
-        },
-        {
-          "id": "p2",
-          "style": "work",
-          "text": "(2, 5)  →  x = 2,  y = 5",
-          "say": "Same for two-comma-five: x is 2, and y is 5."
-        },
-        {
-          "id": "formula",
-          "style": "rule",
-          "text": "gradient = rise ÷ run",
-          "say": "Gradient is rise divided by run. Rise is how far we go UP - the change in y. Run is how far we go ACROSS - the change in x."
-        },
-        {
-          "id": "rise",
-          "style": "work",
-          "text": "rise = 5 − 1 = 4",
-          "say": "Rise first. y goes from 1 up to 5, so the rise is 5 minus 1, which is 4."
-        },
-        {
-          "id": "run",
-          "style": "work",
-          "text": "run = 2 − 2 = 0",
-          "say": "Run is 2 minus 2, which is 0. x never changes, so we do not move across at all.",
-          "ask": {
-            "prompt": "Now you try the run. x goes from 2 to 2. How far across is that?",
-            "lookFor": "0 - both x values are 2, so 2 minus 2 is 0.",
-            "onMiss": "Point at the two x values just written - both are 2. Ask: how much do you move across going from 2 to 2?"
-          }
-        },
-        {
-          "id": "sub",
-          "style": "work",
-          "text": "gradient = 4 ÷ 0",
-          "say": "Now put them into the formula: rise 4, run 0. So the gradient is 4 divided by 0.",
+          "id": "l21",
+          "text": "rise = 5 − 1 = 4,   run = 2 − 2 = 0",
+          "say": "The rise is four. The run is zero.",
           "picture": {
             "ref": "contrast:vertical-gradient-zero",
             "step": "s2"
-          }
+          },
+          "style": "work"
         },
         {
-          "id": "undef",
-          "style": "work",
-          "text": "4 ÷ 0  →  undefined  (we cannot divide by 0)",
-          "say": "Nothing times 0 can ever make 4, so 4 divided by 0 has no answer. We say the gradient is undefined.",
-          "ask": {
-            "prompt": "Can we divide 4 by zero? Think: what number times 0 gives 4?",
-            "lookFor": "No number works - anything times 0 is 0 - so 4 ÷ 0 has no answer: the gradient is undefined, not 0.",
-            "onMiss": "Try a few: 1 times 0? 10 times 0? 100 times 0? They are all 0, never 4. So is there an answer?"
+          "id": "l22",
+          "text": "If 4 ÷ 0 = 0, then 0 × 0 = 4 ??",
+          "say": "If four divided by zero did equal zero, then by checking, zero times zero would have to equal four. Which is nonsense!",
+          "picture": {
+            "ref": "contrast:vertical-gradient-zero",
+            "step": "s3"
           },
+          "style": "point"
+        },
+        {
+          "id": "l23",
+          "text": "No number × 0 gives 4, so 4 ÷ 0 is undefined",
+          "say": "No number multiplied by zero ever gives four. So the division simply has no answer.",
           "picture": {
             "ref": "contrast:vertical-gradient-zero",
             "step": "s4"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l24",
+          "text": "Flat line: gradient 0.   Vertical line: undefined.",
+          "say": "Zero gradient is for flat lines. A vertical line isn't flat, it's the steepest line there is, and its gradient is undefined.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "Summary of the three facts, plus why a vertical line is not the graph of a function. Reuse x = 2 with its three points. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The rules"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l25",
+          "text": "y = c:  horizontal,  gradient 0,  parallel to the x-axis",
+          "say": "One. y equals c: a horizontal line, gradient zero, parallel to the x-axis.",
+          "style": "rule"
+        },
+        {
+          "id": "l26",
+          "text": "x = a:  vertical,  gradient undefined,  parallel to the y-axis",
+          "say": "Two. x equals a: a vertical line, gradient undefined, parallel to the y-axis.",
+          "style": "rule"
+        },
+        {
+          "id": "l27",
+          "text": "x = 2  pairs with y = −1, 0, 3, ... infinitely many",
+          "say": "Three. A vertical line like x equals two matches the single x-value two with infinitely many y-values: minus one, zero, three, and on and on.",
+          "style": "point"
+        },
+        {
+          "id": "l28",
+          "text": "One x must give ONE y for a function  →  x = 2 is not a function",
+          "say": "A function must give just one y for each x. The vertical line breaks that, so it's a line, but it isn't the graph of a function.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER, the line through (-5, 8) and (-5, -3). The picture shows the points. Questions are written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together"
+        },
+        {
+          "type": "picture",
+          "ref": "apply",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l29",
+          "text": "(−5, 8)   (−5, −3)",
+          "say": "Now you help me. A straight line goes through (−5, 8) and (−5, −3).",
+          "picture": {
+            "ref": "apply",
+            "step": "s1"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l30",
+          "text": "Both have x = −5",
+          "say": "Yes, the x-coordinate is minus five in both.",
+          "style": "work",
+          "ask": {
+            "prompt": "What do the two points have in common?",
+            "board": "Both points have ___",
+            "lookFor": "They both have x = −5.",
+            "onMiss": "Ask: look at the first number in each pair."
           }
         },
         {
-          "id": "rule",
-          "style": "rule",
-          "text": "vertical line: gradient is undefined - not 0",
-          "say": "So a vertical line's gradient is undefined. Zero is the gradient of a flat line - that's the one people mix it up with."
+          "id": "l31",
+          "text": "The line is x = −5",
+          "say": "So the equation names that x-value.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is the equation of the line through them?",
+            "board": "Equation = ?",
+            "lookFor": "x = −5.",
+            "onMiss": "Ask: the line is named after what every point shares."
+          }
+        },
+        {
+          "id": "l32",
+          "text": "Gradient: undefined (the run is 0)",
+          "say": "Same x, so no run at all.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is its gradient?",
+            "board": "Gradient = ?",
+            "lookFor": "Undefined: the run is 0, and you cannot divide by 0.",
+            "onMiss": "Ask: what is the run between points with the same x?"
+          }
+        },
+        {
+          "id": "l33",
+          "text": "It is parallel to the y-axis",
+          "say": "A vertical line is parallel to the y-axis.",
+          "picture": {
+            "ref": "apply",
+            "step": "s3"
+          },
+          "style": "work",
+          "ask": {
+            "prompt": "Which axis is it parallel to?",
+            "board": "Parallel to the ___-axis",
+            "lookFor": "The y-axis.",
+            "onMiss": "Ask: is the line vertical or horizontal?"
+          }
         }
       ]
     },
     {
       "id": "b8",
-      "kind": "exception",
-      "say": "One more consequence, said gently: a linear function gives exactly one y for each x. A vertical line has one x with infinitely many y-values, so it is not the graph of a linear function. Do not turn this into a quiz.",
+      "kind": "apply",
+      "say": "The child works alone: line through (1, 6) and (7, 6): equation, gradient, which axis; then the equation of the x-axis. Hints only if stuck.",
       "board": [
         {
-          "type": "picture",
-          "ref": "focus:a-vertical-line-x-a",
-          "step": "s3"
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l34",
+          "text": "(1, 6)   (7, 6)",
+          "say": "Your turn to lead. A line goes through (1, 6) and (7, 6).",
+          "style": "point"
         },
         {
-          "type": "exception",
-          "text": "x = a is not the graph of a linear function: one x, many y"
+          "id": "l35",
+          "text": "The line is y = 6",
+          "say": "Both points have the same height, six.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is the equation of the line?",
+            "board": "Equation = ?",
+            "lookFor": "y = 6.",
+            "onMiss": "Ask: which coordinate is the same in both points?"
+          }
+        },
+        {
+          "id": "l36",
+          "text": "Gradient = 0   (rise = 6 − 6 = 0)",
+          "say": "The rise is zero.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is its gradient?",
+            "board": "Gradient = ?",
+            "lookFor": "0 (rise 0, run 6).",
+            "onMiss": "Ask: what is the rise? What is the run?"
+          }
+        },
+        {
+          "id": "l37",
+          "text": "It is parallel to the x-axis",
+          "say": "And a horizontal line runs parallel to the x-axis.",
+          "style": "work",
+          "ask": {
+            "prompt": "Is it parallel to the x-axis or the y-axis?",
+            "board": "Parallel to the ___-axis",
+            "lookFor": "The x-axis.",
+            "onMiss": "Ask: is y = 6 a flat line or a standing-up line?"
+          }
         }
       ]
     },
     {
       "id": "b9",
-      "kind": "method",
-      "say": "Worked example 1: find the equation and the gradient of the line through (3, -5) and (7, -5). Write the coordinates, work out the gradient, then decide whether it is horizontal or vertical and name it.",
+      "kind": "check",
+      "say": "Explain the two why-questions in the child's own words. Reward reasoning.",
       "board": [
         {
           "type": "heading",
-          "text": "Worked example"
+          "text": "Say it in your own words"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l38",
+          "text": "flat line: gradient 0.  vertical line: undefined",
+          "say": "Last two, the 'why' questions.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why is the gradient of a flat line 0, but a vertical line's gradient undefined?",
+            "board": "Why 0, and why undefined?",
+            "lookFor": "Flat line: rise is 0, and 0 ÷ run = 0. Vertical line: run is 0, and dividing by 0 is impossible.",
+            "onMiss": "Ask: what are the rise and the run for each kind of line?"
+          }
         },
         {
-          "type": "work",
-          "lines": [
-            "(3, −5) and (7, −5)",
-            "m = (−5 − (−5)) ÷ (7 − 3) = 0 ÷ 4 = 0",
-            "same y every time → horizontal",
-            "equation: y = −5,  gradient 0"
-          ]
+          "id": "l39",
+          "text": "x = 2 gives many y values, so it is not a function",
+          "say": "And one more.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why is the vertical line x = 2 not the graph of a linear function?",
+            "board": "Why not a function?",
+            "lookFor": "One x-value (2) goes with infinitely many y-values, but a function gives exactly one y for each x.",
+            "onMiss": "Ask: how many y-values sit above x = 2 on that line?"
+          }
         }
       ]
-    },
-    {
-      "id": "b10",
-      "kind": "apply",
-      "say": "Their turn. A line passes through (-5, 8) and (-5, -3). Ask for the equation, the gradient, and which axis it is parallel to. Let them work it out; hint only when stuck.",
-      "board": [
-        {
-          "type": "picture",
-          "ref": "apply",
-          "step": "s3"
-        },
-        {
-          "type": "slot",
-          "id": "apply_eq",
-          "label": "equation: ___"
-        }
-      ],
-      "ask": {
-        "prompt": "A line passes through (-5, 8) and (-5, -3). What is its equation, what is its gradient, and which axis is it parallel to?",
-        "slot": "apply_eq",
-        "lookFor": "x = -5, gradient undefined, parallel to the y-axis. All three parts, with the reasoning for the gradient.",
-        "onMiss": "Ask for the x-coordinates of the two points, then which kind of line that gives and what the run is."
-      }
-    },
-    {
-      "id": "b11",
-      "kind": "check",
-      "say": "Close on the idea that confuses most students: why a line that runs parallel to the x-axis is named y = -3 and not x = -3.",
-      "board": [
-        {
-          "type": "heading",
-          "text": "Your turn"
-        },
-        {
-          "type": "slot",
-          "id": "why_y",
-          "label": "Named y = −3 because ___"
-        }
-      ],
-      "ask": {
-        "prompt": "The flat line runs parallel to the x-axis. So why is it called y = -3, not x = -3?",
-        "slot": "why_y",
-        "lookFor": "Because every point on it has y = -3; the equation names the value that stays the same.",
-        "onMiss": "Ask them to list three points on the line and read off their coordinates."
-      }
     }
-  ]
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
 }

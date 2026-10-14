@@ -36,12 +36,12 @@ let failed = 0;
 const ok = (c, m) => { console.log(`${c ? 'PASS' : 'FAIL'}  ${m}`); if (!c) failed++; };
 
 // ── 1. mode switch ───────────────────────────────────────────────
-ok(G.resolveTutorMode(undefined, undefined) === 'standard', 'no request, no default → standard');
+ok(G.resolveTutorMode(undefined, undefined) === 'guided', 'no request, no default → guided (the default)');
 ok(G.resolveTutorMode(undefined, 'guided') === 'guided', 'server default guided is used when the session asks for nothing');
 ok(G.resolveTutorMode('standard', 'guided') === 'standard', "the session's own request beats the server default");
 ok(G.resolveTutorMode('guided', 'standard') === 'guided', 'session can opt in when the default is standard');
-ok(G.resolveTutorMode('nonsense', 'alsobad') === 'standard', 'invalid values fall back to standard');
-ok(G.resolveTutorMode('GUIDED', undefined) === 'standard', 'values are exact (no accidental matches)');
+ok(G.resolveTutorMode('nonsense', 'alsobad') === 'guided', 'invalid values fall back to the default (guided)');
+ok(G.resolveTutorMode('GUIDED', undefined) === 'guided' && G.resolveTutorMode('GUIDED', 'standard') === 'standard', 'values are exact (no accidental matches)');
 
 // ── 2. scripts vs stored pictures ────────────────────────────────
 const preDir = path.join(root, 'data', 'pregenerated');

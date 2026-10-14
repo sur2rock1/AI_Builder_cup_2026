@@ -4,138 +4,317 @@
   "title": "Reading, writing and partitioning 4-digit numbers",
   "beats": [
     {
-      "id": "b1", "kind": "orient",
-      "say": "Welcome the child in one warm sentence, then say what today is about: they already know numbers with three digits; today there is one more column, and three jobs - read a 4-digit number, write it, and break it into parts. Two sentences at most, then move straight to the chart.",
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a friendly teacher. We are going to read and write big four-digit numbers, and the secret is that every digit has a job depending on where it sits. Mention the colour code: blue thousands, green hundreds, pink tens, yellow ones. No questions: this is the explaining part.",
       "board": [
-        { "type": "heading", "text": "4-digit numbers" },
-        { "type": "point", "text": "Read it - write it - break it apart" }
+        {
+          "type": "heading",
+          "text": "Big numbers, four digits"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "3246",
+          "say": "Today we're going to meet big numbers, with four digits. Look at this one on the board. It looks like a jumble of digits, but it isn't. Every single digit has a job, and the job depends on where it is sitting.",
+          "style": "point"
+        },
+        {
+          "id": "l2",
+          "text": "Each digit's job depends on its PLACE",
+          "say": "Once you know the places, you can read any big number, write it, and break it into pieces. I'll use colours: blue for thousands, green for hundreds, pink for tens and yellow for ones.",
+          "style": "point"
+        }
       ]
     },
     {
-      "id": "b2", "kind": "define",
-      "say": "A digit is one of the ten symbols 0 to 9; a number is built from digits. What a digit is worth depends on where it sits. Show the empty place value chart and ask the child to predict which column is worth the most before telling them.",
+      "id": "b2",
+      "kind": "define",
+      "say": "Teach the four places right to left, then mark the digits IN PLACE. Ones first, then tens, hundreds, thousands. Explain what each place means with a real example (ones are single things, tens are bundles of ten). The tutor does all the talking.",
       "board": [
-        { "type": "point", "text": "A digit is one of 0 1 2 3 4 5 6 7 8 9" },
-        { "type": "point", "text": "A number is built from digits" },
-        { "type": "picture", "ref": "main", "step": "s1" },
-        { "type": "slot", "id": "biggest", "label": "The column worth the most is the ___" }
+        {
+          "type": "heading",
+          "text": "The four places"
+        }
       ],
-      "ask": {
-        "prompt": "Look at the chart. Which column is worth the most - the left one or the right one?",
-        "slot": "biggest",
-        "lookFor": "The left one (thousands). A good answer says why: the places get bigger as you go left.",
-        "onMiss": "Do not tell them yet. Put one counter in the thousands column and one in the ones column and ask which pile you would rather have. Then re-ask."
-      }
-    },
-    {
-      "id": "b3", "kind": "show",
-      "say": "Build the number with place-value counters. A counter is worth different amounts in different trays - that is the whole idea. Place the thousand counters and the hundred counters first.",
-      "board": [
-        { "type": "point", "text": "Th - H - T - U = thousands, hundreds, tens, ones" },
-        { "type": "picture", "ref": "main", "step": "s2" },
-        { "type": "point", "text": "2 thousand-counters, 3 hundred-counters" }
+      "lines": [
+        {
+          "id": "l3",
+          "text": "3246",
+          "say": "Let's go through the digits. We always start from the right-hand end, with the ones.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "{{3|ul.b|thousands}}{{2|ul.g|hundreds}}{{4|ul.p|tens}}{{6|ul|ones}}",
+          "say": "Watch my chalk. The 6 on the end is in the ones place, so yellow. Next to it the 4 is in the tens place, pink. Then the 2 is in the hundreds place, green. And the digit right at the front, the 3, is in the thousands place, blue.",
+          "style": "point",
+          "annotates": "l3"
+        },
+        {
+          "id": "l5",
+          "text": "ones = single things",
+          "say": "Ones are just single things. Six ones is six.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "tens = bundles of 10",
+          "say": "Tens are bundles of ten. Four tens is four bundles of ten, so forty.",
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "hundreds = bundles of 100",
+          "say": "Hundreds are bundles of a hundred, so two hundreds is two hundred.",
+          "style": "point"
+        },
+        {
+          "id": "l8",
+          "text": "thousands = bundles of 1000",
+          "say": "And thousands are bundles of a thousand, so three thousands is three thousand.",
+          "style": "point"
+        }
       ]
     },
     {
-      "id": "b4", "kind": "show",
-      "say": "Now the tens and the ones. Then read the digits off the chart, column by column, left to right.",
+      "id": "b3",
+      "kind": "show",
+      "say": "Expanded form: put the digits' values together. Write 3246 = 3000 + 200 + 40 + 6 with the colours, then read the number aloud in words. Explain partitioning = breaking a number into its place-value parts. No questions.",
       "board": [
-        { "type": "picture", "ref": "main", "step": "s4" },
-        { "type": "point", "text": "1 ten-counter, 4 one-counters" },
-        { "type": "work", "lines": ["2 Th, 3 H, 1 T, 4 U", "digits: 2, 3, 1, 4  ->  2314"] },
-        { "type": "slot", "id": "three_place", "label": "The digit 3 sits in the ___ place" }
+        {
+          "type": "heading",
+          "text": "Expanded form"
+        }
       ],
-      "ask": {
-        "prompt": "Reading the chart from left to right, which place does the digit 3 sit in?",
-        "slot": "three_place",
-        "lookFor": "Hundreds. The child should be able to point to the column, not only name it.",
-        "onMiss": "Ask them to name the four columns from the left, one at a time, then count along to the 3."
-      }
-    },
-    {
-      "id": "b5", "kind": "contrast",
-      "say": "The most common mix-up: treating a digit as only its face. In 6423 the 4 looks like a four, but it is worth something different. Put the two ideas side by side. Do not call it a mistake; just show the test: if the 4 meant four ones, the parts would add up to the wrong number.",
-      "board": [
-        { "type": "compare", "side": "left", "title": "Face value", "text": "what the digit looks like: 4" },
-        { "type": "compare", "side": "right", "title": "Place value", "text": "what it is worth in 6423: 4 hundreds" },
-        { "type": "picture", "ref": "contrast:confusing-face-and-place-value", "step": "s3" },
-        { "type": "slot", "id": "four_worth", "label": "In 6423, the 4 is worth ___" }
-      ],
-      "ask": {
-        "prompt": "In 6423, is the digit 4 worth 4, 40 or 400? What tells you?",
-        "slot": "four_worth",
-        "lookFor": "400, because the 4 is in the hundreds column (4 x 100). Listen for the reason, not just the number.",
-        "onMiss": "Go back to the chart: ask which column the 4 is in, and what ONE counter in that column is worth. Then re-ask."
-      }
-    },
-    {
-      "id": "b6", "kind": "rule",
-      "say": "Say the rule in the child's own words after you state it: a digit's value is the digit times the value of its place. Then write 6423 as the sum of its parts so they see the rule in use.",
-      "board": [
-        { "type": "rule", "text": "value of a digit = the digit × its place" },
-        { "type": "work", "lines": ["6423", "6000 + 400 + 20 + 3"] }
+      "lines": [
+        {
+          "id": "l9",
+          "text": "3246 = {{3000|ul.b}} + {{200|ul.g}} + {{40|ul.p}} + {{6|ul}}",
+          "say": "Now we put the values together. Three thousand, plus two hundred, plus forty, plus six. If you add them up you get back to our number. Writing it like this is called expanded form.",
+          "style": "work"
+        },
+        {
+          "id": "l10",
+          "text": "Partitioning = breaking a number into its place-value parts",
+          "say": "And breaking a number up into its parts like this has a name: partitioning. It's the same idea you may have met with two-digit numbers, just with more places.",
+          "style": "rule"
+        },
+        {
+          "id": "l11",
+          "text": "3246 → three thousand, two hundred and forty-six",
+          "say": "To say the number out loud, we just read the parts in order: three thousand, two hundred and forty-six. Easy once you can see the parts.",
+          "style": "point"
+        }
       ]
     },
     {
-      "id": "b7", "kind": "exception",
-      "say": "Where the rule needs care: zero. When a column has nothing, zero holds the place open. Show 4040 with its empty hundreds and ones, and what happens if the zeros are left out.",
+      "id": "b4",
+      "kind": "contrast",
+      "say": "The zero placeholder. Compare 5308 with 538. Show that the zero holds the tens place open. Light, curious tone. No questions: the tutor shows it.",
       "board": [
-        { "type": "heading", "text": "Zero holds the place" },
-        { "type": "work", "lines": ["4040 = 4000 + 0 + 40 + 0"] },
-        { "type": "picture", "ref": "focus:zero-acts-as-a-placeholder", "step": "s4" },
-        { "type": "exception", "text": "leave the zeros out and 4040 shrinks to 44" },
-        { "type": "slot", "id": "hundreds_of_4040", "label": "four thousand and forty = ___" }
+        {
+          "type": "heading",
+          "text": "The sneaky zero"
+        }
       ],
-      "ask": {
-        "prompt": "Write 'four thousand and forty' in figures. How many digits does it have, and what is in the hundreds column?",
-        "slot": "hundreds_of_4040",
-        "lookFor": "4040 - four digits, with 0 in the hundreds column. A common slip is 440 or 4400.",
-        "onMiss": "Ask them to say the four columns out loud: how many thousands, hundreds, tens, ones? Fill the hundreds with 0 together."
-      }
+      "lines": [
+        {
+          "id": "l12",
+          "text": "5308",
+          "say": "Now here's a number with something sneaky in it: five thousand, three hundred and eight. Look at the tens place.",
+          "style": "point"
+        },
+        {
+          "id": "l13",
+          "text": "5308 = {{5000|ul.b}} + {{300|ul.g}} + 0 tens + {{8|ul}}",
+          "say": "There are no tens at all. Not one bundle of ten. So there's a zero in the tens place, and that zero is saying: nothing here, but keep this place open.",
+          "style": "point"
+        },
+        {
+          "id": "l14",
+          "text": "538 is NOT the same as 5308",
+          "say": "What if we forgot the zero and wrote five, three, eight? That's five hundred and thirty-eight, a completely different and much smaller number. The zero is a placeholder, and it keeps every other digit in the right seat.",
+          "style": "rule"
+        }
+      ]
     },
     {
-      "id": "b8", "kind": "method",
-      "say": "Now the method for breaking a number apart (expanded form): name the column, write that digit's full value, then join the values with plus signs. Work 4567 line by line, then ask about the 5.",
+      "id": "b5",
+      "kind": "method",
+      "say": "From words to digits. 'four thousand and seven' -> 4007. Teach it by filling the four places and putting a zero in any place the words skip. No questions.",
       "board": [
-        { "type": "heading", "text": "Break it apart" },
-        { "type": "work", "lines": ["4567", "4 thousands = 4000", "5 hundreds = 500", "6 tens = 60", "7 ones = 7", "4567 = 4000 + 500 + 60 + 7"] },
-        { "type": "picture", "ref": "alt:step_by_step", "step": "s4" },
-        { "type": "slot", "id": "five_value", "label": "In 4567, the 5 is worth ___" }
+        {
+          "type": "heading",
+          "text": "Writing a number from words"
+        }
       ],
-      "ask": {
-        "prompt": "In 4567, what is the 5 worth?",
-        "slot": "five_value",
-        "lookFor": "500, from the hundreds column.",
-        "onMiss": "Ask which column the 5 is in and what each counter there is worth, then multiply."
-      }
+      "lines": [
+        {
+          "id": "l15",
+          "text": "Write: four thousand and seven",
+          "say": "How do we go the other way, from words to digits? Say the words are four thousand and seven. Here's my method: draw four boxes, for thousands, hundreds, tens and ones.",
+          "style": "point"
+        },
+        {
+          "id": "l16",
+          "text": "4 | 0 | 0 | 7",
+          "say": "Four thousand, so a 4 in the first box. The words never mention any hundreds, and never mention any tens, so those boxes get zeros. And seven ones. Together that's four thousand and seven, written 4007.",
+          "style": "work"
+        },
+        {
+          "id": "l17",
+          "text": "Skipped place in the words = a 0 in the number",
+          "say": "So whenever the words skip a place, that place gets a zero. That's the whole trick.",
+          "style": "rule"
+        }
+      ]
     },
     {
-      "id": "b9", "kind": "apply",
-      "say": "Their turn, on a fresh chart: 3 thousands, 0 hundreds, 8 tens, 4 ones. Ask them to write the number AND break it apart. Let them work it out; do not give hints until they are stuck.",
+      "id": "b6",
+      "kind": "apply",
+      "say": "Do one TOGETHER, 6481. The tutor sets it up; the child answers each step. Each question is written on the board first. Praise the reasoning in a sentence.",
       "board": [
-        { "type": "picture", "ref": "apply", "step": "s3" },
-        { "type": "slot", "id": "standard_form", "label": "number = ___" }
+        {
+          "type": "heading",
+          "text": "Let's do one together: 6481"
+        }
       ],
-      "ask": {
-        "prompt": "Look at this chart. What number is it, and how do you break it apart?",
-        "slot": "standard_form",
-        "lookFor": "3084 and 3000 + 0 + 80 + 4. The zero in the hundreds must be kept.",
-        "onMiss": "Name the columns from the left and ask what is in each. If the hundreds are dropped, return to 'zero holds the place'."
-      }
+      "lines": [
+        {
+          "id": "l18",
+          "text": "6481",
+          "say": "Now it's your turn to help me. Here's a new number, six thousand four hundred and eighty-one.",
+          "style": "point"
+        },
+        {
+          "id": "l19",
+          "text": "The 4 is in the hundreds place",
+          "say": "Yes, the 4 is the hundreds digit.",
+          "style": "work",
+          "ask": {
+            "prompt": "In 6481, which place is the digit 4 in?",
+            "board": "The 4 is in the ___ place",
+            "lookFor": "Hundreds place.",
+            "onMiss": "Count the places from the right: ones, tens, hundreds. Which is the 4?"
+          }
+        },
+        {
+          "id": "l20",
+          "text": "4 hundreds = 400",
+          "say": "Four hundreds is four hundred. That's the value of that 4.",
+          "style": "work",
+          "ask": {
+            "prompt": "So what is the value of the 4 in 6481?",
+            "board": "Value of the 4 = ?",
+            "lookFor": "400.",
+            "onMiss": "Ask: it is 4 bundles of what? How much is each bundle worth?"
+          }
+        },
+        {
+          "id": "l21",
+          "text": "6481 = {{6000|ul.b}} + {{400|ul.g}} + {{80|ul.p}} + {{1|ul}}",
+          "say": "Perfect, and that's the full expanded form: six thousand, four hundred, eighty and one.",
+          "style": "work",
+          "ask": {
+            "prompt": "Now partition the whole number, 6481, into place-value parts.",
+            "board": "6481 = ? + ? + ? + ?",
+            "lookFor": "6000 + 400 + 80 + 1.",
+            "onMiss": "Start from the left: what is the 6 worth? Then the 4, the 8 and the 1."
+          }
+        }
+      ]
     },
     {
-      "id": "b10", "kind": "check",
-      "say": "Close with a fresh case that tests whether the idea transfers: the same digit in a different place. Ask for the reason, not only the number.",
+      "id": "b7",
+      "kind": "apply",
+      "say": "The child works alone: 7052 in expanded form, then the number for 'nine thousand and sixty'. Hint only if stuck. Praise each step they do themselves.",
       "board": [
-        { "type": "heading", "text": "Your turn" },
-        { "type": "slot", "id": "five_in_5764", "label": "In 5764, the 5 is worth ___" }
+        {
+          "type": "heading",
+          "text": "Your turn: 7052 and a number from words"
+        }
       ],
-      "ask": {
-        "prompt": "In 5764, what is the 5 worth? Why is that different from the 5 in 4567?",
-        "slot": "five_in_5764",
-        "lookFor": "5000, because it is in the thousands column now. The reason is the place, not the digit.",
-        "onMiss": "Put the number on the chart and ask which column the 5 sits in this time, then re-ask the reason."
-      }
+      "lines": [
+        {
+          "id": "l22",
+          "text": "7052",
+          "say": "Your turn to lead. Here's a number with a zero hiding in it: seven thousand and fifty-two.",
+          "style": "point"
+        },
+        {
+          "id": "l23",
+          "text": "7052 = {{7000|ul.b}} + 0 hundreds + {{50|ul.p}} + {{2|ul}}",
+          "say": "Good, there are no hundreds, so we leave them out or write nought hundreds.",
+          "style": "work",
+          "ask": {
+            "prompt": "Partition 7052 into place-value parts. Watch out for the zero.",
+            "board": "7052 = ?",
+            "lookFor": "7000 + 50 + 2 (no hundreds).",
+            "onMiss": "Ask: what digit is in the hundreds place? What is zero hundreds worth?"
+          }
+        },
+        {
+          "id": "l24",
+          "text": "nine thousand and sixty → 9060",
+          "say": "Nine in the thousands, nothing in the hundreds, six in the tens, nothing in the ones: 9060.",
+          "style": "work",
+          "ask": {
+            "prompt": "Write this number in digits: nine thousand and sixty.",
+            "board": "nine thousand and sixty = ?",
+            "lookFor": "9060.",
+            "onMiss": "Draw four boxes: Th, H, T, O. The words skip a place or two: what goes there?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "check",
+      "say": "Final check: compare the value of the same digit in two numbers (the 5 in 5,230 and 2,053) and have the child explain why the zero matters.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Same digit, different place"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l25",
+          "text": "5230 and 2053",
+          "say": "One more, a good one. Two numbers, five thousand two hundred and thirty, and two thousand and fifty-three. Both have a 5 in them.",
+          "style": "point"
+        },
+        {
+          "id": "l26",
+          "text": "In 5230 the 5 is worth 5000. In 2053 the 5 is worth 50.",
+          "say": "The same digit is worth very different amounts. In the first number the 5 is thousands, worth five thousand. In the second it's in the tens place, worth fifty.",
+          "style": "work",
+          "ask": {
+            "prompt": "Is the 5 worth the same in both numbers? What is it worth in each?",
+            "board": "Value of 5: in 5230? in 2053?",
+            "lookFor": "5000 in 5230, and 50 in 2053.",
+            "onMiss": "Ask: which place is the 5 in, in each number?"
+          }
+        },
+        {
+          "id": "l27",
+          "text": "The zero keeps every digit in its place",
+          "say": "So why do we need zeros at all? Because they hold the places open, and a digit's value depends on its place.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why do we write the zero in 5308 and not just 538?",
+            "board": "Why the zero?",
+            "lookFor": "The zero is a placeholder: without it the digits shift places and the number changes.",
+            "onMiss": "Ask: what would happen to the 5, the 3 and the 8 if the zero were missing?"
+          }
+        }
+      ]
     }
-  ]
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
 }

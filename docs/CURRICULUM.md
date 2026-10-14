@@ -174,7 +174,7 @@ pictures are pre-generated (`docs/BOARD_VISUALS.md` §6). Curricula ingested ear
 ## 8. Pre-generated lessons
 
 After publishing, the pipeline writes a snapshot of the course and runs
-`scripts/pregenerate-assets.ts --curricula-file <snapshot>` in the background (works whether
+`scripts/pregenerate-assets.ts --curricula-file <snapshot>` in the background (and then, for the default guided tutor, `scripts/generate-guided.ts --runtime --skip-existing` with the same snapshot; see `docs/GUIDED_TUTOR.md` §7) (works whether
 Firestore or the local file is the store; `DISABLE_PREGEN=true` turns it off). Lessons are cached
 per **concept id** through `src/curriculum/pregenStore.ts` — Firestore collection `pregen` (one doc
 per concept id) plus Cloud Storage for the generated "real-world photo" image, with a local-file

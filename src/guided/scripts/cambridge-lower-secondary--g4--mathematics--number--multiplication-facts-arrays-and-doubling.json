@@ -1,0 +1,313 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--multiplication-facts-arrays-and-doubling",
+  "title": "Multiplication facts, arrays and doubling",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: multiplication tables are not just chanted; they have pictures and patterns behind them. We will look at arrays and doubling. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Pictures behind the tables"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "3 × 4",
+          "say": "Three times four. Instead of chanting it, let's see it. Multiplication has a picture, and once you've seen the picture the facts stick much better.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "An array: equal rows and columns of dots. 3 rows of 4 dots shows 3 x 4 = 12. Write the dots on the board line by line, then the multiplication. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "What is an array?"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "3 × 4 array:   ○ ○ ○ ○",
+          "say": "An array is a neat arrangement of dots in equal rows. Here's the first row, four dots.",
+          "style": "point"
+        },
+        {
+          "id": "l3",
+          "text": "○ ○ ○ ○",
+          "say": "The second row, four dots again.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "○ ○ ○ ○",
+          "say": "And a third row. Three rows with four dots in each.",
+          "style": "point"
+        },
+        {
+          "id": "l5",
+          "text": "3 rows of 4  →  3 × 4 = 12",
+          "say": "Three rows of four. That's three times four, and if you count the dots, there are twelve.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Turn the array: 4 rows of 3 is the same dots, so 4 x 3 = 12. Multiplication can be swapped. Patterns of multiples: 2s even, 5s end in 0 or 5, 10s end in 0. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Turn it round"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l6",
+          "text": "3 × 4 = 12",
+          "say": "Now imagine turning our array on its side.",
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "4 rows of 3  →  4 × 3 = 12",
+          "say": "Now we have four rows with three dots in each. Four times three. The same dots, so the same twelve.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "2s: 2, 4, 6, 8, 10   always even",
+          "say": "Some patterns to spot. Multiples of two are always even.",
+          "style": "rule"
+        },
+        {
+          "id": "l9",
+          "text": "5s: 5, 10, 15, 20   end in 5 or 0",
+          "say": "Multiples of five end in five or zero.",
+          "style": "rule"
+        },
+        {
+          "id": "l10",
+          "text": "10s: 10, 20, 30   end in 0",
+          "say": "And multiples of ten always end in zero.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend says 4 x 6 and 6 x 4 give different answers. Test with arrays: 4 rows of 6 = 24; turned, 6 rows of 4 = 24. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l11",
+          "text": "4 × 6   and   6 × 4",
+          "say": "A friend of mine thinks four times six and six times four are different, because the numbers are the other way round. Let's test with arrays.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "4 rows of 6 dots = 24 dots",
+          "say": "Four rows of six dots. Count them: twenty-four.",
+          "style": "work"
+        },
+        {
+          "id": "l13",
+          "text": "6 rows of 4 dots = 24 dots",
+          "say": "Turn it on its side. Now six rows of four. Still twenty-four dots. Nothing was added or lost.",
+          "style": "work"
+        },
+        {
+          "id": "l14",
+          "text": "4 × 6 = 6 × 4 = 24",
+          "say": "Same array, same total. So the order of a multiplication doesn't matter.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "Doubling to build tables: 2 x 7 = 14, double it for 4 x 7 = 28, double again for 8 x 7 = 56. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Doubling builds tables"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l14b",
+          "text": "2 × 7     4 × 7     8 × 7",
+          "say": "We'll build three facts from each other, starting with the smallest.",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "2 × 7 = 14",
+          "say": "A neat trick to build harder tables from easier ones. Start with the two times table. Two sevens are fourteen.",
+          "style": "work"
+        },
+        {
+          "id": "l16",
+          "text": "4 × 7 = 28",
+          "say": "Double the two times table to get the four times table. Four sevens are double fourteen, which is twenty-eight.",
+          "style": "work"
+        },
+        {
+          "id": "l17",
+          "text": "8 × 7 = 56",
+          "say": "Double the four times table to get the eight times table. Eight sevens are double twenty-eight, fifty-six.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "State the doubling chain as a rule, and the array rule. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Two things to remember"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l18",
+          "text": "Double the 2s  →  the 4s.  Double the 4s  →  the 8s.",
+          "say": "So: double the twos and you get the fours. Double the fours and you get the eights.",
+          "style": "rule"
+        },
+        {
+          "id": "l19",
+          "text": "An array shows a × b, and turned it shows b × a",
+          "say": "And whenever you're stuck, draw the array. It shows the multiplication, and turned round it shows the swap too.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER: 4 x 9 by doubling twice. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together: 4 × 9"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l20",
+          "text": "4 × 9     (4 is double 2)",
+          "say": "Now you help me. Four times nine, using doubling. Four is double two.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "2 × 9 = 18",
+          "say": "Start with the easy one.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is 2 × 9?",
+            "board": "2 × 9 = ?",
+            "lookFor": "18.",
+            "onMiss": "Ask: double 9."
+          }
+        },
+        {
+          "id": "l22",
+          "text": "4 × 9 = 36",
+          "say": "Now double that.",
+          "style": "work",
+          "ask": {
+            "prompt": "Double it to find 4 × 9.",
+            "board": "4 × 9 = ?",
+            "lookFor": "36 (double 18).",
+            "onMiss": "Ask: what is 18 + 18?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "check",
+      "say": "The child works alone: 8 x 6 from 2 x 6 = 12 (double, double); then the array for 3 x 5. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l23",
+          "text": "8 × 6     start from 2 × 6 = 12   (2 → 4 → 8)",
+          "say": "Your turn to lead. Eight times six. Start from two sixes, twelve, and double your way up.",
+          "style": "point"
+        },
+        {
+          "id": "l24",
+          "text": "4 × 6 = 24",
+          "say": "First double.",
+          "style": "work",
+          "ask": {
+            "prompt": "Double 12 to get 4 × 6.",
+            "board": "4 × 6 = ?",
+            "lookFor": "24.",
+            "onMiss": "Ask: what is 12 + 12?"
+          }
+        },
+        {
+          "id": "l25",
+          "text": "8 × 6 = 48",
+          "say": "Second double.",
+          "style": "work",
+          "ask": {
+            "prompt": "Double again to get 8 × 6.",
+            "board": "8 × 6 = ?",
+            "lookFor": "48.",
+            "onMiss": "Ask: what is 24 + 24?"
+          }
+        },
+        {
+          "id": "l26",
+          "text": "3 × 5",
+          "say": "Last one, with an array. Three times five.",
+          "style": "point"
+        },
+        {
+          "id": "l27",
+          "text": "3 rows of 5 = 15 dots;  turned: 5 rows of 3 = 15 dots",
+          "say": "The array for three times five is three rows of five, and turned round it is five rows of three, fifteen both ways.",
+          "style": "work",
+          "ask": {
+            "prompt": "Describe the array for 3 × 5. What other multiplication does it show when you turn it?",
+            "board": "3 × 5 = ? × ?",
+            "lookFor": "3 rows of 5 gives 15 dots; turned it shows 5 × 3 = 15.",
+            "onMiss": "Ask: how many rows and how many dots in each? Now turn it on its side."
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

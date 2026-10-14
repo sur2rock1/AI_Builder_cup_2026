@@ -14,6 +14,10 @@
 //   --no-critic              skip the independent critic (not recommended)
 //   --attempts N             draft + repairs per concept (default 3)
 //   --dry-run                list what would be generated, call nothing
+//   --curricula-file <path>  read the courses from this JSON file instead of data/curricula.json (the PDF upload passes its snapshot)
+//   --runtime                save to the runtime store (Firestore guidedScripts + data/guided/runtime) instead of src/guided/generated.
+//                            Used after a PDF upload: a running server picks the lesson up within ~10 s, no rebuild.
+//   --skip-existing          skip any concept that already has a guided lesson of any kind (bundled, hand-written or runtime)
 //
 // Output:
 //   src/guided/generated/<conceptId>.json    lessons that passed every check (served, bundled into the build)
@@ -31,6 +35,8 @@ import { initFirebaseAdmin } from '../src/firebase/admin';
 import { getPregenAsync } from '../src/curriculum/pregenStore';
 import { gatewayModel } from '../src/quality/model';
 import { gatewayStats, setGatewayLogSink } from '../src/ai/gateway';
+import { hasGuidedScript } from '../src/guided/registry';
+import { saveGuidedScript, guidedScriptExists } from '../src/guided/store';
 import { generateGuidedLesson, sourceFromCurriculum, QuotaExhaustedError } from '../src/guided/generate';
 
 dotenv.config();
@@ -60,6 +66,8 @@ export function writeGeneratedIndex(dir = GEN_DIR): number {
   return files.length;
 }
 
+const ALL_RUNTIME_COUNT = (report: any[]) => report.filter((r) => r.result === 'ok').length;
+
 function selectConcepts(curricula: any[]): Array<{ concept: any; course: any }> {
   const only = argVal('--concepts')?.split(',').map((x) => x.trim()).filter(Boolean);
   const subject = argVal('--subject');
@@ -84,14 +92,21 @@ function selectConcepts(curricula: any[]): Array<{ concept: any; course: any }> 
 }
 
 async function main() {
-  const curricula: any[] = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'curricula.json'), 'utf8'));
+  const curricula: any[] = JSON.parse(fs.readFileSync(argVal('--curricula-file') ?? path.join(ROOT, 'data', 'curricula.json'), 'utf8'));
+  const runtime = flag('--runtime');
+  const skipExisting = flag('--skip-existing');
+  /** Already has a lesson? --runtime/--skip-existing look everywhere; the default only looks at src/guided/generated. */
+  const hasLesson = async (id: string) =>
+    (runtime || skipExisting)
+      ? hasGuidedScript(id) || await guidedScriptExists(id)
+      : fs.existsSync(path.join(GEN_DIR, `${id}.json`));
   const labelOf = new Map<string, string>(curricula.flatMap((c) => (c.concepts ?? []).map((x: any) => [x.id, x.label])));
   const picked = selectConcepts(curricula);
   if (!picked.length) { console.error('Nothing selected. Use --preset first-chapter, --subject, --chapter or --concepts.'); process.exit(1); }
 
   console.log(`\nGuided lessons to generate: ${picked.length}`);
   for (const { concept, course } of picked) {
-    const exists = fs.existsSync(path.join(GEN_DIR, `${concept.id}.json`));
+    const exists = await hasLesson(concept.id);
     console.log(`  ${exists && !flag('--force') ? '= keep  ' : '+ write '} ${course.label} ${course.grade ?? ''} | ${concept.chapter ?? ''} | ${concept.label}`);
   }
   if (flag('--dry-run')) return;
@@ -122,7 +137,7 @@ async function main() {
 
   for (const { concept, course } of picked) {
     const target = path.join(GEN_DIR, `${concept.id}.json`);
-    if (fs.existsSync(target) && !flag('--force')) { report.push({ conceptId: concept.id, result: 'kept' }); continue; }
+    if (!flag('--force') && await hasLesson(concept.id)) { report.push({ conceptId: concept.id, result: 'kept' }); continue; }
     const t0 = Date.now();
     const record = await getPregenAsync([concept.id]);
     if (!record) console.warn(`  ! ${concept.label}: no stored record - generating without pictures`);
@@ -145,7 +160,12 @@ async function main() {
       const lines = r.script.beats.reduce((n, b) => n + (b.lines?.length ?? 0), 0);
       const asks = r.script.beats.reduce((n, b) => n + (b.lines?.filter((l) => l.ask).length ?? 0), 0);
       const out = { ...r.script, meta: { source: 'gemini', model: r.model, generatedAt: new Date().toISOString(), attempts: r.attempts, criticCalls: r.criticCalls, warnings: r.warnings } };
-      fs.writeFileSync(target, JSON.stringify(out, null, 2) + '\n');
+      if (runtime) {
+        const where = await saveGuidedScript(out as any);
+        logConcept(`saved to runtime store: ${where}`);
+      } else {
+        fs.writeFileSync(target, JSON.stringify(out, null, 2) + '\n');
+      }
       const stale = path.join(WITHHELD_DIR, `${concept.id}.json`);
       if (fs.existsSync(stale)) fs.writeFileSync(stale, JSON.stringify({ supersededBy: 'src/guided/generated', at: new Date().toISOString() }) + '\n');
       console.log(`✓ ${r.script.beats.length} beats, ${lines} lines, ${asks} questions (${r.attempts} draft${r.attempts === 1 ? '' : 's'}, ${secs}s)${r.warnings.length ? `, ${r.warnings.length} warning(s)` : ''}`);
@@ -158,16 +178,17 @@ async function main() {
     }
   }
 
-  const n = writeGeneratedIndex();
+  // A runtime run must not touch the bundled folder or its index (a dev-server watcher would restart on it).
+  const n = runtime ? ALL_RUNTIME_COUNT(report) : writeGeneratedIndex();
   const reportPath = path.join(REPORT_DIR, `report-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2) + '\n');
   const st = gatewayStats();
   const ok = report.filter((r) => r.result === 'ok').length, held = report.filter((r) => r.result === 'withheld').length;
-  console.log(`\nDone: ${ok} written, ${held} withheld, ${report.length - ok - held} kept. ${n} generated lesson(s) are now served.`);
+  console.log(`\nDone: ${ok} written, ${held} withheld, ${report.length - ok - held} kept. ${runtime ? n + ' new lesson(s) saved to the runtime store.' : n + ' generated lesson(s) are now served.'}`);
   console.log(`Model calls: ${st.calls} (${st.failed} failed). Report: ${path.relative(ROOT, reportPath)}  Log: ${path.relative(ROOT, runLog)}`);
   if (failures.size) console.log('Failed calls by cause: ' + [...failures].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ×${v}`).join('; '));
   if (held) console.log('Withheld lessons (with reasons) are in data/guided/withheld/ - those concepts keep the standard tutor.');
-  console.log('Restart the server to serve the new lessons.\n');
+  console.log(runtime ? 'A running server picks the new lessons up within ~10 seconds.\n' : 'Restart the server to serve the new lessons.\n');
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

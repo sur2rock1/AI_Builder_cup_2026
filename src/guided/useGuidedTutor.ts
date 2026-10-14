@@ -12,7 +12,7 @@
 // ─────────────────────────────────────────────────────────────────
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { isTutorMode, resolveTutorMode, type TutorMode } from './mode';
+import { isTutorMode, resolveTutorMode, DEFAULT_TUTOR_MODE, SHOW_MODE_TOGGLE, type TutorMode } from './mode';
 import { itemsToStagger } from './board';
 import { DEFAULT_PACE, isPace, paceRevealMs, type Pace } from './pace';
 import { EMPTY_GUIDED_BOARD, type GuidedBoardState, type GuidedPayload } from './types';
@@ -27,6 +27,8 @@ function readStored(): TutorMode | null {
     const fromUrl = new URLSearchParams(window.location.search).get('tutor');
     if (isTutorMode(fromUrl)) return fromUrl;
   } catch { /* no window / blocked */ }
+  // With the toggle hidden, a mode remembered from an older session must not override the default.
+  if (!SHOW_MODE_TOGGLE) return null;
   try {
     const stored = window.sessionStorage.getItem(STORAGE_KEY);
     if (isTutorMode(stored)) return stored;
@@ -43,7 +45,7 @@ export function useGuidedTutor(conceptId?: string | null) {
     try { const v = window.sessionStorage.getItem(PACE_KEY); if (isPace(v)) return v; } catch { /* ignore */ }
     return DEFAULT_PACE;
   });
-  const [serverDefault, setServerDefault] = useState<TutorMode>('standard');
+  const [serverDefault, setServerDefault] = useState<TutorMode>(DEFAULT_TUTOR_MODE);
   const [guidedConcepts, setGuidedConcepts] = useState<string[]>([]);
   /** What the server says is really running (it falls back to standard if a concept has no lesson). */
   const [running, setRunning] = useState<TutorMode | null>(null);

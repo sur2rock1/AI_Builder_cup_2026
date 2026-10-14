@@ -312,7 +312,8 @@ After a gap of more than 30 days, the plan inserts prerequisite review for the f
 | View | Audience | Shows |
 |---|---|---|
 | **"What I've learned about you" card** | Learner | 3–5 `childFriendly` claims, current goals, next review; a "That's not right" button → `disputed` + optional correction |
-| **Parent portal** | Parent | Concept ladder per subject, misconception ledger with status, claims with evidence replay (events), session summaries, safeguarding flags |
+| **Parent view** (default) | Parent | Plain-language letter with evidence links, topic journey, mix-up story, next-lesson plan, home tip — docs/PARENT_VIEW.md. Reads `claims`, `sessionSummaries`, the ledger and events; caches `parentNarratives` (optional field) |
+| **Parent portal ("Under the hood")** | Parent | Concept ladder per subject, misconception ledger with status, claims with evidence replay (events), session summaries, safeguarding flags |
 | **Tutor's reasoning panel** | Demo / teacher | Current move, why (plan rule + evidence refs), the Diagnostician's last classification |
 
 ---

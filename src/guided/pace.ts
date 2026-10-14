@@ -1,5 +1,5 @@
 // Guided mode — pace. The learner chooses how fast the tutor goes.
-// Pace changes the tutor's instructions (how much per turn, how much checking in)
+// Pace changes the tutor's instructions (how much per turn, how much checking in: only the lesson's own questions at steady and quick)
 // and how slowly the board writes. It never changes WHAT is taught.
 
 export const PACES = ['slow', 'steady', 'quick'] as const;
@@ -13,15 +13,16 @@ export const resolvePace = (v: unknown): Pace => (isPace(v) ? v : DEFAULT_PACE);
 export function paceGuidance(pace: Pace): string {
   switch (pace) {
     case 'slow':
-      return 'PACE: SLOW. The learner asked for a slow pace. Speak in short sentences with a clear pause between ideas. '
-        + 'Give ONE idea at a time, then check in ("Does that make sense so far?") and wait for their answer before the next idea. '
-        + 'Use the simplest words you can, and add one small everyday example. Spread this beat over several short turns.';
+      return 'PACE: SLOW. The learner asked for a slow pace. Speak in short sentences, one idea at a time, in the simplest words you can, '
+        + 'and add one small everyday example when an idea is new. Say a little more about each line than usual. '
+        + 'Slow means smaller steps, NOT stopping: never ask a check-in question of your own and never wait for a reply unless the lesson itself asks a question. Keep going.';
     case 'quick':
       return 'PACE: QUICK. The learner asked for a brisk pace. Get to the point, skip recaps and extra examples, '
-        + 'and ask nothing beyond the beat\'s own question. Stay clear and kind.';
+        + 'and ask nothing beyond the lesson\'s own questions. Stay clear and kind.';
     default:
-      return 'PACE: STEADY. Do not rush. Cover one idea, leave a short pause, then the next. Check in once during the beat ("Okay so far?"), '
-        + 'and give the learner room to speak.';
+      return 'PACE: STEADY. Teach the way a good teacher talks at a board: say the idea, write it, and flow straight on to the next. '
+        + 'Never finish with a check-in question of your own, and never wait for a reply unless the lesson itself asks a question. '
+        + 'Stop and check in only if the learner has gone quiet for a long time, sounds unsure, or says they are lost.';
   }
 }
 

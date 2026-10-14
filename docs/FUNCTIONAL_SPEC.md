@@ -55,7 +55,7 @@ Problem Alignment & Impact 25% · Innovation & Creativity 25% · UX & Solution D
 Learner opens "What I've learned about you" → taps "That's not right" on a claim → the claim becomes `disputed` and is excluded from plans until new evidence arrives.
 
 ### J4 — Parent reviews progress
-Parent portal → subject → concept ladder, misconception ledger (suspected / confirmed / resolved), claims with "show evidence" (replays the exchanges), session summaries, escalations.
+Parent portal opens on the **Parent view** (2026-10-14, docs/PARENT_VIEW.md): a plain-language letter whose every sentence has *See why* (opens the child's real answer), the child's journey per topic in words, *How Ananta figured the child out* (noticed → seen again → Ananta changed how it teaches → fixed), what seems to help, Ananta's plan for the next lesson and a 5-minute home activity. No scores or internal codes. The earlier detailed view (concept ladder, misconception ledger with status, evidence replay) is one tap away as **Under the hood**.
 
 ### J5 — Demo (3 minutes)
 Seeded learners (clearly labelled as simulated): **same concept, two learners, different teaching**, with the Tutor's-reasoning panel visible; one live exchange updates the learner card in real time. See §7.
@@ -103,7 +103,7 @@ Priority: **M** = must · **H** = high value · **N** = nice to have.
 ### Added after v1.0 (retroactive, 2026-10-09)
 | ID | Requirement | Pri | Acceptance criteria / status |
 |---|---|---|---|
-| FR-47 | Guided tutor mode: tutor follows a prepared beat script and writes one growing board; switchable per session (`?tutor=guided`, `TUTOR_MODE`), falls back to standard when a concept has no script | H | `src/guided/*`, 4 scripts; `tests/guided/run.mjs` currently crashes (stale) — status 🟨, undocumented until this audit |
+| FR-47 | Guided tutor mode is the **default** tutor (2026-10-14): the tutor follows a prepared beat script and writes one growing, scrolling board with chalk marks; questions only in apply/check beats, written on the board first; Standard/Guided toggle hidden (`?tutor=standard` / `TUTOR_MODE=standard` restore standard); falls back to standard when a concept has no script. A PDF upload also generates guided lessons in the background (runtime store, no rebuild) | H | `src/guided/*`, `scripts/generate-guided.ts`, `src/curriculum/pdfIngest.ts`; `docs/GUIDED_TUTOR.md`; tests `tests/guided/generate.mjs`, `tests/guided/runtime.mts` — status 🟨 (live voice stalls mitigated by a watchdog, not fully verified) |
 | FR-48 | Child names the tutor at login; name saved on the profile and used in UI + prompt (cleaned, ≤24 chars) | N | `tests/tutor-name/run.mjs` 13/13; not verified in browser (D-2026-10-07-1) |
 
 ### Teaching plan

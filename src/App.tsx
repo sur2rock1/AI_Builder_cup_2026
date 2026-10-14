@@ -32,7 +32,7 @@ import {
 import { LoginScreen, StudentProfile } from './components/LoginScreen';
 import { Onboarding } from './components/Onboarding';
 import { SubjectSelector } from './components/SubjectSelector';
-import { ParentPortal } from './components/ParentPortal';
+import { ParentHome } from './parent/ParentHome';
 import {
   TeachingCanvas, resolvePart, FigurePart, FigureSpec,
   StudentThinking, LiveAssessment, BoardNote,
@@ -1311,7 +1311,7 @@ const AppInner: React.FC<{ tutorName: string; setTutorName: (n: string) => void 
   if (screen === 'parent-portal') {
     return (
       <>
-        <ParentPortal
+        <ParentHome
           onBack={() => setScreen(loggedInStudent ? 'subject-select' : 'login')}
           initialStudentId={loggedInStudent?.studentId}
         />

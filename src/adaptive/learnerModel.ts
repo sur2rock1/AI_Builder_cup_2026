@@ -128,6 +128,9 @@ export interface LearnerProfile {
   claims?: LearnerClaim[];
   sessionSummaries?: SessionSummary[];
   escalations?: EscalationEvent[];
+  /** Parent view (docs/PARENT_VIEW.md): the validated, AI-written letter/tip per subject, cached
+   * so the page loads instantly. Regenerated when the number of recorded answers changes. */
+  parentNarratives?: Record<string, import('../parent/types').ReportNarrative>;
 }
 
 // ─── Active Session (in-memory only) ───────────────────────────

@@ -1,0 +1,423 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--multiplying-a-two-digit-number-by-a-single-digit",
+  "title": "Multiplying a two-digit number by a single digit",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher starting a lesson: friendly, a little playful, say what we are learning and why we need a trick. Two or three sentences of talk. Mention that pink will always mean the tens part and yellow the ones part. No questions: this is the explaining part of the lesson.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Multiplying big numbers"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "23 × 5 = ?",
+          "say": "So today we're learning how to multiply big numbers. Say we want to work out twenty-three times five, and no calculator allowed! Twenty-three is quite a big number, so is there an easy way to do it?",
+          "style": "point"
+        },
+        {
+          "id": "l2",
+          "text": "Trick: split the big number into small parts",
+          "say": "There is, and it's a lovely trick: we split the number up into smaller, friendlier parts. That's called partitioning, and I'll show you exactly what it means. Keep an eye on the colours: pink will be our tens, yellow our ones.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Teach partitioning with 23 on the board. Write 23 plain, then mark the 3 as ones and the 2 as tens IN PLACE (the next line redraws the same 23 with marks). Show the 2 is really 20 and write 23 = 20 + 3, then do 36 quickly the same way. The tutor explains it all; the child just watches and listens.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Partitioning"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l3",
+          "text": "23",
+          "say": "Let's take our number, twenty-three. If we want to break it into small parts, how do we do it? We break it into tens and ones, because it has two digits.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "{{2|ul.p|tens}}{{3|ul|ones}}",
+          "say": "Watch my chalk. The digit on this side, the 3, I'm underlining in yellow, and that's our ones. This other digit, the 2, I'm underlining in pink, and it sits in the tens place.",
+          "style": "point",
+          "annotates": "l3"
+        },
+        {
+          "id": "l5",
+          "text": "3 stays 3",
+          "say": "Now let's break it down. The yellow part is easy: the 3 is just three ones, so it stays as three.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "{{2|circle.p}} tens → 2 × 10 = 20",
+          "say": "The pink 2 is different, because it's sitting in the tens place. It isn't two ones, it's two tens. And two tens means two times ten, which is twenty.",
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "23 = {{20|ul.p}} + {{3|ul}}",
+          "say": "So when we put the parts back together, twenty-three is twenty plus three. Pink for the tens part, yellow for the ones part.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "Partitioning = breaking a big number into smaller parts",
+          "say": "And that is partitioning: breaking a big number into smaller place-value parts. Remember that word, because we're about to use it.",
+          "style": "rule"
+        },
+        {
+          "id": "l9",
+          "text": "36 = {{30|ul.p}} + {{6|ul}}",
+          "say": "Let's check it works on another number. In thirty-six, the 3 is in the tens place so it's worth thirty, and the 6 is six ones. Thirty plus six.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Now use partitioning to multiply. Tell it as a story (5 bags, 23 sweets each). Split 23, multiply the pink part and the yellow part by 5 separately, then add. Keep the pink and yellow colours consistent. The tutor works every step; no questions yet.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "23 × 5: five bags of sweets"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "5 bags, 23 sweets in each bag",
+          "say": "Let's make it real. Imagine five bags, with twenty-three sweets in every bag. How many sweets altogether?",
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "Split 23 → {{20|ul.p}} + {{3|ul}}",
+          "say": "We can't easily do twenty-three times five in our heads, so we use our trick: split twenty-three into twenty and three. Then we multiply each part by five, one at a time.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "{{20|ul.p}} × 5 = 100",
+          "say": "Start with the pink part, twenty times five. Twenty is just two tens, and two times five is ten, so that's ten tens, which makes a hundred.",
+          "style": "work"
+        },
+        {
+          "id": "l13",
+          "text": "{{3|ul}} × 5 = 15",
+          "say": "Now the yellow part, which is much smaller: three times five is fifteen.",
+          "style": "work"
+        },
+        {
+          "id": "l14",
+          "text": "100 + 15 = 115",
+          "say": "We've got a pink answer and a yellow answer. Join them back together, a hundred plus fifteen, and we get one hundred and fifteen.",
+          "style": "work"
+        },
+        {
+          "id": "l15",
+          "text": "5 bags × 23 sweets = 115 sweets",
+          "say": "So five bags of twenty-three sweets means one hundred and fifteen sweets. No calculator, and no counting one by one!",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend's idea, not the child's. Treat it as something to test, never as a mistake. The tutor tests it with a quick estimate, then explains what the idea missed: the 2 in 23 is worth 20, not 2. Light, detective tone. No questions: the tutor does the testing.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l16",
+          "text": "23 × 5 → 2 × 5 + 3 × 5 = 10 + 15 = 25",
+          "say": "Now, a friend of mine tried it a different way. They said: two times five is ten, three times five is fifteen, so the answer is twenty-five. Let's test that like detectives.",
+          "style": "point"
+        },
+        {
+          "id": "l17",
+          "text": "25 is too small: 5 bags of 20 is already 100",
+          "say": "Here's a quick test. If every bag only had twenty sweets, then five bags would already be a hundred sweets. So twenty-five can't possibly be enough.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "The {{2|ul.p}} in 23 means 20, not 2",
+          "say": "So what did my friend's idea miss? The 2 in twenty-three isn't a two. It's two tens, so it's worth twenty.",
+          "style": "point"
+        },
+        {
+          "id": "l19",
+          "text": "Multiply the VALUE of each part, not just the digit",
+          "say": "That's the big idea of today: multiply what each part is really worth. Twenty, not two.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "Second worked example, 27 x 4, with the grid. Same colours: pink = tens part, yellow = ones part. The tutor works every step and shows the grid after the two products. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "27 × 4 in a grid"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l20",
+          "text": "Split 27 → {{20|ul.p}} + {{7|ul}}",
+          "say": "Same steps again. First we split twenty-seven into twenty, in pink, and seven, in yellow.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "{{20|ul.p}} × 4 = 80",
+          "say": "Now multiply the pink part by four. Twenty is two tens, two times four is eight, so that's eight tens: eighty.",
+          "style": "work"
+        },
+        {
+          "id": "l22",
+          "text": "{{7|ul}} × 4 = 28",
+          "say": "And the yellow part: four sevens make twenty-eight.",
+          "style": "work"
+        },
+        {
+          "id": "l23",
+          "text": "× | {{20|ul.p}} | {{7|ul}}",
+          "say": "We can put all this in a grid, which teachers love. Our two parts go across the top, and the four goes down the side.",
+          "style": "point"
+        },
+        {
+          "id": "l24",
+          "text": "4 | {{80|ul.p}} | {{28|ul}}",
+          "say": "Each box holds its own answer: eighty in the pink box, twenty-eight in the yellow one.",
+          "style": "point"
+        },
+        {
+          "id": "l25",
+          "text": "80 + 28 = 108",
+          "say": "To finish, we add the boxes together, and twenty-seven times four is one hundred and eight.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "State the whole method in one line, then give a handy estimating habit as a safety net. The tutor says it; no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The trick, in one line"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l26",
+          "text": "Split  →  multiply each part  →  add",
+          "say": "So the whole trick is just three moves: split the number, multiply each part, then add the answers.",
+          "style": "rule"
+        },
+        {
+          "id": "l27",
+          "text": "Estimate first: 23 × 5 is close to 20 × 5 = 100",
+          "say": "A handy habit: before you start, round to an easy number. Twenty-three is close to twenty, so we expect something near a hundred, and one hundred and fifteen fits.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "We do one TOGETHER. A new example, 34 x 6. The tutor sets it up and the child answers each step they can now do. Each question is written on the board before the answer. Praise the reasoning in one sentence.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together: 34 × 6"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l28",
+          "text": "34 × 6",
+          "say": "Now it's your turn to help me. We'll work out thirty-four times six, using exactly the same trick.",
+          "style": "point"
+        },
+        {
+          "id": "l29",
+          "text": "34 = {{30|ul.p}} + {{4|ul}}",
+          "say": "Yes, the 3 is in the tens place, so thirty, and then four ones.",
+          "style": "work",
+          "ask": {
+            "prompt": "First step of the trick: how do we split 34?",
+            "board": "34 = ? + ?",
+            "lookFor": "30 and 4; the 3 is worth 30.",
+            "onMiss": "Ask: which digit is in the tens place, and what is it worth?"
+          }
+        },
+        {
+          "id": "l30",
+          "text": "6 × {{30|ul.p}} = 180",
+          "say": "Six times thirty: six times three is eighteen, so eighteen tens, a hundred and eighty.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is 6 × 30? Think of the 30 as 3 tens.",
+            "board": "6 × 30 = ?",
+            "lookFor": "180 (6 × 3 tens = 18 tens).",
+            "onMiss": "Ask: what is 6 × 3? Since it is tens, what is that worth?"
+          }
+        },
+        {
+          "id": "l31",
+          "text": "6 × {{4|ul}} = 24",
+          "say": "Six fours are twenty-four.",
+          "style": "work",
+          "ask": {
+            "prompt": "And what is 6 × 4?",
+            "board": "6 × 4 = ?",
+            "lookFor": "24.",
+            "onMiss": "Count in fours, six times: 4, 8, ..."
+          }
+        },
+        {
+          "id": "l32",
+          "text": "180 + 24 = 204",
+          "say": "Add the two parts and we get two hundred and four. You did that really well.",
+          "style": "work",
+          "ask": {
+            "prompt": "Last step. What do we do with the two answers, and what do we get?",
+            "board": "180 + 24 = ?",
+            "lookFor": "Add them: 180 + 24 = 204.",
+            "onMiss": "Ask: the two answers came from splitting 34. How do we put them back together?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "apply",
+      "say": "The child works a fresh one ALONE: 4 boxes of 38 books. Give no hints until they are stuck. Praise each step they do themselves, in a sentence.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn: 4 boxes of books"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l33",
+          "text": "4 boxes, 38 books in each box",
+          "say": "Your turn, and this time you lead. A school orders four boxes, with thirty-eight books in every box. How many books altogether?",
+          "style": "point"
+        },
+        {
+          "id": "l34",
+          "text": "38 = {{30|ul.p}} + {{8|ul}}",
+          "say": "Good start, split it by place value.",
+          "style": "work",
+          "ask": {
+            "prompt": "How will you split 38?",
+            "board": "38 = ? + ?",
+            "lookFor": "30 + 8.",
+            "onMiss": "Ask: how many tens in 38, and what is the 3 worth?"
+          }
+        },
+        {
+          "id": "l35",
+          "text": "4 × {{30|ul.p}} = 120",
+          "say": "Four times thirty is twelve tens, which is a hundred and twenty.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is 4 × 30?",
+            "board": "4 × 30 = ?",
+            "lookFor": "120 (4 × 3 tens = 12 tens).",
+            "onMiss": "Think of 30 as 3 tens. How many tens do you get with 4 groups of that?"
+          }
+        },
+        {
+          "id": "l36",
+          "text": "4 × {{8|ul}} = 32",
+          "say": "And four eights are thirty-two.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is 4 × 8?",
+            "board": "4 × 8 = ?",
+            "lookFor": "32.",
+            "onMiss": "Ask the child to double 8, then double again."
+          }
+        },
+        {
+          "id": "l37",
+          "text": "120 + 32 = 152",
+          "say": "Join your two answers and there it is: a hundred and fifty-two books.",
+          "style": "work",
+          "ask": {
+            "prompt": "Now put your two answers together. How many books?",
+            "board": "120 + 32 = ?",
+            "lookFor": "152.",
+            "onMiss": "Ask: which two numbers did you just find, and what do we do with them?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "check",
+      "say": "Final check: same idea with the numbers the other way round (6 x 43), so the child does the whole method in their head or on paper, then explain WHY we split. Reward the reasoning, not just the answer.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Flip it: 6 × 43"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l38",
+          "text": "6 × 43 = 258",
+          "say": "The single digit comes first this time, but nothing changes. Split the big number, multiply each part, add: two hundred and fifty-eight.",
+          "style": "work",
+          "ask": {
+            "prompt": "Work out 6 × 43 using the trick. Tell me your steps as you go.",
+            "board": "6 × 43 = ?",
+            "lookFor": "258, with the steps 40 + 3, 6 × 40 = 240, 6 × 3 = 18, 240 + 18.",
+            "onMiss": "Ask: which of the two numbers has a tens part? Split that one first."
+          }
+        },
+        {
+          "id": "l39",
+          "text": "Splitting makes each multiplication easy, then we add",
+          "say": "That's it exactly. Splitting turns one hard sum into two easy ones, and then we just add.",
+          "style": "point",
+          "ask": {
+            "prompt": "In your own words: why do we split the number before multiplying?",
+            "board": "Why do we split first?",
+            "lookFor": "Splitting gives smaller, easier multiplications (tens and ones) that we then add; ideally mentions place value.",
+            "onMiss": "Ask: was 20 × 5 easier or harder than 23 × 5? What did splitting do for us?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

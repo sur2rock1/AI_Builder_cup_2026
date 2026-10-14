@@ -30,6 +30,15 @@ added by the admin only — full design in [docs/CURRICULUM.md](docs/CURRICULUM.
 
 Tests for this: `npm run test:curriculum`.
 
+## Parent view
+
+The Parent portal opens on a plain-language report — what Ananta has learned about the child, how it worked it out (with a *See why* link to the child's real answer behind every sentence), its plan for the next lesson and a home activity; **Under the hood** switches to the detailed engineering view. Design: [docs/PARENT_VIEW.md](docs/PARENT_VIEW.md).
+
+| Command | What it does |
+|---|---|
+| `npm run seed:story` | Creates the simulated demo child **Maya** (5 lessons over 12 days: mix-up noticed → confirmed → teaching approach changed → fixed). Uses real Gemini for lesson summaries and the parent letter when `GEMINI_API_KEY` is set; `-- --no-ai` runs offline. File store only: run locally, then `npm run migrate:cloud -- --only learners` |
+| `npm run test:parent` | Offline tests: sentence/evidence gate, jargon-leak check, story logic (no network) |
+
 ## Lesson material and board pictures
 
 Lessons, board pictures and real-world photos are pre-generated once per concept and cached
@@ -38,6 +47,7 @@ step by step the way the tutor teaches — full design in [docs/BOARD_VISUALS.md
 
 | Command | What it does |
 |---|---|
+| `npm run guided:first-chapter` | Write **guided** lessons (the default tutor) for the first chapter of each subject (needs `GEMINI_API_KEY`). A PDF upload does this automatically for the whole course, after pregen. See `docs/GUIDED_TUTOR.md` |
 | `npm run pregen` | Generate everything missing (lesson text, board pictures, photo) for loaded concepts |
 | `npm run pregen:first` | Same, first concept only — a cheap test |
 | `npm run pregen -- --visuals-only` | Only add board pictures to concepts that already have a lesson (no text or photo calls). Add `--force` to redraw existing pictures |

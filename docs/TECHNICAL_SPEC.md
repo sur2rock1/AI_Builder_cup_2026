@@ -88,6 +88,15 @@ logging) · persona (`src/persona`) · plan (`src/plan`) · learner model (`src/
 | Serve rules | `src/curriculum/serve.ts` | What a browser may see: no tutor-only fields, only verified photos, sanitised reasoning | New |
 | Quiz evidence guard | `src/adaptive/assessmentEngine.ts` (`capForEvidence`) | No child-written reasoning → recognition at most; "guessed" never scored as understanding | Changed |
 
+### 3a. Guided tutor (default since 2026-10-14)
+
+See `docs/GUIDED_TUTOR.md`. Components: `src/guided/{registry,session,board,tools,prompt,pace,marks,validate,generate,store,mode}.ts`,
+UI `GuidedBoard.tsx`, `useGuidedTutor.ts`, `TutorModeSwitch.tsx`. Generation: `scripts/generate-guided.ts` (Gemini draft →
+validate → critic → repair). Upload path: `pdfIngest.ts` runs pregen, then `generate-guided.ts --runtime --skip-existing`; lessons
+land in Firestore `guidedScripts` / `data/guided/runtime/` and are served within ~10 s. Extra endpoints: `GET /api/tutor-mode`
+(`{default, guidedConcepts}`), `GET /api/guided-script?conceptId=` (script + board pictures). Env: `TUTOR_MODE`,
+`DISABLE_GUIDED_GENERATION`, `GUIDED_STALL_MS`, `GUIDED_RUNTIME_DIR`.
+
 ## 4. APIs
 
 | Method | Path | Purpose |

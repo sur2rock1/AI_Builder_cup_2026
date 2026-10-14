@@ -1,0 +1,574 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--applications-of-simultaneous-equations-in-real-world-context",
+  "title": "Applications of simultaneous equations in real-world contexts",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: a puzzle with two unknowns and two clues; turn the words into two equations. Playful. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Two clues, two unknowns"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "digits add to 8;   number − reversed number = 18",
+          "say": "Here's a puzzle. A two-digit number has digits that add up to eight. If you swap the digits around, the new number is eighteen less than the original. What's the number? Two unknowns, two clues. Perfect for simultaneous equations.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "How to write a two-digit number in algebra with x tens and y units: 10x + y. Use 53 as the picture's example: 10(5) + 3. The reversed number is 10y + x. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Writing a two-digit number"
+        },
+        {
+          "type": "picture",
+          "ref": "main",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "5 tens and 3 ones",
+          "say": "First, how do we write a two-digit number in algebra? Take fifty-three: five tens and three ones.",
+          "picture": {
+            "ref": "main",
+            "step": "s1"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l3",
+          "text": "10(5) + 3 = 53",
+          "say": "Each ten is worth ten, so five tens is ten times five, plus the three ones.",
+          "picture": {
+            "ref": "main",
+            "step": "s2"
+          },
+          "style": "work"
+        },
+        {
+          "id": "l4",
+          "text": "Swap the digits: 10(3) + 5 = 35",
+          "say": "Swap the digits and we have three tens and five ones: thirty-five.",
+          "picture": {
+            "ref": "main",
+            "step": "s4"
+          },
+          "style": "work"
+        },
+        {
+          "id": "l5",
+          "text": "Tens digit x, ones digit y:   number = 10x + y",
+          "say": "In general, with tens digit x and ones digit y, the number is ten x plus y.",
+          "picture": {
+            "ref": "main",
+            "step": "s5"
+          },
+          "style": "rule"
+        },
+        {
+          "id": "l6",
+          "text": "Reversed number = 10y + x",
+          "say": "And the reversed number has y in the tens place, so it's ten y plus x.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "contrast",
+      "say": "A friend writes the number as xy. Test with 5 and 3: 5 x 3 = 15, not 53. Detective tone. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        },
+        {
+          "type": "picture",
+          "ref": "contrast:place-value-as-product",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l7",
+          "text": "xy  with x = 5, y = 3",
+          "say": "A friend writes the number as x y, side by side, like on a number plate. Let's test it with x equals five and y equals three.",
+          "picture": {
+            "ref": "contrast:place-value-as-product",
+            "step": "s1"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l8",
+          "text": "In algebra, xy means x × y = 5 × 3 = 15",
+          "say": "But in algebra, two letters side by side means multiply. Five times three is fifteen, not fifty-three.",
+          "picture": {
+            "ref": "contrast:place-value-as-product",
+            "step": "s2"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l9",
+          "text": "10x + y = 10(5) + 3 = 53 ✓",
+          "say": "Ten x plus y does the job: fifty plus three, fifty-three.",
+          "picture": {
+            "ref": "contrast:place-value-as-product",
+            "step": "s3"
+          },
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "show",
+      "say": "Turn the two clues into two equations for the puzzle: x + y = 8, and (10x + y) - (10y + x) = 18, which simplifies to x - y = 2. Write each simplification on its own line. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Words into equations"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "digits add to 8   →   x + y = 8",
+          "say": "Clue one: the digits add up to eight. That's x plus y equals eight.",
+          "style": "work"
+        },
+        {
+          "id": "l11",
+          "text": "(10x + y) − (10y + x) = 18",
+          "say": "Clue two: the number minus the reversed number is eighteen. Ten x plus y, minus the bracket ten y plus x, equals eighteen.",
+          "style": "work"
+        },
+        {
+          "id": "l12",
+          "text": "10x − x = 9x",
+          "say": "Collect the x terms: ten x minus x is nine x.",
+          "style": "work"
+        },
+        {
+          "id": "l13",
+          "text": "y − 10y = −9y",
+          "say": "And the y terms: y minus ten y is minus nine y.",
+          "style": "work"
+        },
+        {
+          "id": "l14",
+          "text": "9x − 9y = 18",
+          "say": "So nine x minus nine y equals eighteen.",
+          "style": "work"
+        },
+        {
+          "id": "l15",
+          "text": "x − y = 18 ÷ 9 = 2",
+          "say": "Divide everything by nine: x minus y equals two. Much friendlier.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "show",
+      "say": "Solve with elimination: add x + y = 8 and x - y = 2. Then build the number and check both clues. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Solve the puzzle"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l16",
+          "text": "x + y = 8     x − y = 2",
+          "say": "Two simple equations now. The y's have opposite signs, so we add.",
+          "style": "point"
+        },
+        {
+          "id": "l17",
+          "text": "2x = 8 + 2 = 10",
+          "say": "Adding: two x equals ten.",
+          "style": "work"
+        },
+        {
+          "id": "l18",
+          "text": "x = 10 ÷ 2 = 5",
+          "say": "So x is five.",
+          "style": "work"
+        },
+        {
+          "id": "l19",
+          "text": "y = 8 − 5 = 3",
+          "say": "And y is eight minus five, three.",
+          "style": "work"
+        },
+        {
+          "id": "l20",
+          "text": "Number = 10(5) + 3 = 53",
+          "say": "So the tens digit is five and the ones digit is three: the number is fifty-three.",
+          "style": "rule"
+        },
+        {
+          "id": "l21",
+          "text": "Check:  5 + 3 = 8 ✓    53 − 35 = 18 ✓",
+          "say": "Check both clues: five plus three is eight, and fifty-three minus thirty-five is eighteen. Both true.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "show",
+      "say": "A shopping problem: 2 notebooks and 3 pens cost $12; 3 notebooks and 1 pen cost $11. Define n and p, write the equations, solve by substitution. Write each step on its own line. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A shopping problem"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l22",
+          "text": "2n + 3p = 12     3n + p = 11",
+          "say": "Another puzzle. Two notebooks and three pens cost twelve dollars. Three notebooks and one pen cost eleven. Let n be the price of a notebook and p the price of a pen. The two clues give these two equations.",
+          "style": "point"
+        },
+        {
+          "id": "l23",
+          "text": "p = 11 − 3n",
+          "say": "The second equation has a lonely p, so make p the subject.",
+          "style": "work"
+        },
+        {
+          "id": "l24",
+          "text": "2n + 3(11 − 3n) = 12",
+          "say": "Substitute into the first equation, in brackets.",
+          "style": "work"
+        },
+        {
+          "id": "l25",
+          "text": "3 × 11 = 33",
+          "say": "Multiply out the bracket: three elevens, thirty-three.",
+          "style": "work"
+        },
+        {
+          "id": "l26",
+          "text": "3 × 3n = 9n",
+          "say": "And three times three n, nine n, with the minus sign.",
+          "style": "work"
+        },
+        {
+          "id": "l27",
+          "text": "2n − 9n = −7n",
+          "say": "Collect the n terms: two n minus nine n is minus seven n.",
+          "style": "work"
+        },
+        {
+          "id": "l28",
+          "text": "−7n = 12 − 33 = −21",
+          "say": "So minus seven n plus thirty-three equals twelve. Take away thirty-three.",
+          "style": "work"
+        },
+        {
+          "id": "l29",
+          "text": "n = −21 ÷ (−7) = 3",
+          "say": "Divide by minus seven. A notebook costs three dollars.",
+          "style": "work"
+        },
+        {
+          "id": "l30",
+          "text": "p = 11 − 3(3) = 2",
+          "say": "And the pen: eleven minus nine, two dollars.",
+          "style": "work"
+        },
+        {
+          "id": "l31",
+          "text": "Check:  2(3) + 3(2) = 12 ✓    3(3) + 2 = 11 ✓",
+          "say": "Check both purchases: six plus six is twelve, and nine plus two is eleven.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "rule",
+      "say": "The four-step method, including checking the answer makes sense in the story. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The four steps"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l32",
+          "text": "1. Let letters stand for the unknowns",
+          "say": "One: decide what your letters mean, and write it down.",
+          "style": "rule"
+        },
+        {
+          "id": "l33",
+          "text": "2. Turn each clue into an equation",
+          "say": "Two: turn each clue into an equation.",
+          "style": "rule"
+        },
+        {
+          "id": "l34",
+          "text": "3. Solve (elimination or substitution)",
+          "say": "Three: solve, with whichever method is easier.",
+          "style": "rule"
+        },
+        {
+          "id": "l35",
+          "text": "4. Check in the story: does the answer make sense?",
+          "say": "Four: check it in the story. Does it make sense? Can there really be that many tickets, or that price?",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "contrast",
+      "say": "The unrealistic answer. Cinema: 10 tickets, adults $10, children $5, receipts $120 gives a = 14, c = -4. Negative tickets is impossible. The picture shows the idea. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "When the maths says something silly"
+        },
+        {
+          "type": "picture",
+          "ref": "contrast:unrealistic-solution-acceptance",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l36",
+          "text": "a + c = 10     10a + 5c = 120     5 × 10 = 50",
+          "say": "A cinema sells ten tickets, adult tickets at ten dollars and child tickets at five dollars, and takes one hundred and twenty dollars. Let's solve it. a is adult tickets, c is child tickets.",
+          "picture": {
+            "ref": "contrast:unrealistic-solution-acceptance",
+            "step": "s1"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l37",
+          "text": "c = 10 − a",
+          "say": "From the first equation, c is ten minus a.",
+          "style": "work"
+        },
+        {
+          "id": "l38",
+          "text": "10a + 5(10 − a) = 120",
+          "say": "Substitute into the money equation.",
+          "style": "work"
+        },
+        {
+          "id": "l39",
+          "text": "10a − 5a = 5a",
+          "say": "The a terms: ten a minus five a is five a.",
+          "style": "work"
+        },
+        {
+          "id": "l40",
+          "text": "5a = 120 − 50 = 70",
+          "say": "And five times ten is fifty, so five a is seventy.",
+          "style": "work"
+        },
+        {
+          "id": "l41",
+          "text": "a = 70 ÷ 5 = 14",
+          "say": "So a is fourteen adult tickets.",
+          "style": "work"
+        },
+        {
+          "id": "l42",
+          "text": "c = 10 − 14 = −4",
+          "say": "And c is minus four. Minus four child tickets?",
+          "picture": {
+            "ref": "contrast:unrealistic-solution-acceptance",
+            "step": "s2"
+          },
+          "style": "work"
+        },
+        {
+          "id": "l43",
+          "text": "−4 tickets is impossible: reject it",
+          "say": "You can't sell minus four tickets. The algebra is right, but the situation can't happen. So we conclude the numbers in the story don't fit.",
+          "picture": {
+            "ref": "contrast:unrealistic-solution-acceptance",
+            "step": "s4"
+          },
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "apply",
+      "say": "Do one TOGETHER: the same cinema with receipts of $70. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l44",
+          "text": "a + c = 10     10a + 5c = 70     5 × 10 = 50",
+          "say": "Now you help me. Same cinema, same prices, but this time the takings are seventy dollars.",
+          "style": "point"
+        },
+        {
+          "id": "l45",
+          "text": "c = 10 − a",
+          "say": "Same first step.",
+          "style": "work",
+          "ask": {
+            "prompt": "Make c the subject of a + c = 10.",
+            "board": "c = ?",
+            "lookFor": "c = 10 − a.",
+            "onMiss": "Ask: take a from both sides."
+          }
+        },
+        {
+          "id": "l46",
+          "text": "10a + 5(10 − a) = 70",
+          "say": "Substitute.",
+          "style": "work",
+          "ask": {
+            "prompt": "Substitute into 10a + 5c = 70.",
+            "board": "Substituted:",
+            "lookFor": "10a + 5(10 − a) = 70.",
+            "onMiss": "Ask: replace c with (10 − a), in brackets."
+          }
+        },
+        {
+          "id": "l47",
+          "text": "5a = 70 − 50 = 20",
+          "say": "Expand and collect.",
+          "style": "work",
+          "ask": {
+            "prompt": "Expand and simplify to 5a = something.",
+            "board": "5a = ?",
+            "lookFor": "5a = 20 (10a + 50 − 5a = 70).",
+            "onMiss": "Ask: 5 × 10 = 50; 10a − 5a = 5a. Then subtract 50."
+          }
+        },
+        {
+          "id": "l48",
+          "text": "a = 20 ÷ 5 = 4",
+          "say": "Divide.",
+          "style": "work",
+          "ask": {
+            "prompt": "How many adult tickets?",
+            "board": "a = ?",
+            "lookFor": "a = 4.",
+            "onMiss": "Ask: divide both sides by 5."
+          }
+        },
+        {
+          "id": "l49",
+          "text": "c = 10 − 4 = 6",
+          "say": "And the child tickets.",
+          "style": "work",
+          "ask": {
+            "prompt": "How many child tickets? Does it make sense?",
+            "board": "c = ?",
+            "lookFor": "c = 6: positive whole numbers, and 40 + 30 = 70 dollars.",
+            "onMiss": "Ask: use c = 10 − a. Are both numbers sensible?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b10",
+      "kind": "apply",
+      "say": "The child works alone: a + o = 5 and 3a + 2o = 13 (apples and oranges). Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn: apples and oranges"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l50",
+          "text": "a + o = 5     3a + 2o = 13     2 × 5 = 10",
+          "say": "Your turn to lead. Five fruits altogether, apples at three dollars and oranges at two, costing thirteen in total. How many of each? Let a be apples and o be oranges.",
+          "style": "point"
+        },
+        {
+          "id": "l51",
+          "text": "o = 5 − a",
+          "say": "Rearrange the count equation.",
+          "style": "work",
+          "ask": {
+            "prompt": "Make o the subject of a + o = 5.",
+            "board": "o = ?",
+            "lookFor": "o = 5 − a.",
+            "onMiss": "Ask: take a from both sides."
+          }
+        },
+        {
+          "id": "l52",
+          "text": "3a + 2(5 − a) = 13",
+          "say": "Substitute into the cost equation.",
+          "style": "work",
+          "ask": {
+            "prompt": "Substitute into 3a + 2o = 13.",
+            "board": "Substituted:",
+            "lookFor": "3a + 2(5 − a) = 13.",
+            "onMiss": "Ask: replace o with (5 − a), in brackets."
+          }
+        },
+        {
+          "id": "l53",
+          "text": "a = 13 − 10 = 3",
+          "say": "Expand and collect: a plus ten equals thirteen.",
+          "style": "work",
+          "ask": {
+            "prompt": "Solve it. How many apples?",
+            "board": "a = ?",
+            "lookFor": "a = 3 (3a + 10 − 2a = 13, so a = 3).",
+            "onMiss": "Ask: 3a − 2a is a. Then subtract 10 from both sides."
+          }
+        },
+        {
+          "id": "l54",
+          "text": "o = 5 − 3 = 2",
+          "say": "And the oranges.",
+          "style": "work",
+          "ask": {
+            "prompt": "How many oranges?",
+            "board": "o = ?",
+            "lookFor": "o = 2 (check: 3(3) + 2(2) = 13).",
+            "onMiss": "Ask: use o = 5 − a."
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

@@ -42,6 +42,8 @@ export type BoardItem =
   | { type: 'slot'; id: string; label: string }
   /** One line of a line-by-line beat, written as the tutor says it. */
   | { type: 'line'; style: LineStyle; text: string }
+  /** A question the tutor has just asked, written on the board (the answer follows as the next line once the learner replies). */
+  | { type: 'question'; text: string }
   /** The tutor's own line answering a side question; `question` heads the first line of an aside. */
   | { type: 'aside'; question?: string; text: string };
 
@@ -49,7 +51,13 @@ export type LineStyle = 'point' | 'work' | 'rule';
 
 /** A question asked BEFORE a line is written: the line is the answer, so it is held back until the learner replies. */
 export interface LineAsk {
+  /** What the tutor asks, in plain words (spoken). */
   prompt: string;
+  /**
+   * The question as it is written on the board: short, the way a teacher writes it ("20 × 5 = ?").
+   * It must not contain the answer. If missing, the prompt itself is written.
+   */
+  board?: string;
   lookFor: string;
   onMiss: string;
 }
@@ -60,10 +68,21 @@ export interface LineAsk {
  */
 export interface BoardLine {
   id: string;
-  /** Exactly what is written. */
+  /**
+   * What is written. May carry chalk marks (underline, circle, box, highlight) as {{text|style|label}} - see marks.ts.
+   * The words on the board are the text with the marks removed.
+   */
   text: string;
-  /** What the tutor says as it appears (it reads the line out in words, then explains it). */
+  /**
+   * What the tutor SAYS while this line is written: natural teacher talk, 1-4 short sentences. It explains and points
+   * ("I'm underlining the 3"); it does not read the board text out and then say the same thing again.
+   */
   say: string;
+  /**
+   * Mark up a line that is ALREADY on the board instead of adding a new row: the id of an earlier line in this beat.
+   * `text` is then that line again with marks added - the plain words must be identical.
+   */
+  annotates?: string;
   style?: LineStyle;
   /** Ask first; write `text` only once the learner has answered. */
   ask?: LineAsk;

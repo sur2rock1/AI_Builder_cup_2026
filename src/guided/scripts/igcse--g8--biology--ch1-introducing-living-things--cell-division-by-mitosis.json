@@ -1,0 +1,356 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--biology--ch1-introducing-living-things--cell-division-by-mitosis",
+  "title": "Cell division by mitosis",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: you started as one cell and now you are trillions; how? Playful. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "One cell becomes trillions"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "1 cell  →  trillions of cells",
+          "say": "You began life as a single cell. Now you are made of trillions. And every day you replace old, worn-out cells. How do cells make more cells without making mistakes? Through mitosis.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Mitosis: nuclear division giving two genetically identical cells with the same chromosome number. Four jobs: growth, repair, replacement, asexual reproduction. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "What is mitosis?"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "{{Mitosis|ul.p}}: division of the nucleus that makes cells with {{identical|ul}} genes and the {{same number of chromosomes|ul}}",
+          "say": "Mitosis is a way a cell divides its nucleus to make two new cells that are genetically identical to the original, with exactly the same number of chromosomes.",
+          "style": "rule"
+        },
+        {
+          "id": "l3",
+          "text": "growth      repair      replacing worn-out cells      asexual reproduction",
+          "say": "Cells use it for four jobs: growth, repair, replacing worn-out cells, and asexual reproduction.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Use the picture: a cell with 4 chromosomes. They copy themselves into pairs of sister chromatids joined at a centromere, line up in the middle, are pulled apart to opposite ends, and two cells form each with 4 chromosomes. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Mitosis step by step"
+        },
+        {
+          "type": "picture",
+          "ref": "main",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l4",
+          "text": "a body cell with 4 chromosomes",
+          "say": "Let's follow a cell that has four chromosomes. To keep things simple, the picture shows just four.",
+          "picture": {
+            "ref": "main",
+            "step": "s1"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l5",
+          "text": "step 1:  every chromosome COPIES itself",
+          "say": "Step one happens before the cell divides. Every chromosome makes an exact copy of its DNA.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "each chromosome is now 2 identical {{sister chromatids|ul.p}} joined at a {{centromere|ul}}",
+          "say": "Each chromosome is now two identical halves, called sister chromatids, joined in the middle at the centromere. It looks like an X.",
+          "picture": {
+            "ref": "main",
+            "step": "s2"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "step 2:  the X shapes line up across the middle of the cell",
+          "say": "Step two: the X shapes line up across the middle of the cell, along its equator.",
+          "style": "point"
+        },
+        {
+          "id": "l8",
+          "text": "step 3:  the sister chromatids are pulled apart to opposite ends",
+          "say": "Step three: fibres pull the sister chromatids apart, one of each pair to each end of the cell.",
+          "style": "point"
+        },
+        {
+          "id": "l9",
+          "text": "step 4:  two nuclei form, then the cell splits  →  2 daughter cells, each with 4 chromosomes",
+          "say": "Step four: a nucleus forms at each end, and the cell divides. We have two daughter cells, each with four chromosomes, identical to the parent.",
+          "picture": {
+            "ref": "main",
+            "step": "s3"
+          },
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend says mitosis halves the chromosome number because one cell becomes two. Test with 46 human chromosomes: copied first, so each daughter gets 46. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea: mitosis halves"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "human body cell: 46 chromosomes",
+          "say": "A friend of mine says mitosis halves the chromosomes, because one cell becomes two. Let's test it with a human body cell, which has forty-six chromosomes.",
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "if 46 were just split in half, each cell would get only 23",
+          "say": "If the forty-six were simply shared out, each new cell would get only twenty-three. That would be a disaster, missing half its instructions.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "But the chromosomes copy FIRST: each daughter cell gets all 46",
+          "say": "But that's not what happens. The chromosomes copy themselves first, then the copies separate. So each daughter cell gets a full set of forty-six.",
+          "style": "rule"
+        },
+        {
+          "id": "l13",
+          "text": "Copy first  →  same number  (46 → 46)",
+          "say": "The key idea: copy first, then divide. The number stays the same.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "contrast",
+      "say": "A friend says mitosis stops when you stop growing. Test with a cut skin: new cells must be made. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea: adults stop"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l14",
+          "text": "adult:  finished growing, so mitosis stops?",
+          "say": "Another friend says mitosis stops once you're fully grown. Let's test it. Imagine you cut your finger.",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "The gap must be filled with new skin cells",
+          "say": "The gap in your skin has to be filled with new cells, and the only way to make identical new cells is mitosis.",
+          "style": "point"
+        },
+        {
+          "id": "l16",
+          "text": "Adults use mitosis every day: repair and replacing worn-out cells",
+          "say": "So adults use mitosis all the time, to heal wounds and to replace worn-out cells like skin and blood cells.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "contrast",
+      "say": "A friend says mitosis makes sperm and egg cells. Test: gametes need half the chromosomes; mitosis keeps them the same. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea: gametes"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l17",
+          "text": "if mitosis made gametes:   egg 46  +  sperm 46",
+          "say": "A final friend says mitosis makes eggs and sperm. Let's test it with numbers. If both were made by mitosis, each would have forty-six chromosomes.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "at fertilisation:  46 + 46  =  92 in the baby",
+          "say": "Then at fertilisation the baby would start with ninety-two chromosomes. And the next generation would have even more. Impossible.",
+          "style": "point"
+        },
+        {
+          "id": "l19",
+          "text": "Sex cells are made by a DIFFERENT division: meiosis, which halves the number",
+          "say": "So sex cells must be made by a different division, called meiosis, which halves the number. We'll meet it next. Mitosis is for growth and repair.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "show",
+      "say": "Asexual reproduction: one parent, mitosis, identical offspring (clones). Example: a single-celled organism or a plant cutting. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Asexual reproduction"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l20",
+          "text": "one parent  →  mitosis  →  identical offspring (clones)",
+          "say": "Mitosis is also how some organisms reproduce. With only one parent, the parent divides by mitosis, so the offspring are genetically identical to it. We call them clones.",
+          "style": "rule"
+        },
+        {
+          "id": "l21",
+          "text": "examples:  single-celled organisms,  plants grown from cuttings",
+          "say": "Single-celled organisms do this, and so do plants grown from cuttings.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "apply",
+      "say": "Do it TOGETHER: a cell with 6 chromosomes divides by mitosis twice. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l22",
+          "text": "a cell with 6 chromosomes divides by mitosis, then both daughter cells divide again",
+          "say": "Now you help me. A cell has six chromosomes and divides by mitosis. Then each of the two new cells divides again by mitosis.",
+          "style": "point"
+        },
+        {
+          "id": "l23",
+          "text": "After the first division: 2 cells, each with 6 chromosomes",
+          "say": "Yes.",
+          "style": "work",
+          "ask": {
+            "prompt": "After the first division, how many cells are there and how many chromosomes in each?",
+            "board": "Cells and chromosomes:",
+            "lookFor": "2 cells, each with 6 chromosomes.",
+            "onMiss": "Ask: mitosis keeps the chromosome number the same. How many cells from one?"
+          }
+        },
+        {
+          "id": "l24",
+          "text": "After the second division: 4 cells, each with 6 chromosomes",
+          "say": "Yes.",
+          "style": "work",
+          "ask": {
+            "prompt": "After the second division, how many cells are there and how many chromosomes in each?",
+            "board": "Cells and chromosomes:",
+            "lookFor": "4 cells, each with 6 chromosomes.",
+            "onMiss": "Ask: each of the 2 cells makes 2 new cells. How many now?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "apply",
+      "say": "The child works alone: why mitosis is needed for healing; and what happens just before the cell divides. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l25",
+          "text": "a cut heals;   chromosomes must copy",
+          "say": "Your turn to lead.",
+          "style": "point"
+        },
+        {
+          "id": "l26",
+          "text": "New identical cells are made by mitosis to fill the gap",
+          "say": "First.",
+          "style": "work",
+          "ask": {
+            "prompt": "Why is mitosis needed to heal a cut?",
+            "board": "Healing needs mitosis because:",
+            "lookFor": "It makes new, genetically identical cells to replace the lost ones.",
+            "onMiss": "Ask: what must fill the gap? What kind of cells?"
+          }
+        },
+        {
+          "id": "l27",
+          "text": "Each chromosome copies itself into two sister chromatids",
+          "say": "Second.",
+          "style": "work",
+          "ask": {
+            "prompt": "What happens to each chromosome before the cell divides?",
+            "board": "Before dividing:",
+            "lookFor": "It copies itself, making two identical sister chromatids joined at a centromere.",
+            "onMiss": "Ask: if the cell divided without copying, what would each new cell be missing?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b10",
+      "kind": "check",
+      "say": "Why copy first. Reward reasoning.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Say it in your own words"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l28",
+          "text": "copy first,  then divide",
+          "say": "Last one.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why must the chromosomes copy before the cell divides, if the daughter cells are to keep the full set?",
+            "board": "Why copy first?",
+            "lookFor": "Without copying, the chromosomes would be shared out and each daughter cell would get only half; copying first gives each a complete identical set.",
+            "onMiss": "Ask: if you tear a book in two, do both halves have the whole story?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

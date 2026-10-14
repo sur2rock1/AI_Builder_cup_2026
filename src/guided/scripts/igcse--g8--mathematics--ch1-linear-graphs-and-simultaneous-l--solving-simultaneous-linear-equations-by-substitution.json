@@ -1,0 +1,428 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-substitution",
+  "title": "Solving simultaneous linear equations by substitution",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: sometimes one equation already tells you exactly what a letter is. Use that. Playful: tag in a teammate. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Swap in a teammate"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "y = 2x + 1     3x + y = 11",
+          "say": "Look at the first equation. It already tells us exactly what y is: y equals two x plus one. So why not use that? That's substitution: we swap y for what it equals.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Replace y with (2x + 1) in brackets in the other equation. Mark the swapped part. Explain why brackets: the whole expression travels together. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Swap it in, in brackets"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "y = 2x + 1",
+          "say": "y equals two x plus one: that's the teammate we're going to tag in.",
+          "style": "point"
+        },
+        {
+          "id": "l3",
+          "text": "3x + y = 11",
+          "say": "And here's the other equation, with a y in it.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "3x + {{(2x + 1)|box.y}} = 11",
+          "say": "We take the y out and put its equal in, inside brackets. The brackets keep the whole expression together as one piece.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Solve it step by step: collect terms, subtract, divide, back-substitute for y, check. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Solve and check"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l5",
+          "text": "3x + (2x + 1) = 11",
+          "say": "Now there's only one letter, x, so we can solve it.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "3x + 2x = 5x",
+          "say": "First collect the x terms: three x plus two x is five x.",
+          "style": "work"
+        },
+        {
+          "id": "l7",
+          "text": "5x + 1 = 11",
+          "say": "So five x plus one equals eleven.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "5x = 11 − 1 = 10",
+          "say": "Take one from both sides.",
+          "style": "work"
+        },
+        {
+          "id": "l9",
+          "text": "x = 10 ÷ 5 = 2",
+          "say": "Divide by five: x is two.",
+          "style": "work"
+        },
+        {
+          "id": "l10",
+          "text": "y = 2(2) + 1 = 5",
+          "say": "To find y, go back to the equation that told us what y is: two times two plus one, five.",
+          "style": "work"
+        },
+        {
+          "id": "l11",
+          "text": "Check:  3(2) + 5 = 11 ✓",
+          "say": "And check in the other equation: six plus five is eleven.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "Substituting back into the SAME equation gives a useless 'true' statement. Use the OTHER equation. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l12",
+          "text": "y = 2x + 1     (put it back into y = 2x + 1)",
+          "say": "A friend of mine put the expression back into the same equation it came from. Let's see what happens.",
+          "style": "point"
+        },
+        {
+          "id": "l13",
+          "text": "2x + 1 = 2x + 1",
+          "say": "We get two x plus one equals two x plus one.",
+          "style": "work"
+        },
+        {
+          "id": "l14",
+          "text": "True for every x: it tells us nothing",
+          "say": "That's true no matter what x is. It's like saying five equals five. We learned nothing about x.",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "Substitute into the OTHER equation",
+          "say": "The trick is to put it into the other equation. That's where the two clues get combined into something we can solve.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "contrast",
+      "say": "Brackets matter. y = 5 - x into 2x - 3y = 5. With brackets x = 4; without, a friend gets x = 20, which fails the check. Detective tone. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Why the brackets matter"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l16",
+          "text": "y = 5 − x     2x − 3y = 5     (a friend gets x = 20, y = −15)",
+          "say": "Another example. y equals five minus x, and two x minus three y equals five. A friend forgot the brackets and got x equals twenty, y equals minus fifteen. Let's see who's right.",
+          "style": "point"
+        },
+        {
+          "id": "l17",
+          "text": "2x − 3(5 − x) = 5",
+          "say": "With brackets, the three multiplies everything inside.",
+          "style": "work"
+        },
+        {
+          "id": "l18",
+          "text": "−3 × 5 = −15     −3 × (−x) = +3x",
+          "say": "Minus three times five is minus fifteen. Minus three times minus x is plus three x.",
+          "style": "work"
+        },
+        {
+          "id": "l19",
+          "text": "5x − 15 = 5   →   x = 4",
+          "say": "So two x plus three x is five x, minus fifteen, equals five. Five x is twenty, so x is four.",
+          "style": "work"
+        },
+        {
+          "id": "l20",
+          "text": "Friend:  2x − 3 × 5 − x = 5",
+          "say": "Without brackets, the three only multiplied the five, and the minus x was left alone.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "Test (20, −15):  2(20) − 3(−15) = 40 + 45 = 85, not 5  ✗",
+          "say": "Test their answer in the original equation: forty plus forty-five is eighty-five, not five. Their answer fails.",
+          "style": "point"
+        },
+        {
+          "id": "l22",
+          "text": "Brackets: the minus 3 multiplies EVERY term inside",
+          "say": "So when you substitute an expression, put it in brackets, so the multiplying reaches every term.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "The steps in order. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The steps"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l23",
+          "text": "1. Make one letter the subject (easiest: coefficient 1 or −1)",
+          "say": "One: pick the letter that's easiest to get alone, one with a coefficient of one or minus one, so there are no fractions.",
+          "style": "rule"
+        },
+        {
+          "id": "l24",
+          "text": "2. Substitute it, in BRACKETS, into the OTHER equation",
+          "say": "Two: swap it into the other equation, in brackets.",
+          "style": "rule"
+        },
+        {
+          "id": "l25",
+          "text": "3. Solve for the one letter left",
+          "say": "Three: solve the one-letter equation.",
+          "style": "rule"
+        },
+        {
+          "id": "l26",
+          "text": "4. Back-substitute for the other letter, then CHECK both",
+          "say": "Four: find the other letter, and check in both equations.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER: x + y = 9 and 2x - y = 3. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l27",
+          "text": "x + y = 9     2x − y = 3",
+          "say": "Now you help me.",
+          "style": "point"
+        },
+        {
+          "id": "l28",
+          "text": "y = 9 − x",
+          "say": "y is easy to get alone from the first equation.",
+          "style": "work",
+          "ask": {
+            "prompt": "Make y the subject of x + y = 9.",
+            "board": "y = ?",
+            "lookFor": "y = 9 − x.",
+            "onMiss": "Ask: take x from both sides."
+          }
+        },
+        {
+          "id": "l29",
+          "text": "2x − (9 − x) = 3",
+          "say": "Now swap it into the other equation, in brackets.",
+          "style": "work",
+          "ask": {
+            "prompt": "Substitute y = 9 − x into 2x − y = 3. Write it with brackets.",
+            "board": "2x − (...) = 3",
+            "lookFor": "2x − (9 − x) = 3.",
+            "onMiss": "Ask: replace y with its equal, inside brackets."
+          }
+        },
+        {
+          "id": "l30",
+          "text": "2x − 9 + x = 3   →   3x − 9 = 3",
+          "say": "Minus a bracket changes both signs inside, so minus nine and plus x.",
+          "style": "work",
+          "ask": {
+            "prompt": "Expand the bracket and simplify.",
+            "board": "Simplified:",
+            "lookFor": "3x − 9 = 3.",
+            "onMiss": "Ask: minus times 9 is -9; minus times -x is +x. Now collect the x terms."
+          }
+        },
+        {
+          "id": "l31",
+          "text": "x = (3 + 9) ÷ 3 = 4",
+          "say": "Add nine, then divide by three.",
+          "style": "work",
+          "ask": {
+            "prompt": "Solve 3x − 9 = 3.",
+            "board": "x = ?",
+            "lookFor": "x = 4.",
+            "onMiss": "Ask: add 9 to both sides first."
+          }
+        },
+        {
+          "id": "l32",
+          "text": "y = 9 − 4 = 5",
+          "say": "And back-substitute.",
+          "style": "work",
+          "ask": {
+            "prompt": "Find y using y = 9 − x.",
+            "board": "y = ?",
+            "lookFor": "y = 5.",
+            "onMiss": "Ask: put x = 4 into y = 9 − x."
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "apply",
+      "say": "The child works alone: y = 3x - 4 and 2x + y = 11. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l33",
+          "text": "y = 3x − 4     2x + y = 11",
+          "say": "Your turn to lead. One of these is already solved for y.",
+          "style": "point"
+        },
+        {
+          "id": "l34",
+          "text": "2x + (3x − 4) = 11",
+          "say": "Swap it in.",
+          "style": "work",
+          "ask": {
+            "prompt": "Substitute y into 2x + y = 11. Use brackets.",
+            "board": "Substituted:",
+            "lookFor": "2x + (3x − 4) = 11.",
+            "onMiss": "Ask: which equation tells you what y is? Put that in brackets in the other."
+          }
+        },
+        {
+          "id": "l35",
+          "text": "5x = 11 + 4 = 15",
+          "say": "Collect and move.",
+          "style": "work",
+          "ask": {
+            "prompt": "Simplify and get 5x = something.",
+            "board": "5x = ?",
+            "lookFor": "5x = 15 (2x + 3x − 4 = 11).",
+            "onMiss": "Ask: collect the x terms, then add 4 to both sides."
+          }
+        },
+        {
+          "id": "l36",
+          "text": "x = 15 ÷ 5 = 3",
+          "say": "Divide.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is x?",
+            "board": "x = ?",
+            "lookFor": "x = 3.",
+            "onMiss": "Ask: divide both sides by 5."
+          }
+        },
+        {
+          "id": "l37",
+          "text": "y = 3(3) − 4 = 5",
+          "say": "Back-substitute.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is y?",
+            "board": "y = ?",
+            "lookFor": "y = 5.",
+            "onMiss": "Ask: use y = 3x − 4 with x = 3."
+          }
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "check",
+      "say": "Explain the two key habits. Reward reasoning.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Say it in your own words"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l38",
+          "text": "Brackets, and the OTHER equation",
+          "say": "Last two.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why do we put the substituted expression in brackets?",
+            "board": "Why brackets?",
+            "lookFor": "So any multiplying or minus sign in front applies to every term of the expression.",
+            "onMiss": "Ask: what happens to -3(5 − x) if you forget the bracket?"
+          }
+        },
+        {
+          "id": "l39",
+          "text": "Same equation  →  useless",
+          "say": "And the other habit.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why must we substitute into the other equation, not the one we rearranged?",
+            "board": "Why the other equation?",
+            "lookFor": "Putting it back in the same equation just gives a true statement with no information; the other equation combines the clues.",
+            "onMiss": "Ask: what did we get when we substituted back into the same equation?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

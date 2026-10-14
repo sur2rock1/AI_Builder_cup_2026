@@ -701,30 +701,49 @@ function defaultDeps(apiKey: string): IngestDeps {
 
 // ─── Background asset pre-generation ────────────────────────────
 // Writes a snapshot of the published course to a temp file and hands it to
-// scripts/pregenerate-assets.ts, which caches one lesson per CONCEPT ID
-// (data/pregenerated/<conceptId>.json) and skips ones already cached.
-// Passing the snapshot (rather than having the script read
-// data/curricula.json) is what makes this work when Firestore is the store.
+//   1. scripts/pregenerate-assets.ts  - the standard lesson + pictures, one per CONCEPT ID
+//      (data/pregenerated/<conceptId>.json); skips ones already cached.
+//   2. scripts/generate-guided.ts     - the GUIDED lesson (the default tutor, src/guided/*), one per concept,
+//      built from step 1's record. Saved to the runtime store (Firestore "guidedScripts" + data/guided/runtime),
+//      so the running server serves it within ~10 s with no rebuild. Concepts that already have a guided
+//      lesson (bundled, hand-written or runtime) are skipped. Runs only after step 1 finishes, because it
+//      reads that record. A concept whose guided lesson fails the checks is withheld and keeps the standard tutor.
+// Passing the snapshot (rather than having the scripts read data/curricula.json) is what makes this work
+// when Firestore is the store. DISABLE_PREGEN=true skips both; DISABLE_GUIDED_GENERATION=true skips step 2.
+function runBackground(label: string, args: string[], apiKey: string, snapshot: string, onExit?: (code: number | null) => void): void {
+  const child = spawn('npx', ['tsx', ...args], {
+    env: { ...process.env, GEMINI_API_KEY: apiKey },
+    cwd: process.cwd(),
+    detached: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    shell: process.platform === 'win32',
+  });
+  child.stdout?.on('data', (d: Buffer) => process.stdout.write(`[${label}] ${d}`));
+  child.stderr?.on('data', (d: Buffer) => process.stderr.write(`[${label}] ${d}`));
+  child.on('exit', (code: number | null) => {
+    console.log(`[Ingest] Background ${label} finished (exit ${code}).`);
+    onExit?.(code);
+  });
+  child.unref();
+}
+
 function triggerPregenerationBackground(course: CurriculumSubject, apiKey: string): void {
   if (process.env.DISABLE_PREGEN === 'true') return;
   try {
     const snapshot = path.join(os.tmpdir(), `pt-course-${course.id}-${Date.now()}.json`);
     fs.writeFileSync(snapshot, JSON.stringify([course]));
+    const cleanup = () => { fs.promises.unlink(snapshot).catch(() => {}); };
     console.log(`[Ingest] Launching background pre-generation for ${course.id}…`);
-    const child = spawn('npx', ['tsx', 'scripts/pregenerate-assets.ts', '--curricula-file', snapshot], {
-      env: { ...process.env, GEMINI_API_KEY: apiKey },
-      cwd: process.cwd(),
-      detached: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      shell: process.platform === 'win32',
+    runBackground('pregen', ['scripts/pregenerate-assets.ts', '--curricula-file', snapshot], apiKey, snapshot, () => {
+      if (process.env.DISABLE_GUIDED_GENERATION === 'true') return cleanup();
+      try {
+        console.log(`[Ingest] Launching background guided-lesson generation for ${course.id}…`);
+        runBackground('guided', ['scripts/generate-guided.ts', '--curricula-file', snapshot, '--subject', course.id, '--runtime', '--skip-existing'], apiKey, snapshot, cleanup);
+      } catch (err: any) {
+        console.warn('[Ingest] Could not spawn guided-lesson generation:', err?.message);
+        cleanup();
+      }
     });
-    child.stdout?.on('data', (d: Buffer) => process.stdout.write(`[pregen] ${d}`));
-    child.stderr?.on('data', (d: Buffer) => process.stderr.write(`[pregen] ${d}`));
-    child.on('exit', (code: number | null) => {
-      console.log(`[Ingest] Background pre-generation finished (exit ${code}).`);
-      fs.promises.unlink(snapshot).catch(() => {});
-    });
-    child.unref();
   } catch (err: any) {
     console.warn('[Ingest] Could not spawn background pre-generation:', err?.message);
   }

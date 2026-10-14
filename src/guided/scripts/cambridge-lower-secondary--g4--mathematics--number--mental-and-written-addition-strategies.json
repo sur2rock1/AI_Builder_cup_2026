@@ -1,0 +1,276 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--mental-and-written-addition-strategies",
+  "title": "Mental and written addition strategies",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: adding is one of the things we do most, so let's be quick and clever. Say we will learn to spot friendly pairs and to break numbers up. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Adding cleverly"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "8 + 7 + 2 + 3",
+          "say": "Look at this: eight plus seven plus two plus three. You could add left to right, but there's a cleverer way, and once you see it, you can't unsee it.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Number bonds to 10: 1+9, 2+8, 3+7, 4+6, 5+5. Look for pairs that make ten. Then do 8+7+2+3. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Pairs that make ten"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "1+9   2+8   3+7   4+6   5+5",
+          "say": "First, our friendly pairs that make ten. One and nine, two and eight, three and seven, four and six, five and five. Learn these and sums get easy.",
+          "style": "rule"
+        },
+        {
+          "id": "l3",
+          "text": "8 + 7 + 2 + 3",
+          "say": "Back to our sum. Do you see any pairs?",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "8 + {{2|ul}} = 10     7 + {{3|ul}} = 10",
+          "say": "Eight and two make ten. Seven and three make ten.",
+          "style": "work"
+        },
+        {
+          "id": "l5",
+          "text": "10 + 10 = 20",
+          "say": "So that's ten plus ten, which is twenty. Much easier than adding one by one.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Order and grouping do not change a total: 6+8+4+2. Add in any order. Name it: you can swap or regroup. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Any order, any grouping"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l6",
+          "text": "6 + 8 + 4 + 2",
+          "say": "Here's another. Six plus eight plus four plus two.",
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "6 + 4 = 10     8 + 2 = 10",
+          "say": "Adding can be done in any order, so I'll pick my pairs: six and four make ten, and eight and two make ten.",
+          "style": "work"
+        },
+        {
+          "id": "l7b",
+          "text": "10 + 10 = 20",
+          "say": "Ten and ten make twenty.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "Adding in any order, or in any groups, gives the same total",
+          "say": "So adding in any order, or grouping the numbers any way you like, gives the same total. Mathematicians say addition can be swapped and regrouped.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "Counting on in ones is slow and slips. Compare 27 + 5 counted in ones with bridging to the next ten: 27 + 3 + 2. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Counting on is slow"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l9",
+          "text": "27 + 5     (5 = 3 + 2)",
+          "say": "Let's add five to twenty-seven. One way: count on in ones. Twenty-eight, twenty-nine, thirty, thirty-one, thirty-two. It works, but it's slow, and it's easy to lose your place.",
+          "style": "point"
+        },
+        {
+          "id": "l10",
+          "text": "27 + {{3|ul}} = 30",
+          "say": "Here's a smarter way, called bridging. Twenty-seven needs three to reach thirty, so we split the five into three and two. Twenty-seven plus three is thirty.",
+          "style": "work"
+        },
+        {
+          "id": "l10b",
+          "text": "30 + {{2|ul.p}} = 32",
+          "say": "And thirty plus the two left over is thirty-two.",
+          "style": "work"
+        },
+        {
+          "id": "l11",
+          "text": "Bridge to the next ten, then add what is left",
+          "say": "Bridging to the next ten is quick, because adding onto a ten is easy.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "Written method by partitioning: 46 + 37. Add tens, add ones, then add the two. Mention that column addition is the same idea. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Partitioning to add"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l12",
+          "text": "46 + 37",
+          "say": "For bigger numbers, we can partition. Forty-six plus thirty-seven.",
+          "style": "point"
+        },
+        {
+          "id": "l13",
+          "text": "46 = {{40|ul.p}} + {{6|ul}}",
+          "say": "Split forty-six into forty and six.",
+          "style": "work"
+        },
+        {
+          "id": "l14",
+          "text": "37 = {{30|ul.p}} + {{7|ul}}",
+          "say": "And thirty-seven into thirty and seven.",
+          "style": "work"
+        },
+        {
+          "id": "l15",
+          "text": "{{40|ul.p}} + {{30|ul.p}} = 70      {{6|ul}} + {{7|ul}} = 13",
+          "say": "Add the pink tens together: seventy. Add the yellow ones together: thirteen.",
+          "style": "work"
+        },
+        {
+          "id": "l16",
+          "text": "70 + 13 = 83",
+          "say": "And finally join them: seventy plus thirteen is eighty-three. Column addition is exactly this, just written neatly in columns.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "apply",
+      "say": "Do one TOGETHER: 7+3+9+1 by pairs to ten. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l17",
+          "text": "7 + 3 + 9 + 1",
+          "say": "Now you help me. Seven plus three plus nine plus one. Look for pairs that make ten.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "7 + 3 = 10",
+          "say": "Seven and three.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which two numbers here make ten?",
+            "board": "Pairs to ten: ___ + ___",
+            "lookFor": "7 and 3 (and also 9 and 1).",
+            "onMiss": "Ask: what do we add to 7 to get to 10?"
+          }
+        },
+        {
+          "id": "l19",
+          "text": "9 + 1 = 10",
+          "say": "And nine and one.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which other pair makes ten?",
+            "board": "Another pair: ___ + ___",
+            "lookFor": "9 and 1.",
+            "onMiss": "Ask: what is left after we use 7 and 3?"
+          }
+        },
+        {
+          "id": "l20",
+          "text": "10 + 10 = 20",
+          "say": "So ten plus ten.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is the total of 7 + 3 + 9 + 1?",
+            "board": "Total = ?",
+            "lookFor": "20.",
+            "onMiss": "Ask: you found two tens. What is ten plus ten?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "check",
+      "say": "The child works alone: 58 + 25 by partitioning; 4 + 9 + 6 + 1 + 5 by pairs. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l21",
+          "text": "58 + 25 = 83",
+          "say": "Your turn to lead. Fifty-eight plus twenty-five. Partition both numbers.",
+          "style": "point",
+          "ask": {
+            "prompt": "Work out 58 + 25 by partitioning. Tell me your steps.",
+            "board": "58 + 25 = ?",
+            "lookFor": "83 (50 + 20 = 70, 8 + 5 = 13, 70 + 13 = 83).",
+            "onMiss": "Ask: what are the tens parts? Then the ones parts?"
+          }
+        },
+        {
+          "id": "l22",
+          "text": "4 + 9 + 6 + 1 + 5 = 25",
+          "say": "Now a string of numbers: four plus nine plus six plus one plus five.",
+          "style": "point",
+          "ask": {
+            "prompt": "Use pairs to ten. What is the total?",
+            "board": "4 + 9 + 6 + 1 + 5 = ?",
+            "lookFor": "25 (4 + 6 = 10, 9 + 1 = 10, and 5 left).",
+            "onMiss": "Ask: which pairs make ten? What is left over?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

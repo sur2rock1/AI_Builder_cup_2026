@@ -37,14 +37,28 @@ export function startBeat(state: GuidedBoardState, script: GuidedScript, request
     const beat = script.beats[i];
     beat.board.forEach((item, n) => placed.push({ key: `${beat.id}:${n}`, beatId: beat.id, item }));
     // A skipped line-by-line beat still leaves its lines on the board.
-    if (i < target) (beat.lines ?? []).forEach((l) => placed.push(...lineItems(beat.id, l)));
+    if (i < target) {
+      (beat.lines ?? []).forEach((l) => {
+        const at = l.annotates ? placed.findIndex((p) => p.key === `${beat.id}:L:${l.annotates}`) : -1;
+        if (at >= 0 && placed[at].item.type === 'line') placed[at] = { ...placed[at], item: { ...placed[at].item, text: l.text } as PlacedItem['item'] };
+        else placed.push(...lineItems(beat.id, l, true));
+      });
+    }
   }
   return { ...state, beatIndex: target, items: [...state.items, ...placed], lineIndex: 0, pendingAsk: null };
 }
 
+/** The question of an asked line, as written on the board while the learner thinks. */
+export const questionText = (l: BoardLine): string => (l.ask?.board?.trim() || l.ask?.prompt || '').trim();
+function questionItem(beatId: string, l: BoardLine): PlacedItem {
+  return { key: `${beatId}:Q:${l.id}`, beatId, item: { type: 'question', text: questionText(l) } };
+}
+
 /** A written line, plus the picture step it moves on to (if any). */
-function lineItems(beatId: string, l: BoardLine): PlacedItem[] {
-  const out: PlacedItem[] = [{ key: `${beatId}:L:${l.id}`, beatId, item: { type: 'line', style: l.style ?? 'work', text: l.text } }];
+function lineItems(beatId: string, l: BoardLine, withQuestion = false): PlacedItem[] {
+  const out: PlacedItem[] = [];
+  if (withQuestion && l.ask) out.push(questionItem(beatId, l));
+  out.push({ key: `${beatId}:L:${l.id}`, beatId, item: { type: 'line', style: l.style ?? 'work', text: l.text } });
   if (l.picture) out.push({ key: `${beatId}:P:${l.id}`, beatId, item: { type: 'picture', ref: l.picture.ref, step: l.picture.step } });
   return out;
 }
@@ -69,13 +83,21 @@ export function nextLine(state: GuidedBoardState, script: GuidedScript): NextLin
   const line = beat?.lines?.[state.lineIndex];
   if (!beat || !line) return { action: 'done', state };
   if (line.ask && state.pendingAsk !== line.id) {
-    return { action: 'ask', state: { ...state, pendingAsk: line.id }, line };
+    // The question goes on the board now (once - a re-ask after a side question writes nothing new); the answer follows later.
+    const qKey = `${beat.id}:Q:${line.id}`;
+    const items = state.items.some((p) => p.key === qKey) ? state.items : [...state.items, questionItem(beat.id, line)];
+    return { action: 'ask', state: { ...state, items, pendingAsk: line.id }, line };
   }
+  // A line that marks up an earlier line redraws that row in place (no new row), so the teacher can underline what is already there.
+  const target = line.annotates ? state.items.findIndex((p) => p.key === `${beat.id}:L:${line.annotates}`) : -1;
+  const items = target >= 0
+    ? state.items.map((p, i) => (i === target && p.item.type === 'line' ? { ...p, item: { ...p.item, text: line.text } } : p))
+    : [...state.items, ...lineItems(beat.id, line)];
   return {
     action: 'write',
     line,
     answered: !!line.ask,
-    state: { ...state, items: [...state.items, ...lineItems(beat.id, line)], lineIndex: state.lineIndex + 1, pendingAsk: null },
+    state: { ...state, items, lineIndex: state.lineIndex + 1, pendingAsk: null },
   };
 }
 
@@ -119,6 +141,6 @@ export function currentPicture(state: GuidedBoardState): { ref: string; step: st
 export function itemsToStagger(prev: GuidedBoardState, next: GuidedBoardState): string[] {
   if (next.beatIndex === prev.beatIndex) return [];
   const known = new Set(prev.items.map((p) => p.key));
-  const fresh = next.items.filter((p) => !known.has(p.key) && p.item.type !== 'line' && p.item.type !== 'aside');
+  const fresh = next.items.filter((p) => !known.has(p.key) && p.item.type !== 'line' && p.item.type !== 'aside' && p.item.type !== 'question');
   return fresh.slice(1).map((p) => p.key);
 }

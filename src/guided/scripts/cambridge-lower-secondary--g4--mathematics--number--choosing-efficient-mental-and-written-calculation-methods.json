@@ -1,0 +1,289 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--choosing-efficient-mental-and-written-calculation-methods",
+  "title": "Choosing efficient mental and written calculation methods",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: there is never only one way to calculate; today we learn to LOOK first and then pick. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Look first, then choose"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "Same sum, many ways",
+          "say": "Here's something your teacher wants you to know. For almost any sum there are lots of ways to get the answer. A clever mathematician doesn't just pick one at random. They look at the numbers first.",
+          "style": "point"
+        },
+        {
+          "id": "l2",
+          "text": "Efficient = quick, simple, few mistakes",
+          "say": "The best method is called the efficient one. That means quick, simple, and not likely to go wrong.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Mental methods suit numbers that are close, small or friendly; written methods suit big numbers with lots of exchanging. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Mental or written?"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l3",
+          "text": "MENTAL: numbers that are small, close together, or next to a ten",
+          "say": "Mental methods, in your head, are best when the numbers are friendly: small numbers, numbers close together, or numbers sitting next to a multiple of ten.",
+          "style": "rule"
+        },
+        {
+          "id": "l4",
+          "text": "WRITTEN: big numbers, lots of carrying or exchanging",
+          "say": "Written methods are best when numbers are big and there are lots of carrying or exchanging steps, because writing keeps track for you.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Walk through three sums and choose a method for each: 63 + 9 (near a multiple of ten -> add 10, take 1), 83 - 79 (close -> find the difference, 4), 368 + 247 (big -> written partition, 615). No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Three sums, three choices"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l5",
+          "text": "63 + 9     83 − 79     368 + 247     (+10 −1, the gap, or 300 + 60 + 8 and 200 + 40 + 7)",
+          "say": "Three sums on the board. Let's choose a method for each one, and I'll tell you why.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "63 + 9: nine is next to ten  →  63 + 10 − 1 = 72",
+          "say": "First one. Nine is just next to a ten, so add ten and take one back: seventy-three, then seventy-two. In your head, in seconds.",
+          "style": "work"
+        },
+        {
+          "id": "l7",
+          "text": "83 − 79: close together  →  difference = 4",
+          "say": "Second one. Eighty-three and seventy-nine are close together, so count up the gap: seventy-nine to eighty is one, eighty to eighty-three is three. Four.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "368 + 247: big  →  300 + 200 = 500,  60 + 40 = 100,  8 + 7 = 15",
+          "say": "The third has big numbers, and the ones will make more than ten. That one I'd partition on paper: three hundred plus two hundred, sixty plus forty, eight plus seven.",
+          "style": "work"
+        },
+        {
+          "id": "l9",
+          "text": "500 + 100 + 15 = 615",
+          "say": "Five hundred, a hundred, and fifteen, which is six hundred and fifteen.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend uses the same long written method every time, even for 83 - 79. Show it is slow and slip-prone. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's way"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "83 − 79 by column subtraction",
+          "say": "A friend of mine always uses the long written method, even for eighty-three minus seventy-nine. They set it up in columns, then exchange a ten, then cross things out.",
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "They got 14. The exchange went wrong.",
+          "say": "And on the way they slipped, and got fourteen. That's a long way from the gap of four we found in our heads.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "A long method on an easy sum = more chances to slip",
+          "say": "The long method isn't wrong, but it's more work than the sum needs, and more steps means more chances to make a mistake.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "A short checklist to choose: close together? next to a ten? small number? otherwise written. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A checklist"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l13",
+          "text": "1. Are the numbers close?  →  find the difference",
+          "say": "So here's a little checklist. One: are the two numbers close together? Then find the gap.",
+          "style": "rule"
+        },
+        {
+          "id": "l14",
+          "text": "2. Is one next to a multiple of 10?  →  round, then fix",
+          "say": "Two: is one number next to a multiple of ten, like nine, eleven, nineteen? Then round and fix.",
+          "style": "rule"
+        },
+        {
+          "id": "l15",
+          "text": "3. Is it small and friendly?  →  count on or back",
+          "say": "Three: is the number small and friendly? Then count on or back.",
+          "style": "rule"
+        },
+        {
+          "id": "l16",
+          "text": "4. Otherwise  →  partition or use columns on paper",
+          "say": "Four, if none of those fit: use a written method and partition.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "Always check the answer with an estimate. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Check with an estimate"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l17",
+          "text": "368 + 247 is about 400 + 250 = 650",
+          "say": "Whatever method you use, do a quick check. Three hundred and sixty-eight is nearly four hundred, and two hundred and forty-seven is nearly two fifty. Together about six hundred and fifty. Our six hundred and fifteen is close enough to make sense.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do two TOGETHER: 54 + 19 and 702 - 698. Choose a method for each. Operands in the intro line.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do two together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l18",
+          "text": "54 + 19     702 − 698     (use 20 and 1)",
+          "say": "Now you help me choose. Fifty-four plus nineteen, and seven hundred and two minus six hundred and ninety-eight.",
+          "style": "point"
+        },
+        {
+          "id": "l19",
+          "text": "54 + 19: nineteen is next to twenty  →  54 + 20 − 1 = 73",
+          "say": "Nineteen is next to twenty.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which method is best for 54 + 19, and what is the answer?",
+            "board": "54 + 19 = ?",
+            "lookFor": "73 (add 20, then take 1 back: round and fix).",
+            "onMiss": "Ask: is 19 close to a multiple of ten? Which one?"
+          }
+        },
+        {
+          "id": "l20",
+          "text": "702 − 698: close together  →  difference = 4",
+          "say": "Those two are very close together.",
+          "style": "work",
+          "ask": {
+            "prompt": "And 702 − 698: which method is best, and what is the answer?",
+            "board": "702 − 698 = ?",
+            "lookFor": "4 (find the difference: 698 to 700 is 2, then 2 more).",
+            "onMiss": "Ask: are the two numbers close together? How far is 698 from 702?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "check",
+      "say": "The child works alone: 456 + 378 (written), 91 - 88 (difference), and explains how they chose. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l21",
+          "text": "456 + 378     91 − 88",
+          "say": "Your turn to lead. Pick the best method for each one. Four hundred and fifty-six plus three hundred and seventy-eight, and ninety-one minus eighty-eight.",
+          "style": "point"
+        },
+        {
+          "id": "l22",
+          "text": "456 + 378 = 834",
+          "say": "Big numbers, with exchanging, so a written method.",
+          "style": "work",
+          "ask": {
+            "prompt": "Work out 456 + 378. Which method did you pick?",
+            "board": "456 + 378 = ?",
+            "lookFor": "834 (partition: 700 + 120 + 14).",
+            "onMiss": "Ask: add the hundreds, the tens, and the ones separately. What do you get?"
+          }
+        },
+        {
+          "id": "l23",
+          "text": "91 − 88 = 3",
+          "say": "And those are close together.",
+          "style": "work",
+          "ask": {
+            "prompt": "Work out 91 − 88. Which method did you pick?",
+            "board": "91 − 88 = ?",
+            "lookFor": "3 (find the difference).",
+            "onMiss": "Ask: are 91 and 88 close together? How far apart are they?"
+          }
+        },
+        {
+          "id": "l24",
+          "text": "Look at the numbers first, then choose the quickest safe method",
+          "say": "The big idea.",
+          "style": "point",
+          "ask": {
+            "prompt": "In your own words: how do you decide which method to use?",
+            "board": "How do I choose?",
+            "lookFor": "Look at the numbers: close, next to a ten, or small means a mental method; big with exchanging means written.",
+            "onMiss": "Ask: what did you notice about 91 and 88 that made it easy?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

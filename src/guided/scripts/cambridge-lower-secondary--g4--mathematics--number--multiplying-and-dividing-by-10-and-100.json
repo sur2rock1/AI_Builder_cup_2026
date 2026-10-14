@@ -1,0 +1,302 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--multiplying-and-dividing-by-10-and-100",
+  "title": "Multiplying and dividing by 10 and 100",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open playfully: there is a pattern that makes times-ten and times-hundred almost magic. Say we will find out why it works, not just what to do. Colours: pink tens, yellow ones, blue hundreds, green thousands. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The ×10 and ×100 pattern"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "34 × 10 = 340",
+          "say": "Look at this: thirty-four times ten is three hundred and forty. Now a lot of people say, oh, you just stick a zero on the end. That works, but today I want you to know why it works, so it never lets you down.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Place value columns H T U. Put 34 in tens and ones, then ×10 shifts every digit one place left, and the empty ones place is filled with a zero. Mark the digits in place. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Digits move left"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "34",
+          "say": "Here's thirty-four. The 3 is in the tens place and the 4 is in the ones place.",
+          "style": "point"
+        },
+        {
+          "id": "l3",
+          "text": "{{3|ul.p|tens}}{{4|ul|ones}}",
+          "say": "Pink for the tens digit, yellow for the ones.",
+          "style": "point",
+          "annotates": "l2"
+        },
+        {
+          "id": "l4",
+          "text": "× 10 means 10 times bigger",
+          "say": "Multiplying by ten makes a number ten times bigger. And every digit's value becomes ten times bigger, so every digit moves one place to the left.",
+          "style": "rule"
+        },
+        {
+          "id": "l5",
+          "text": "3 tens → 3 hundreds     4 ones → 4 tens",
+          "say": "The 3 was three tens, now it's three hundreds. The 4 was four ones, now it's four tens.",
+          "style": "work"
+        },
+        {
+          "id": "l6",
+          "text": "340",
+          "say": "That leaves the ones place empty, and an empty place must be held by a zero. So thirty-four times ten is three hundred and forty. The zero isn't magic: it's just holding the ones place open.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Times 100: every digit moves TWO places left, zeros fill the tens and ones. 34 x 100 = 3400. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "× 100: two places"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l7",
+          "text": "34 × 100",
+          "say": "Now times a hundred. A hundred is ten times ten, so the digits jump twice.",
+          "style": "point"
+        },
+        {
+          "id": "l8",
+          "text": "3 tens → 3 thousands     4 ones → 4 hundreds",
+          "say": "The 3 climbs from tens to thousands, and the 4 climbs from ones to hundreds. Two places each.",
+          "style": "work"
+        },
+        {
+          "id": "l9",
+          "text": "3400",
+          "say": "Two empty places are left behind, the tens and the ones, so we fill both with zeros: three thousand four hundred.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend thinks 'times 10' means 'add 10'. Test it with 34. Detective tone. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "34 × 10  →  34 + 10 = 44 ?",
+          "say": "A friend of mine says times ten just means plus ten, so thirty-four times ten is forty-four. Let's test that.",
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "10 groups of 34 is far more than 44",
+          "say": "Ten times thirty-four means ten groups of thirty-four. Even ten groups of thirty would already be three hundred. So forty-four is way too small.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "× 10 = ten TIMES bigger, not ten MORE",
+          "say": "Times ten makes it ten times as big, not ten more. Big difference!",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "Dividing by 10 and 100 is the opposite: digits move RIGHT. 560 / 10 = 56; 4500 / 100 = 45. The zeros drop off the end. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Dividing: the opposite"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l13",
+          "text": "560 ÷ 10     4500 ÷ 100",
+          "say": "Dividing is the opposite of multiplying, so the digits go the opposite way: to the right. Two to try: five hundred and sixty divided by ten, and then four thousand five hundred divided by a hundred. Ten first.",
+          "style": "point"
+        },
+        {
+          "id": "l14",
+          "text": "5 hundreds → 5 tens     6 tens → 6 ones",
+          "say": "The 5 drops from hundreds to tens, and the 6 drops from tens to ones. The zero slides off the end.",
+          "style": "work"
+        },
+        {
+          "id": "l15",
+          "text": "560 ÷ 10 = 56",
+          "say": "So the answer is fifty-six.",
+          "style": "work"
+        },
+        {
+          "id": "l16",
+          "text": "4500 ÷ 100 = 45",
+          "say": "For a hundred, the digits move two places right. Four thousand five hundred divided by a hundred is forty-five.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "State the pattern in one line and show the check that they undo each other: 56 x 10 = 560. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The pattern"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l17",
+          "text": "×10: digits move 1 place LEFT.  ×100: 2 places LEFT.  (56 → 560)",
+          "say": "Multiplying by ten, digits move one place left. By a hundred, two places left.",
+          "style": "rule"
+        },
+        {
+          "id": "l18",
+          "text": "÷10: digits move 1 place RIGHT.  ÷100: 2 places RIGHT.",
+          "say": "Dividing by ten, one place right. By a hundred, two places right.",
+          "style": "rule"
+        },
+        {
+          "id": "l19",
+          "text": "56 × 10 = 560   and   560 ÷ 10 = 56",
+          "say": "They undo each other. Multiply and divide by the same number and you land back where you started.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER, 27 x 10 and 27 x 100. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together: 27"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l20",
+          "text": "27 × 10     27 × 100",
+          "say": "Now you help me. We'll take twenty-seven, and multiply it by ten and then by a hundred.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "27 × 10 = 270",
+          "say": "Digits move one place left, zero in the ones place: two hundred and seventy.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is 27 × 10? Tell me where the digits move.",
+            "board": "27 × 10 = ?",
+            "lookFor": "270 (each digit moves one place left).",
+            "onMiss": "Ask: the 2 is in the tens place. Which place does it move to?"
+          }
+        },
+        {
+          "id": "l22",
+          "text": "27 × 100 = 2700",
+          "say": "Two places left this time, with two zeros: two thousand seven hundred.",
+          "style": "work",
+          "ask": {
+            "prompt": "And what is 27 × 100?",
+            "board": "27 × 100 = ?",
+            "lookFor": "2700 (each digit moves two places left).",
+            "onMiss": "Ask: how many places do the digits move for a hundred?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "check",
+      "say": "The child works alone: 600 / 10, 7300 / 100, then why the digits move. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l22b",
+          "text": "600 ÷ 10     7300 ÷ 100",
+          "say": "Your turn to lead. Two divisions to do.",
+          "style": "point"
+        },
+        {
+          "id": "l23",
+          "text": "600 ÷ 10 = 60",
+          "say": "First, six hundred divided by ten.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is 600 ÷ 10?",
+            "board": "600 ÷ 10 = ?",
+            "lookFor": "60.",
+            "onMiss": "Ask: do the digits move left or right when we divide? By how many places?"
+          }
+        },
+        {
+          "id": "l24",
+          "text": "7300 ÷ 100 = 73",
+          "say": "Now seven thousand three hundred divided by a hundred.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is 7300 ÷ 100?",
+            "board": "7300 ÷ 100 = ?",
+            "lookFor": "73.",
+            "onMiss": "Ask: the digits move two places right. Where do the 7 and the 3 end up?"
+          }
+        },
+        {
+          "id": "l25",
+          "text": "Each digit becomes 10 times bigger/smaller, so it moves one place",
+          "say": "The pattern works because every digit becomes ten times bigger, or smaller, which is exactly one place.",
+          "style": "point",
+          "ask": {
+            "prompt": "In your own words: why do the digits move when we multiply by 10?",
+            "board": "Why do the digits move?",
+            "lookFor": "Each digit becomes 10 times bigger, so it moves up one place value.",
+            "onMiss": "Ask: three tens times ten is how many? Which place is that?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}
