@@ -14,6 +14,7 @@ import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { BoardVisualView, type StepState } from '../components/BoardVisualView';
 import type { BoardVisual } from '../visual/types';
 import { currentPicture } from './board';
+import { parseMarks, type MarkColour } from './marks';
 import type { BoardItem, GuidedBoardState, GuidedPayload, PlacedItem } from './types';
 import { useTutorName } from '../persona/TutorNameContext';
 
@@ -28,6 +29,31 @@ const chalkify = (s: string) => s
   .replace(/->|=>/g, '→').replace(/\^2\b/g, '²').replace(/\^3\b/g, '³')
   // keep an equation together: no line break between an operator and its neighbours
   .replace(/\s([=+×÷<>≤≥≠→])\s/g, '\u00A0$1\u00A0');
+
+const MARK_COLOUR: Record<MarkColour, string> = { y: YELLOW, p: PINK, b: BLUE, g: GREEN };
+
+/** A board line with its chalk marks (underline / circle / box / highlight, optional label underneath) drawn on top of the words. */
+const renderMarked = (raw: string): React.ReactNode => parseMarks(raw).map((seg, i) => {
+  if (seg.kind === 'text') return <React.Fragment key={i}>{chalkify(seg.text)}</React.Fragment>;
+  const c = MARK_COLOUR[seg.colour];
+  const style: React.CSSProperties = { display: 'inline-block', position: 'relative', lineHeight: 1.15, marginBottom: seg.label ? '0.75em' : undefined, animationDelay: '0.9s' };
+  if (seg.label) {
+    // The label is centred under the mark and can be wider than it: widen the mark so neighbouring labels never overlap.
+    style.minWidth = `${Math.max(1, seg.label.length * 0.33)}em`;
+    style.textAlign = 'center';
+    style.margin = '0 0.18em 0.75em';
+  } else if (seg.style !== 'ul') { style.margin = '0 0.1em'; }
+  if (seg.style === 'ul') { style.borderBottom = `3px solid ${c}`; style.paddingBottom = '1px'; }
+  else if (seg.style === 'circle') { style.border = `2px solid ${c}`; style.borderRadius = '999px'; style.padding = '0 0.4em'; }
+  else if (seg.style === 'box') { style.border = `2px solid ${c}`; style.borderRadius = '6px'; style.padding = '0 0.3em'; }
+  else { style.background = `${c}44`; style.borderRadius = '4px'; style.padding = '0 0.2em'; }
+  return (
+    <span key={i} className="chalk-mark" style={style}>
+      {chalkify(seg.text)}
+      {seg.label && <span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', fontSize: '0.58em', color: c, whiteSpace: 'nowrap', lineHeight: 1.1 }}>{seg.label}</span>}
+    </span>
+  );
+});
 
 interface Props {
   payload: GuidedPayload;
@@ -78,7 +104,8 @@ export const GuidedBoard: React.FC<Props> = ({ payload, board, conceptLabel }) =
   }, [board.items.length, Object.keys(board.filled).length]);
 
   const narrow = useMediaQuery('(max-width: 639px)');
-  const baseSize = board.items.length <= 10 ? 27 : board.items.length <= 18 ? 24 : 21;
+  // The board scrolls (and follows the newest line), so the chalk keeps a comfortable size however long the lesson grows.
+  const baseSize = board.items.length <= 10 ? 27 : 25;
   // The board is a small box on a phone: shrink the chalk so a line still holds several words.
   const size = narrow ? Math.max(15, Math.round(baseSize * 0.68)) : baseSize;
 
@@ -109,10 +136,10 @@ export const GuidedBoard: React.FC<Props> = ({ payload, board, conceptLabel }) =
           </div>
         );
       case 'point':
-        return <p className="chalk-write leading-snug" style={{ ...anim, fontSize: size, color: CHALK }}>{chalkify(it.text)}</p>;
+        return <p className="chalk-write leading-snug" style={{ ...anim, fontSize: size, color: CHALK }}>{renderMarked(it.text)}</p>;
       case 'rule':
         return (
-          <p className="chalk-write self-start px-4 py-1.5 rounded-xl border-2 leading-snug" style={{ ...anim, fontSize: size + 3, color: BLUE, borderColor: PINK }}>{chalkify(it.text)}</p>
+          <p className="chalk-write self-start px-4 py-1.5 rounded-xl border-2 leading-snug" style={{ ...anim, fontSize: size + 3, color: BLUE, borderColor: PINK }}>{renderMarked(it.text)}</p>
         );
       case 'exception':
         return (
@@ -123,17 +150,24 @@ export const GuidedBoard: React.FC<Props> = ({ payload, board, conceptLabel }) =
       case 'work':
         return (
           <div className="chalk-write pl-3 border-l-2 space-y-0.5" style={{ ...anim, borderColor: 'rgba(244,241,230,.35)', color: CHALK, fontSize: size - 1 }}>
-            {it.lines.map((l, i) => <div key={i}>{chalkify(l)}</div>)}
+            {it.lines.map((l, i) => <div key={i}>{renderMarked(l)}</div>)}
           </div>
         );
       case 'slot':
         return <p className="leading-snug" style={{ fontSize: size, color: CHALK }}>{renderSlot(it.id, it.label)}</p>;
       case 'line':
         if (it.style === 'rule') {
-          return <p className="chalk-write self-start px-4 py-1.5 rounded-xl border-2 leading-snug" style={{ ...anim, fontSize: size + 3, color: BLUE, borderColor: PINK }}>{chalkify(it.text)}</p>;
+          return <p className="chalk-write self-start px-4 py-1.5 rounded-xl border-2 leading-snug" style={{ ...anim, fontSize: size + 3, color: BLUE, borderColor: PINK }}>{renderMarked(it.text)}</p>;
         }
-        if (it.style === 'point') return <p className="chalk-write leading-snug" style={{ ...anim, fontSize: size, color: CHALK }}>{chalkify(it.text)}</p>;
-        return <div className="chalk-write pl-3 border-l-2 leading-snug" style={{ ...anim, borderColor: 'rgba(244,241,230,.35)', color: CHALK, fontSize: size }}>{chalkify(it.text)}</div>;
+        if (it.style === 'point') return <p className="chalk-write leading-snug" style={{ ...anim, fontSize: size, color: CHALK }}>{renderMarked(it.text)}</p>;
+        return <div className="chalk-write pl-3 border-l-2 leading-snug" style={{ ...anim, borderColor: 'rgba(244,241,230,.35)', color: CHALK, fontSize: size }}>{renderMarked(it.text)}</div>;
+      case 'question':
+        // A question the tutor has just asked: written up like a teacher would, the answer follows underneath.
+        return (
+          <div className="chalk-write pl-3 border-l-4 leading-snug" style={{ ...anim, borderColor: YELLOW, fontSize: size, color: YELLOW }}>
+            <span className="mr-2" style={{ color: PINK }}>Q.</span>{renderMarked(it.text)}
+          </div>
+        );
       case 'aside':
         // The learner's own question, answered on the board, set apart from the lesson.
         return (

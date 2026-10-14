@@ -1,0 +1,387 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--biology--ch1-introducing-living-things--cell-structure-and-levels-of-organisation",
+  "title": "Cell structure and levels of organisation",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: every living thing is built from cells, and a cell is a tiny factory with parts. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Cells: the building blocks"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "cells are the basic units of all living things",
+          "say": "Every living thing is made of cells. They're so small that we measure them in micrometres, which are thousandths of a millimetre. Inside, a cell is like a tiny factory, with different parts doing different jobs.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "The animal cell parts and jobs: membrane, cytoplasm, nucleus, mitochondria, ribosomes. Explain each with a colour. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "An animal cell"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "{{cell membrane|ul.b}}  -  a barrier that controls what goes in and out",
+          "say": "First the outside. The cell membrane is a thin barrier that is partially permeable: it lets some things through, and stops others.",
+          "style": "point"
+        },
+        {
+          "id": "l3",
+          "text": "{{cytoplasm|ul.g}}  -  where chemical reactions happen",
+          "say": "Inside is the cytoplasm, a jelly-like liquid where many of the cell's chemical reactions happen.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "{{nucleus|ul.p}}  -  holds DNA, controls the cell",
+          "say": "The nucleus holds the DNA, the instructions that control what the cell does.",
+          "style": "point"
+        },
+        {
+          "id": "l5",
+          "text": "{{mitochondria|ul}}  -  release energy by aerobic respiration",
+          "say": "Mitochondria are where aerobic respiration happens, releasing energy.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "{{ribosomes|ul.b}}  -  make proteins",
+          "say": "And ribosomes are where the cell builds proteins.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "define",
+      "say": "Plant cell extras: cellulose cell wall, large permanent vacuole with cell sap, chloroplasts with chlorophyll. Plant cells also have everything an animal cell has. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A plant cell has extras"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l7",
+          "text": "plant cell  =  everything in an animal cell, PLUS three extras",
+          "say": "A plant cell has everything an animal cell has, and three extra things.",
+          "style": "rule"
+        },
+        {
+          "id": "l8",
+          "text": "{{cell wall|ul.p}}  -  tough, made of cellulose, supports and shapes the cell",
+          "say": "One, a cell wall made of cellulose. It's tough and gives the cell its shape and support.",
+          "style": "point"
+        },
+        {
+          "id": "l9",
+          "text": "{{large vacuole|ul.b}}  -  holds cell sap",
+          "say": "Two, a large permanent vacuole filled with a liquid called cell sap.",
+          "style": "point"
+        },
+        {
+          "id": "l10",
+          "text": "{{chloroplasts|ul.g}}  -  contain chlorophyll, make food by photosynthesis",
+          "say": "Three, chloroplasts, which contain the green pigment chlorophyll and make food by photosynthesis. But only in green parts of the plant.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend says plant cells have a cell wall instead of a membrane, and that all plant cells have chloroplasts. Test both. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's ideas about plant cells"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l11",
+          "text": "cell wall only?",
+          "say": "A friend of mine says plant cells have a cell wall, so they don't need a membrane. Let's test that.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "The cell wall lets almost everything through",
+          "say": "A cellulose wall is fully permeable. It holds the shape but it lets water and dissolved substances pass freely.",
+          "style": "point"
+        },
+        {
+          "id": "l13",
+          "text": "The membrane inside the wall CONTROLS what enters and leaves",
+          "say": "So there is still a membrane just inside the wall, and it's the membrane that controls what goes in and out. Plant cells have both.",
+          "style": "rule"
+        },
+        {
+          "id": "l14",
+          "text": "root cell underground:  no light  →  no chloroplasts",
+          "say": "Second claim: all plant cells have chloroplasts. A root cell is underground, in the dark. Chloroplasts would be useless there, so root cells don't have them.",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "Only green, light-exposed cells have chloroplasts",
+          "say": "Only the green cells that are exposed to light, such as in leaves, have chloroplasts.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "contrast",
+      "say": "A friend says the nucleus is the brain of the cell. Test: a cell has no thoughts; the nucleus stores DNA instructions. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea: the nucleus is the brain"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l16",
+          "text": "Is the nucleus a brain?",
+          "say": "A friend of mine calls the nucleus the cell's brain, that it thinks and decides. Let's test that.",
+          "style": "point"
+        },
+        {
+          "id": "l17",
+          "text": "A cell has no nerves and no thoughts",
+          "say": "A single cell has no nerves and cannot think.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "The nucleus stores DNA: a set of instructions, like a recipe book",
+          "say": "What the nucleus actually does is store the DNA, a coded set of instructions, like a recipe book. Other parts, such as ribosomes, read the instructions and build proteins.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "show",
+      "say": "Specialised cells: red blood cell (biconcave, no nucleus, haemoglobin), root hair cell (long projection), ciliated cell (cilia sweep mucus). Shape fits function. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Specialised cells"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l19",
+          "text": "Red blood cell:  biconcave disc, no nucleus, full of haemoglobin",
+          "say": "A red blood cell is shaped like a disc with a dip on each side, has no nucleus, and is packed with haemoglobin, which carries oxygen.",
+          "style": "point"
+        },
+        {
+          "id": "l20",
+          "text": "Root hair cell:  a long thin projection",
+          "say": "A root hair cell has a long, thin projection that gives it a large surface to take in water and minerals from the soil.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "Ciliated cell:  tiny hairs (cilia) that sweep mucus",
+          "say": "A ciliated cell has tiny hairs called cilia that sweep mucus along.",
+          "style": "point"
+        },
+        {
+          "id": "l22",
+          "text": "Shape fits job",
+          "say": "In each case, the shape of the cell fits its job. That is what specialised means.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "show",
+      "say": "Levels of organisation: organelle, cell, tissue, organ, organ system, organism. Use the heart muscle for a worked example. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Levels of organisation"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l23",
+          "text": "organelle → cell → tissue → organ → organ system → organism",
+          "say": "Cells aren't the end of the story. Living things are built up in levels, starting with the tiny parts inside a cell and finishing with the whole living thing.",
+          "style": "rule"
+        },
+        {
+          "id": "l24",
+          "text": "A mitochondrion is an organelle inside a heart muscle cell",
+          "say": "Take the heart. A mitochondrion is an organelle, a small part, inside a heart muscle cell.",
+          "style": "point"
+        },
+        {
+          "id": "l25",
+          "text": "Many muscle cells together  =  muscle tissue",
+          "say": "A group of similar cells doing the same job is a tissue, like heart muscle tissue.",
+          "style": "point"
+        },
+        {
+          "id": "l26",
+          "text": "Different tissues together  =  an organ  (the heart)",
+          "say": "Different tissues working together make an organ, the heart.",
+          "style": "point"
+        },
+        {
+          "id": "l27",
+          "text": "Organs together  =  an organ system  (circulatory system)",
+          "say": "Organs working together make an organ system, like the circulatory system. And all the systems together make the whole organism.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "apply",
+      "say": "Do it TOGETHER: structure jobs. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's match jobs"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l28",
+          "text": "mitochondria     ribosomes     cell wall     chloroplasts",
+          "say": "Now you help me match some structures to their jobs.",
+          "style": "point"
+        },
+        {
+          "id": "l29",
+          "text": "Mitochondria: release energy (aerobic respiration)",
+          "say": "Yes.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is the job of mitochondria?",
+            "board": "Mitochondria:",
+            "lookFor": "They release energy by aerobic respiration.",
+            "onMiss": "Ask: which life process releases energy?"
+          }
+        },
+        {
+          "id": "l30",
+          "text": "Ribosomes: make proteins",
+          "say": "Right.",
+          "style": "work",
+          "ask": {
+            "prompt": "What do ribosomes do?",
+            "board": "Ribosomes:",
+            "lookFor": "They make proteins.",
+            "onMiss": "Ask: they follow the DNA's instructions to build what?"
+          }
+        },
+        {
+          "id": "l31",
+          "text": "Only in plant cells: cell wall, large vacuole, chloroplasts",
+          "say": "Last.",
+          "style": "work",
+          "ask": {
+            "prompt": "Name one structure found in plant cells but not in animal cells.",
+            "board": "Plant cells only:",
+            "lookFor": "Any of: cellulose cell wall, large permanent vacuole, chloroplasts.",
+            "onMiss": "Ask: what gives a plant cell its stiff shape? What makes its food?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "apply",
+      "say": "The child works alone: order these levels: tissue, organism, cell, organ; and why a root hair cell has a long projection. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l32",
+          "text": "tissue     organism     cell     organ",
+          "say": "Your turn to lead. Four levels in a jumble.",
+          "style": "point"
+        },
+        {
+          "id": "l33",
+          "text": "cell → tissue → organ → organism",
+          "say": "Put them in order.",
+          "style": "work",
+          "ask": {
+            "prompt": "Put these in order, smallest to largest.",
+            "board": "smallest → largest:",
+            "lookFor": "cell, tissue, organ, organism.",
+            "onMiss": "Ask: which one is made of cells that are alike? Which is made of different tissues?"
+          }
+        },
+        {
+          "id": "l34",
+          "text": "Long projection  →  large surface area to take in water and minerals",
+          "say": "And one about adaptation.",
+          "style": "work",
+          "ask": {
+            "prompt": "Why does a root hair cell have a long, thin projection?",
+            "board": "Why the projection?",
+            "lookFor": "It gives a large surface area for taking in water and minerals from the soil.",
+            "onMiss": "Ask: does a bigger surface take in more or less?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b10",
+      "kind": "check",
+      "say": "Why a membrane is needed even with a wall. Reward reasoning.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Say it in your own words"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l35",
+          "text": "wall AND membrane",
+          "say": "Last one.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why does a plant cell need a cell membrane when it already has a cell wall?",
+            "board": "Why both?",
+            "lookFor": "The wall is fully permeable and only supports the cell; the membrane controls what enters and leaves.",
+            "onMiss": "Ask: does the wall stop substances getting through, or the membrane?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

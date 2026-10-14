@@ -1,7 +1,14 @@
 # PROJECT STATE
 
-_Last updated: 2026-10-09 (audited — see docs/AUDIT_2026-10-09.md)_
+_Last updated: 2026-10-14 (Parent View added; 2026-10-09 audit below — see docs/AUDIT_2026-10-09.md)_
 
+
+## UPDATE 2026-10-14 — Parent View (plain-language parent report) added
+- **New:** `src/parent/*` + `GET/POST /api/learners/:id/parent-report[/generate]`; the Parent portal now opens on a plain-language **Parent view** ("What Ananta has learned about <child>": letter with *See why* evidence links, topic journey in words, *How Ananta figured the child out* story, next-lesson plan, home tip). The previous portal is unchanged and reachable via the **Under the hood** switch. Spec: `docs/PARENT_VIEW.md`; decision D-2026-10-14-1.
+- **Demo data:** `npm run seed:story` creates **Maya (Simulated)** (5 lessons, 13 answers; answers scripted and labelled, everything derived is real code; real Gemini lesson summaries + letter when a key is present, `--no-ai` for offline). Must be run locally then `npm run migrate:cloud -- --only learners` and redeployed for the Cloud Run URL to show her.
+- **Tests:** `npm run test:parent` — 25 offline assertions pass (includes a per-subject isolation regression); `tsc` and `vite build` clean; real-HTTP check of both routes against seeded data; page rendered at 1100 px and 390 px with no horizontal overflow. **Not yet verified:** the Gemini-written letter (sandbox has no Gemini access — first real run is `npm run seed:story` on the owner's PC), the page on the deployed Cloud Run URL.
+- **Deployment (owner-reported 2026-10-10):** Cloud Run URL https://ananta-ivczdbgbja-as.a.run.app/ — supersedes "Deployment: NOT DONE" below. The Parent View needs a redeploy (`npm run deploy:live`) to appear there.
+- **Known, unchanged:** BKT mastery falls sharply after a confirmed mix-up and recovers slowly (why the Parent View shows ladder steps in words, not %); the live tutor records every turn's representation as direct explanation, so real lessons rarely show a "changed how it teaches" step; DEMO_MODE exposes all learners.
 
 ## STATUS 2026-10-09 (audited; supersedes the stale sections below where they disagree)
 - **Product name:** Ananta (code, README). Older sections say "Dr. Marcus" / "Adaptive AI Tutor"; the child now names the tutor (D-2026-10-07-1).
@@ -13,7 +20,7 @@ _Last updated: 2026-10-09 (audited — see docs/AUDIT_2026-10-09.md)_
 - **Evidence of effectiveness:** EV-01/02/03 (diagnosis accuracy, adapted-vs-base, persona adherence) NOT built. No measured result exists.
 - **Privacy/auth:** deployed builds default `DEMO_MODE=true` (no token checks; `GET /api/learners` lists all profiles). Not acceptable for real children's data.
 - **Tests:** `tsc` clean; `tests/live/run.mjs` fails 7 assertions (since 28 Sep); `tests/guided/run.mjs` crashes (stale test); `npm test` is red.
-- **In progress / uncommitted:** guided tutor mode (`src/guided/`, toggle `TUTOR_MODE`, default `standard`), tutor-name feature, 25 modified files.
+- **In progress / uncommitted:** guided tutor mode (`src/guided/`, default `guided` since 2026-10-14, toggle hidden, `TUTOR_MODE=standard` or `?tutor=standard` restores standard), tutor-name feature, 25 modified files.
 - **Removed behaviour:** PARK_AND_ESCALATE no longer runs in the live path (D-2026-09-30-9); Parent-Portal escalation card is dead code.
 - **Not built:** T12 confidence capture, T15 spaced review/decay, T19 latency spike, T24–T26 eval harnesses.
 
@@ -844,3 +851,11 @@ Unmeasured: real cost and first-shot yield.
 - Built: after every login the child is asked what to call the tutor (default "Dr. Marcus", pre-filled with the last choice, saved on the profile as `tutorName`). All on-screen labels (stage, avatar, bottom bar, boards, scene panel, onboarding) and the voice tutor's prompt use the chosen name. See D-2026-10-07-1, docs/TUTOR_PERSONA.md §2, FR-09a.
 - Verified: unit checks (tests/tutor-name/run.mjs, 13) and `tsc --noEmit`. Not yet verified: in a browser, in a live voice session, on Firestore.
 - Closed: OQ-1 (persona name).
+
+## Guided tutor (2026-10-14)
+- Default tutor; toggle hidden; `docs/GUIDED_TUTOR.md` explains how it works.
+- PDF upload now generates guided lessons after pregen (runtime store `guidedScripts`, ~10 s pickup, no rebuild) - untested end to end (needs Gemini credits).
+- Grade-4 Number: 1 of 14 lessons written (two-digit x single-digit pilot); the other 13 wait for approval of the pilot's voice.
+
+## Guided lesson library
+30 authored guided lessons (Grade-4 all 15, Grade-8 Maths ch1–2 9, Grade-8 Biology 6) in src/guided/scripts; validator 0 errors; live-voice run pending.

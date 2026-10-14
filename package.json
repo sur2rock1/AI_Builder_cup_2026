@@ -28,6 +28,8 @@
     "deploy:hosting": "npm run build:web && npx -y firebase-tools@latest deploy --only hosting",
     "verify:models": "npx --yes tsx scripts/verify-models.ts",
     "seed:demo": "npx --yes tsx scripts/seed-demo-learners.ts",
+    "seed:story": "npx --yes tsx scripts/seed-story-learner.ts",
+    "test:parent": "npx --yes tsx tests/parent/run.mjs",
     "test:curriculum": "npx --yes tsx tests/smoke/curriculum-ingest.mjs",
     "migrate:cloud": "npx --yes tsx scripts/migrate-local-to-cloud.ts",
     "verify:migration": "npx --yes tsx scripts/verify-migration.ts",

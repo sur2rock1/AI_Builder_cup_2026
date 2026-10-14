@@ -1,0 +1,398 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--mathematics--ch2-linear-inequalities--real-world-applications-of-linear-inequalities",
+  "title": "Real-world applications of linear inequalities",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: budgets and limits are everywhere, and inequalities are how maths talks about them. Gym membership hook. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Budgets and limits"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "budget $100;   $25 joining fee + $15 each month",
+          "say": "Imagine you want to join a gym. You have a hundred dollars. The gym charges twenty-five dollars to join, and then fifteen dollars each month. How many months can you afford? That's an inequality question.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Translate words into symbols: at most / no more than -> <=; at least / no less than -> >=; less than / fewer than -> <; more than -> >. Examples. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Words into symbols"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "at most,  no more than   →   ≤",
+          "say": "If something is at most or no more than a limit, that's less than or equal to.",
+          "style": "rule"
+        },
+        {
+          "id": "l3",
+          "text": "at least,  no less than   →   ≥",
+          "say": "At least or no less than, that's greater than or equal to.",
+          "style": "rule"
+        },
+        {
+          "id": "l4",
+          "text": "fewer than,  less than   →   <",
+          "say": "Fewer than or less than is just less than.",
+          "style": "rule"
+        },
+        {
+          "id": "l5",
+          "text": "more than,  greater than   →   >",
+          "say": "More than or greater than is just greater than.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Gym: let m be months. Cost = 25 + 15m, must be at most 100. Solve: 15m <= 75, m <= 5. The picture shows the setup. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The gym budget"
+        },
+        {
+          "type": "picture",
+          "ref": "apply",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l6",
+          "text": "25 + 15m ≤ 100",
+          "say": "Let m be the number of months. The total cost is twenty-five plus fifteen m, and it must be at most a hundred. That's our inequality.",
+          "picture": {
+            "ref": "apply",
+            "step": "s2"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "15m ≤ 75",
+          "say": "Take twenty-five from both sides: fifteen m is at most seventy-five.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "m ≤ 5",
+          "say": "Divide by fifteen, a positive number, so the sign stays. m is at most five.",
+          "picture": {
+            "ref": "apply",
+            "step": "s3"
+          },
+          "style": "work"
+        },
+        {
+          "id": "l9",
+          "text": "At most 5 months",
+          "say": "So you can afford at most five months.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "Whole-number answers: curry puffs at $1.60 each with $20. 1.60x <= 20 gives x <= 12.5. A friend rounds to 13; test shows 13 costs more than 20. The answer is 12, the greatest whole number that fits. The picture steps through. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Rounding the answer"
+        },
+        {
+          "type": "picture",
+          "ref": "contrast:standard-rounding-on-inequalities",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "1.60x ≤ 20",
+          "say": "Another one. Curry puffs cost a dollar sixty each. You have twenty dollars. How many can you buy? Let x be the number of puffs.",
+          "picture": {
+            "ref": "contrast:standard-rounding-on-inequalities",
+            "step": "s2"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "x ≤ 20 ÷ 1.60 = 12.5",
+          "say": "Divide both sides by one point six: x is at most twelve point five.",
+          "style": "work"
+        },
+        {
+          "id": "l12",
+          "text": "Friend: 12.5 rounds up to 13        (or is it 12?)",
+          "say": "A friend says: twelve point five rounds to thirteen, the usual rounding rule. Let's test thirteen puffs.",
+          "style": "point"
+        },
+        {
+          "id": "l13",
+          "text": "13 × 1.60 = 20.80   more than 20  ✗",
+          "say": "Thirteen puffs cost twenty dollars eighty. That's more than our twenty. Too expensive!",
+          "picture": {
+            "ref": "contrast:standard-rounding-on-inequalities",
+            "step": "s3"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l14",
+          "text": "12 × 1.60 = 19.20   less than 20  ✓",
+          "say": "Twelve puffs cost nineteen dollars twenty. That fits.",
+          "picture": {
+            "ref": "contrast:standard-rounding-on-inequalities",
+            "step": "s4"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "Whole items: take the GREATEST whole number that still fits",
+          "say": "You can't buy half a puff, and the limit is a hard limit. So we don't round normally: we take the greatest whole number that still fits. Twelve.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "contrast",
+      "say": "Strict vs inclusive in a budget: spending exactly the limit is allowed, so use <=, not <. A bill of exactly $20 against a $20 budget. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Exactly the limit"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l16",
+          "text": "budget 20;   bill < 20  or  bill ≤ 20 ?",
+          "say": "Quick question about the symbol. Your budget is twenty dollars. Should the bill be less than twenty, or less than or equal to twenty?",
+          "style": "point"
+        },
+        {
+          "id": "l17",
+          "text": "A bill of exactly 20 is NOT less than 20",
+          "say": "If the rule were strictly less than, a bill of exactly twenty dollars would be rejected. But you can afford exactly twenty dollars!",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "'At most' and 'no more than'  →  ≤   (the limit itself is allowed)",
+          "say": "So for 'at most' or 'no more than', we use less than or equal to. The limit itself is allowed.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "The method in steps: define letter, translate to inequality, solve, interpret in context (whole numbers: greatest or least that fits). No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The method"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l19",
+          "text": "1. Let a letter stand for the unknown",
+          "say": "One: say what the letter means.",
+          "style": "rule"
+        },
+        {
+          "id": "l20",
+          "text": "2. Translate the words into an inequality",
+          "say": "Two: use the word-to-symbol table.",
+          "style": "rule"
+        },
+        {
+          "id": "l21",
+          "text": "3. Solve it (flip if you divide by a negative)",
+          "say": "Three: solve it like we practised.",
+          "style": "rule"
+        },
+        {
+          "id": "l22",
+          "text": "4. Interpret: whole items → greatest (for ≤) or least (for ≥) whole number that fits",
+          "say": "Four: interpret. If the answer must be a whole number, for a 'less than' limit take the greatest whole number that fits, and for an 'at least' limit take the least.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER: movie tickets $8 each, $50 available. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together: movie tickets"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l23",
+          "text": "tickets cost 8 each;   you have 50;   t = number of tickets",
+          "say": "Now you help me. Movie tickets cost eight dollars each, and you have fifty dollars. How many can you buy? Let t be the number of tickets.",
+          "style": "point"
+        },
+        {
+          "id": "l24",
+          "text": "8t ≤ 50",
+          "say": "Yes, the cost has to be at most fifty.",
+          "style": "work",
+          "ask": {
+            "prompt": "Write an inequality for the cost.",
+            "board": "Total cost ___ the money we have",
+            "lookFor": "8t ≤ 50.",
+            "onMiss": "Ask: the total cost must be 'at most' 50. Which symbol is that?"
+          }
+        },
+        {
+          "id": "l25",
+          "text": "t ≤ 6.25",
+          "say": "Divide by eight.",
+          "style": "work",
+          "ask": {
+            "prompt": "Solve it: t ≤ ?",
+            "board": "t ≤ ?",
+            "lookFor": "t ≤ 6.25 (50 ÷ 8).",
+            "onMiss": "Ask: divide both sides by 8. What is 50 ÷ 8?"
+          }
+        },
+        {
+          "id": "l26",
+          "text": "6 tickets (7 would cost 56, too much)",
+          "say": "And we can't buy a quarter of a ticket.",
+          "style": "work",
+          "ask": {
+            "prompt": "How many tickets can you actually buy?",
+            "board": "Whole tickets:",
+            "lookFor": "6 tickets: it is the greatest whole number that fits (7 tickets would cost $56).",
+            "onMiss": "Ask: can t be 6.25 tickets? What is the greatest whole number not above 6.25?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "apply",
+      "say": "The child works alone: starting with $40, saving $6 a week, wants at least $100. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn: saving up"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l27",
+          "text": "start with 40;   save 6 each week;   want at least 100;   w = number of weeks",
+          "say": "Your turn to lead. You have forty dollars, you save six dollars every week, and you want to have at least a hundred dollars. Let w be the number of weeks.",
+          "style": "point"
+        },
+        {
+          "id": "l28",
+          "text": "40 + 6w ≥ 100",
+          "say": "Total money has to be at least a hundred.",
+          "style": "work",
+          "ask": {
+            "prompt": "Write the inequality.",
+            "board": "Total money ___ the target",
+            "lookFor": "40 + 6w ≥ 100.",
+            "onMiss": "Ask: 'at least 100' means which symbol?"
+          }
+        },
+        {
+          "id": "l29",
+          "text": "w ≥ 10",
+          "say": "Solve it.",
+          "style": "work",
+          "ask": {
+            "prompt": "Solve it: w ≥ ?",
+            "board": "w ≥ ?",
+            "lookFor": "w ≥ 10 (6w ≥ 60).",
+            "onMiss": "Ask: subtract 40 from both sides, then divide by 6."
+          }
+        },
+        {
+          "id": "l30",
+          "text": "At least 10 weeks",
+          "say": "And what does it mean?",
+          "style": "work",
+          "ask": {
+            "prompt": "In words: how many weeks do you need to save?",
+            "board": "Answer in words:",
+            "lookFor": "At least 10 weeks (the least whole number of weeks that works is 10).",
+            "onMiss": "Ask: is it the greatest or the least number of weeks that matters here?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "check",
+      "say": "Explain why we don't round normally and why least vs greatest. Reward reasoning.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Say it in your own words"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l31",
+          "text": "12.5 puffs  →  12",
+          "say": "Last two.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why did we not round 12.5 puffs up to 13?",
+            "board": "Why 12 and not 13?",
+            "lookFor": "13 puffs would cost more than the limit; the answer must satisfy the inequality, so we take the greatest whole number that fits.",
+            "onMiss": "Ask: what did 13 puffs cost compared with our $20?"
+          }
+        },
+        {
+          "id": "l32",
+          "text": "at most  /  at least",
+          "say": "And the choice.",
+          "style": "point",
+          "ask": {
+            "prompt": "When the limit is 'at least', do we want the greatest or the least whole number that fits?",
+            "board": "Greatest or least?",
+            "lookFor": "The least whole number that still satisfies it (for a 'greater than or equal' limit).",
+            "onMiss": "Ask: in the saving problem, did we want the most weeks or the fewest weeks that work?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

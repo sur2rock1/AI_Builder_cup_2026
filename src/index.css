@@ -90,3 +90,8 @@ input, textarea, select, [contenteditable="true"] {
 /* Gentle fade used when a view or a live learner insight appears. */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 .animate-fadeIn { animation: fadeIn .45s ease-out both; }
+
+/* Guided board: a mark (underline / circle / box / highlight) is drawn a moment after its words are written. */
+@keyframes chalkMarkIn { from { opacity: 0; transform: scale(1.12); } to { opacity: 1; transform: none; } }
+.chalk-mark { opacity: 0; animation: chalkMarkIn .5s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) { .chalk-mark { animation: none; opacity: 1; } }

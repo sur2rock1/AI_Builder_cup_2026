@@ -1,0 +1,302 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--ordering-and-rounding-whole-numbers",
+  "title": "Ordering and rounding whole numbers",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: two skills today, ordering numbers (which is bigger) and rounding (a close, friendly number). Both depend on place value. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Ordering and rounding"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "4825  or  4285 ?",
+          "say": "Here are two numbers that look almost the same: four thousand eight hundred and twenty-five, and four thousand two hundred and eighty-five. Which one is bigger? There's a clever way to decide without guessing.",
+          "style": "point"
+        },
+        {
+          "id": "l2",
+          "text": "Today: ORDER numbers, then ROUND them",
+          "say": "Today we'll learn two things. How to put numbers in order, and how to round a number to a friendlier one that's close to it. Both come from place value.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Comparing: start at the LEFT, the biggest place. Compare thousands, then hundreds... Mark the first place that differs. Use 4825 vs 4285. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Compare from the left"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l3",
+          "text": "4825   4285",
+          "say": "Here's the rule. Always start at the left, with the biggest place. Compare the thousands first.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "{{4|ul.b}}825   {{4|ul.b}}285",
+          "say": "Both have four thousands, so it's a tie. Nothing to decide yet. Move on to the next place.",
+          "style": "point",
+          "annotates": "l3"
+        },
+        {
+          "id": "l5",
+          "text": "4{{8|circle.g}}25   4{{2|circle.g}}85",
+          "say": "Now the hundreds. One has eight hundreds, the other has only two. Eight is more than two, so we have our winner.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "4825 > 4285",
+          "say": "So four thousand eight hundred and twenty-five is greater than four thousand two hundred and eighty-five. We don't even need to look at the tens and ones. The first place that is different decides.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Order three numbers from smallest to greatest: 5031, 5310, 5103. Walk through: same thousands, compare hundreds. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Putting numbers in order"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l7",
+          "text": "5031   5310   5103",
+          "say": "Let's put these three in order, smallest to greatest. They all start with five thousand, so I look at the hundreds.",
+          "style": "point"
+        },
+        {
+          "id": "l8",
+          "text": "hundreds: 0, 3, 1",
+          "say": "Zero hundreds, three hundreds, one hundred. So the smallest is the one with no hundreds, which is 5031.",
+          "style": "work"
+        },
+        {
+          "id": "l9",
+          "text": "5031 < 5103 < 5310",
+          "say": "Then one hundred beats nothing, and three hundreds beats one hundred. In order, smallest first: 5031, then 5103, then 5310.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend compares from the right end (looks at ones first). Test it on 3299 vs 3301 and show it fails. Detective tone.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "3299  or  3301 ?",
+          "say": "A friend of mine says: just look at the end digits. Nine is bigger than one, so 3299 is bigger than 3301. Let's test that.",
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "3 thousands = 3 thousands; 2 hundreds < 3 hundreds",
+          "say": "Using our rule from the left: thousands tie. Then hundreds: two hundreds against three hundreds. Three hundreds wins, so 3301 is the bigger number.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "3301 > 3299",
+          "say": "My friend's idea fails because the ones are the smallest place. The biggest place that differs is what counts.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "Rounding to the nearest ten. Number line idea: 47 is between 40 and 50. Look at the ones digit: 5 or more round up, less than 5 round down. Do 47 and 43. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Rounding to the nearest ten"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l13",
+          "text": "47 is between 40 and 50",
+          "say": "Rounding means finding the nearest friendly number. Look at forty-seven. It sits between forty and fifty. Which is it closer to?",
+          "style": "point"
+        },
+        {
+          "id": "l14",
+          "text": "Look at the ones digit: {{7|circle.p}}",
+          "say": "Here's the trick. Look at the ones digit. It's a 7, which is five or more, so the number climbs up to the next ten.",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "47 → 50",
+          "say": "Forty-seven rounds up to fifty.",
+          "style": "work"
+        },
+        {
+          "id": "l16",
+          "text": "43 → 40  (ones digit 3 is less than 5)",
+          "say": "Forty-three has a 3 in the ones place, less than five, so it stays down at forty.",
+          "style": "work"
+        },
+        {
+          "id": "l17",
+          "text": "5 or more: round UP.  Less than 5: round DOWN.",
+          "say": "So: five or more, round up. Less than five, round down.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "Rounding to the nearest hundred and thousand for 4-digit numbers: look at the digit just to the right of the place you are rounding to. Do 362 -> 400, 348 -> 300 and 350 -> 400. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Rounding to the nearest hundred"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l18",
+          "text": "362  →  look at the tens digit",
+          "say": "To round to the nearest hundred, we look at the tens digit, the one right next door. In three hundred and sixty-two, the tens digit is a 6, so we round up to four hundred.",
+          "style": "work"
+        },
+        {
+          "id": "l19",
+          "text": "362 → 400     348 → 300     350 → 400",
+          "say": "Three hundred and forty-eight has a 4 in the tens place, so it stays at three hundred. And exactly three hundred and fifty has a 5, so by our rule it goes up to four hundred.",
+          "style": "work"
+        },
+        {
+          "id": "l20",
+          "text": "Look at the digit one place to the RIGHT",
+          "say": "The rule never changes, whatever place you round to. Peek at the neighbour on the right-hand side, and let that digit decide.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER: round 2586 to the nearest ten and nearest hundred. Each question is written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together: 2586"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l21",
+          "text": "2586",
+          "say": "Now you help me. Two thousand five hundred and eighty-six. We'll round it two ways.",
+          "style": "point"
+        },
+        {
+          "id": "l22",
+          "text": "Nearest ten: look at the ones digit, 6, so round UP → 2590",
+          "say": "The ones digit is 6, five or more, so we go up.",
+          "style": "work",
+          "ask": {
+            "prompt": "Round 2586 to the nearest ten. Which digit do you look at?",
+            "board": "2586 to the nearest ten = ?",
+            "lookFor": "2590 (ones digit 6, round up).",
+            "onMiss": "Ask: which digit is in the ones place? Is it five or more?"
+          }
+        },
+        {
+          "id": "l23",
+          "text": "Nearest hundred: look at the tens digit, 8, so round UP → 2600",
+          "say": "Eight tens means we climb up past the next hundred.",
+          "style": "work",
+          "ask": {
+            "prompt": "Now round 2586 to the nearest hundred.",
+            "board": "2586 to the nearest hundred = ?",
+            "lookFor": "2600 (tens digit 8, round up).",
+            "onMiss": "Ask: which digit is in the tens place? What does it tell us?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "check",
+      "say": "Child works alone: order 4080, 4008, 4800, 4088; round 6753 to the nearest hundred; explain which digit decides. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l24",
+          "text": "4080   4008   4800   4088",
+          "say": "Your turn to lead. Put these four numbers in order, smallest first.",
+          "style": "point",
+          "ask": {
+            "prompt": "Put these in order, smallest to greatest: 4080, 4008, 4800, 4088.",
+            "board": "smallest → greatest = ?",
+            "lookFor": "4008, 4080, 4088, 4800.",
+            "onMiss": "Ask: same thousands for all. Which hundreds digit is biggest? Then compare the tens."
+          }
+        },
+        {
+          "id": "l25",
+          "text": "6753 → 6800",
+          "say": "The tens digit is 5, so we round up to six thousand eight hundred.",
+          "style": "work",
+          "ask": {
+            "prompt": "Round 6753 to the nearest hundred.",
+            "board": "6753 to the nearest hundred = ?",
+            "lookFor": "6800 (tens digit 5, round up).",
+            "onMiss": "Ask: which digit is in the tens place? Is it five or more?"
+          }
+        },
+        {
+          "id": "l26",
+          "text": "Rounding to a place: the digit to its right decides",
+          "say": "The digit just to the right of the place tells us whether to round up or stay.",
+          "style": "point",
+          "ask": {
+            "prompt": "In your own words: when you round to the nearest hundred, which digit decides?",
+            "board": "Which digit decides?",
+            "lookFor": "The tens digit, the one just to the right of the hundreds place.",
+            "onMiss": "Ask: for the nearest ten we looked at the ones. So for the nearest hundred we look at..."
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

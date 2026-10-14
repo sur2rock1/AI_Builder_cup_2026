@@ -1,0 +1,276 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--odd-and-even-numbers-and-generalizations",
+  "title": "Odd and even numbers and generalizations",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open with sharing sweets between two friends: who gets a leftover? Say today we find rules about odd and even, and how to check a rule. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Odd and even"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "7 sweets, 2 friends",
+          "say": "Imagine seven sweets to share equally between two friends. Three each, and... one left over! What about eight sweets? Four each, nothing left. That leftover is what makes a number odd or even.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Even: shares into 2 equal groups, ones digit 0,2,4,6,8. Odd: always 1 left over, ones digit 1,3,5,7,9. Only the ones digit matters, shown with 3574 and 3575. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "What odd and even mean"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "Even: shares equally into 2, nothing left over",
+          "say": "A number is even if it shares equally into two, with nothing left over. Eight is even.",
+          "style": "rule"
+        },
+        {
+          "id": "l3",
+          "text": "Odd: one left over",
+          "say": "A number is odd if there's always one left over. Seven is odd.",
+          "style": "rule"
+        },
+        {
+          "id": "l4",
+          "text": "even ones digits:  0  2  4  6  8",
+          "say": "Here's the quick check for big numbers. Only the ones digit matters. If it's nought, two, four, six or eight, the number is even.",
+          "style": "point"
+        },
+        {
+          "id": "l5",
+          "text": "odd ones digits:  1  3  5  7  9",
+          "say": "If the ones digit is one, three, five, seven or nine, the number is odd.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "3574 is even     3575 is odd",
+          "say": "So three thousand five hundred and seventy-four has a 4 on the end: even. Add one and the end is a 5: odd. We ignore the thousands, hundreds and tens, because a ten always splits into two fives.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Rules for adding odd and even, with a reason: leftovers. even+even=even (4+6=10), odd+even=odd (3+4=7), odd+odd=even (3+5=8) because two leftovers make a pair. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Adding odd and even"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l7",
+          "text": "even + even = even     4 + 6 = 10",
+          "say": "Two even numbers have no leftovers between them, so the total has none either: four plus six is ten.",
+          "style": "rule"
+        },
+        {
+          "id": "l8",
+          "text": "odd + even = odd     3 + 4 = 7",
+          "say": "An odd number brings one leftover, the even one brings none, so one leftover remains: three plus four is seven.",
+          "style": "rule"
+        },
+        {
+          "id": "l9",
+          "text": "odd + odd = even     3 + 5 = 8",
+          "say": "Two odd numbers each bring a leftover, and the two leftovers pair up with each other, so nothing is left: three plus five is eight.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend claims a number with many even digits is even, e.g. 2461. Test and show only the ones digit decides. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "2461",
+          "say": "A friend of mine looked at two thousand four hundred and sixty-one and said: look at all those even digits, the 2, the 4, the 6. It must be even.",
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "ones digit = 1  →  odd",
+          "say": "Let's test it. The ones digit is a 1, so there's one left over when we share between two. It's odd.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "Only the ONES digit decides",
+          "say": "So we only ever look at the last digit. The others are bundles of ten, hundred or thousand, and those always share equally.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "General statement and counter-example. A general statement is a rule for ALL cases. One counter-example breaks it. Use 'adding two numbers always gives an even number' (3 + 4 = 7). Tests that agree do not prove it. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Testing a rule"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l13",
+          "text": "A general statement is a rule that works for ALL cases",
+          "say": "Here's a big mathematical idea. A general statement is a rule that is claimed to work every single time.",
+          "style": "rule"
+        },
+        {
+          "id": "l14",
+          "text": "\"Adding two numbers always gives an even number\"   Test: 2 + 4,  5 + 5,  3 + 4",
+          "say": "Someone says: adding two numbers always gives an even number. Let's check it with some examples. Two plus four is six, even. Five plus five is ten, even. It's looking good! Now the third one.",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "3 + 4 = 7  →  odd!  A COUNTER-EXAMPLE",
+          "say": "But three plus four is seven, and seven is odd. One example that breaks the rule is called a counter-example, and one is enough to show the rule is false.",
+          "style": "work"
+        },
+        {
+          "id": "l16",
+          "text": "Many examples that agree don't prove a rule. One counter-example disproves it.",
+          "say": "Lots of examples that agree don't prove a rule, but a single counter-example disproves it. That's how mathematicians test ideas.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "apply",
+      "say": "Do one TOGETHER: is 4683 odd or even; then predict odd/even of 27 + 14 without adding. Questions are written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l17",
+          "text": "4683     27 + 14",
+          "say": "Now you help me. Two things to work out: whether four thousand six hundred and eighty-three is odd or even, and then twenty-seven plus fourteen.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "4683 is odd (the ones digit is 3)",
+          "say": "Yes, we only look at the last digit.",
+          "style": "work",
+          "ask": {
+            "prompt": "Is 4683 odd or even? How do you know?",
+            "board": "4683 is ___",
+            "lookFor": "Odd: the ones digit is 3.",
+            "onMiss": "Ask: which digit do we look at? Is it one of 0, 2, 4, 6, 8?"
+          }
+        },
+        {
+          "id": "l19",
+          "text": "27 + 14: odd + even = odd",
+          "say": "Twenty-seven is odd, fourteen is even, and odd plus even is odd.",
+          "style": "work",
+          "ask": {
+            "prompt": "Without adding, is 27 + 14 odd or even?",
+            "board": "27 + 14 is ___",
+            "lookFor": "Odd (odd + even = odd).",
+            "onMiss": "Ask: is 27 odd or even? And 14? What does that make?"
+          }
+        },
+        {
+          "id": "l20",
+          "text": "27 + 14 = 41  → odd, as predicted",
+          "say": "And checking: twenty-seven plus fourteen is forty-one, which is odd. The rule worked.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "check",
+      "say": "The child works alone: 58 + 36 odd/even; find a counter-example to 'all odd numbers are bigger than 10'; explain why odd + odd is even. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l21",
+          "text": "58 + 36",
+          "say": "Your turn to lead. Fifty-eight plus thirty-six, but don't add. Just predict.",
+          "style": "point"
+        },
+        {
+          "id": "l21b",
+          "text": "even + even = even",
+          "say": "Yes, an even number plus an even number is even, so no adding was needed.",
+          "style": "work",
+          "ask": {
+            "prompt": "Will 58 + 36 be odd or even?",
+            "board": "The total will be ___",
+            "lookFor": "Even (even + even = even).",
+            "onMiss": "Ask: is 58 odd or even? Is 36?"
+          }
+        },
+        {
+          "id": "l22",
+          "text": "\"All odd numbers are bigger than 10\"",
+          "say": "Here's a rule someone made up: all odd numbers are bigger than ten.",
+          "style": "point",
+          "ask": {
+            "prompt": "Give a counter-example that shows the rule is false.",
+            "board": "A counter-example: ___",
+            "lookFor": "Any odd number below 10, such as 3.",
+            "onMiss": "Ask: can you think of a small odd number, less than ten?"
+          }
+        },
+        {
+          "id": "l23",
+          "text": "Odd + odd = even, because the two leftovers make a pair",
+          "say": "Last one, the why.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why is odd + odd always even?",
+            "board": "Why odd + odd = even?",
+            "lookFor": "Each odd number has one left over, and the two leftovers make a pair, so nothing is left.",
+            "onMiss": "Ask: what happens to the two leftover ones when we join the numbers?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

@@ -16,6 +16,7 @@ import {
 } from './src/adaptive/learnerStore';
 import { getRepo } from './src/adaptive/repo';
 import { runProfiler } from './src/adaptive/profiler';
+import { getParentReport, generateParentReport } from './src/parent/report';
 import { requireAuth, requireOwnership } from './server/middleware/requireAuth';
 import { requireAdmin, checkAdmin } from './server/middleware/requireAdmin';
 import { registerTutorRoutes, clearTutorTurnState } from './server/routes/tutor';
@@ -59,12 +60,23 @@ import { findVisualForFocus, boardContextBlock, toolSummary, matchScore } from '
 import { VISUAL_KEYS } from './src/visual/types';
 // Guided mode (src/guided) — additive; see src/guided/mode.ts
 import { resolveTutorMode } from './src/guided/mode';
-import { getGuidedScript, ALL_GUIDED_SCRIPTS } from './src/guided/registry';
+import { getGuidedScript, ALL_GUIDED_SCRIPTS, setRuntimeGuidedScripts } from './src/guided/registry';
+import { loadRuntimeGuidedScripts } from './src/guided/store';
+
+// Guided lessons written after the build (curriculum PDF upload). Re-read at most every 10 s, so a lesson
+// generated in the background appears without a restart. Never throws: a failure keeps the lessons already loaded.
+let runtimeGuidedAt = 0;
+async function refreshRuntimeGuided(force = false): Promise<void> {
+  if (!force && Date.now() - runtimeGuidedAt < 10_000) return;
+  runtimeGuidedAt = Date.now();
+  try { setRuntimeGuidedScripts(await loadRuntimeGuidedScripts()); }
+  catch (err: any) { console.warn('[guided] could not refresh runtime lessons:', err?.message); }
+}
 import { buildGuidedPayload } from './src/guided/payload';
 import { GuidedSession, isGuidedCall } from './src/guided/session';
 import { resolvePace, isPace } from './src/guided/pace';
 import { TranscriptLog } from './src/utils/transcriptLog';
-import { guidedBoardBlock, guidedKickoff } from './src/guided/prompt';
+import { guidedBoardBlock, guidedKickoff, resumeInstruction } from './src/guided/prompt';
 import { guidedToolDeclarations } from './src/guided/tools';
 import os from 'os';
 import fs from 'fs';
@@ -341,7 +353,8 @@ function visualRequestFor(ctx: VisualConceptContext, focus: string): { req: Visu
 // picture it already has rather than show a template.
 // ── Guided mode (src/guided) ─────────────────────────────────────
 // The server's default mode, and the prepared lesson script for a concept.
-app.get('/api/tutor-mode', (_req, res) => {
+app.get('/api/tutor-mode', async (_req, res) => {
+  await refreshRuntimeGuided();
   res.json({
     default: resolveTutorMode(undefined, process.env.TUTOR_MODE),
     guidedConcepts: ALL_GUIDED_SCRIPTS.map((s) => s.conceptId),
@@ -349,6 +362,7 @@ app.get('/api/tutor-mode', (_req, res) => {
 });
 
 app.get('/api/guided-script', async (req, res) => {
+  await refreshRuntimeGuided();
   const conceptId = String(req.query.conceptId || '');
   const script = getGuidedScript(conceptId);
   if (!script) return res.status(404).json({ error: 'No guided lesson for this concept.' });
@@ -848,6 +862,31 @@ app.get('/api/learners/:studentId/events', requireAuth, requireOwnership, async 
   }
 });
 
+// Parent view (docs/PARENT_VIEW.md). GET is instant (deterministic facts + cached or offline-template
+// letter, never calls a model). POST asks Gemini to write the letter/tip, validates every sentence
+// against the child's real answers, caches the result, and returns the full report.
+app.get('/api/learners/:studentId/parent-report', requireAuth, requireOwnership, async (req, res) => {
+  try {
+    const report = await getParentReport(req.params.studentId, req.query.subjectId ? String(req.query.subjectId) : undefined);
+    if (!report) return (res as any).status(404).json({ error: 'No lessons to report on yet' });
+    res.json({ report });
+  } catch (err: any) {
+    console.error('[API parent-report]', err);
+    res.status(500).json({ error: err?.message || 'Failed to build parent report' });
+  }
+});
+app.post('/api/learners/:studentId/parent-report/generate', requireAuth, requireOwnership, async (req, res) => {
+  try {
+    const subjectId = req.body?.subjectId ? String(req.body.subjectId) : undefined;
+    const report = await generateParentReport(req.params.studentId, subjectId, process.env.GEMINI_API_KEY, Boolean(req.body?.force));
+    if (!report) return (res as any).status(404).json({ error: 'No lessons to report on yet' });
+    res.json({ report });
+  } catch (err: any) {
+    console.error('[API parent-report/generate]', err);
+    res.status(500).json({ error: err?.message || 'Failed to generate parent report' });
+  }
+});
+
 // T21 (FR-22) — "That's not right" on the learner card. See disputeMisconception's
 // comment in learnerStore.ts for why this marks the ledger entry rather than a
 // separate claim (T14's profiler/claim validator isn't built yet).
@@ -1206,7 +1245,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
     if (latestPlan) resolvedPlan = latestPlan.plan as TeachingPlan;
   }
 
-  // Guided mode: per-session switch (?mode=), server default (TUTOR_MODE), else standard.
+  // Guided mode: per-session switch (?mode=), server default (TUTOR_MODE), else guided (DEFAULT_TUTOR_MODE).
   // A concept with no guided script quietly runs as standard.
   const requestedMode = url.searchParams.get('mode');
   const guidedScript = process.env.PERSONA === 'legacy' || resolveTutorMode(requestedMode, process.env.TUTOR_MODE) !== 'guided'
@@ -1244,6 +1283,51 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   const transcriptLog = new TranscriptLog();
   // Guided: how long the voice stays silent after a guided tool call (the cost of writing line by line).
   let guidedVoiceClock: { at: number; tool: string } | null = null;
+  // Stall watchdog (guided only). After a tool result the tutor must speak. If the live model goes silent instead
+  // (it asked a question of its own and is waiting for an answer nobody was meant to give), nudge it to carry on.
+  const GUIDED_STALL_MS = Number(process.env.GUIDED_STALL_MS || 9000);
+  const GUIDED_MAX_NUDGES = 3;
+  const GUIDED_NUDGE_GAP_MS = Number(process.env.GUIDED_NUDGE_GAP_MS || 7000);
+  let guidedLastNudgeAt = 0;
+  let guidedStallTimer: ReturnType<typeof setTimeout> | null = null;
+  let guidedNudges = 0;
+  let guidedLearnerSpokeAt = 0;
+  let guidedLearnerText = '';      // what the learner said since the tutor last spoke
+  let guidedAudioFrames = 0;       // mic frames received from the browser since the tutor last spoke
+  const clearGuidedWatchdog = () => { if (guidedStallTimer) { clearTimeout(guidedStallTimer); guidedStallTimer = null; } };
+  const armGuidedWatchdog = () => {
+    clearGuidedWatchdog();
+    if (!guidedSession || !guidedVoiceClock) return;
+    // Silence is measured from the later of: the tool result, or the learner's last words (so we never talk over them).
+    const quietSince = Math.max(guidedVoiceClock.at, guidedLearnerSpokeAt, guidedLastNudgeAt);
+    const wait = Math.max(500, quietSince + GUIDED_STALL_MS - Date.now());
+    guidedStallTimer = setTimeout(() => {
+      guidedStallTimer = null;
+      const clock = guidedVoiceClock;
+      if (!clock || isClosed || !liveSession || !guidedSession) return;      // the tutor has spoken since: all good
+      if (Date.now() - Math.max(clock.at, guidedLearnerSpokeAt) < GUIDED_STALL_MS - 250) { armGuidedWatchdog(); return; }   // the learner spoke meanwhile: wait for them to finish
+      if (guidedNudges >= GUIDED_MAX_NUDGES) {
+        console.warn(`[guided] STALLED ${Date.now() - clock.at}ms after ${clock.tool}; gave up after ${guidedNudges} nudges (mic frames=${guidedAudioFrames}, learner said: "${guidedLearnerText.trim()}")`);
+        return;
+      }
+      guidedNudges++;
+      const said = guidedLearnerText.trim();
+      console.warn(`[guided] STALLED ${Date.now() - clock.at}ms after ${clock.tool} -> nudge ${guidedNudges}/${GUIDED_MAX_NUDGES} (mic frames=${guidedAudioFrames}, learner said: "${said}")`);
+      guidedLastNudgeAt = Date.now();
+      const nudgeText =
+            (said
+              ? `The learner just said: "${said}". Answer them directly in a sentence or two, then carry on with the lesson. `
+              : 'Please carry on with the lesson now. The learner is listening and has not asked anything, so do not wait for them. ') +
+            resumeInstruction(guidedSession.script, guidedSession.state);
+      try {
+        // Realtime text is treated like the learner speaking, so it starts a turn; client content mid-session is only
+        // honoured when the model is idle (docs/AGENT_GUIDE.md), so it is the fallback on the last nudge.
+        if (guidedNudges < GUIDED_MAX_NUDGES) liveSession.sendRealtimeInput({ text: nudgeText });
+        else liveSession.sendClientContent({ turns: [{ role: 'user', parts: [{ text: nudgeText }] }], turnComplete: true });
+      } catch (err: any) { console.error('[guided] nudge failed:', err?.message); }
+      armGuidedWatchdog();
+    }, wait);
+  };
   let isClosed = false;
 
   // T11 (partial): per-connection plan-delta state. A fuller implementation
@@ -1582,6 +1666,8 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } },
         },
+        // Guided lessons are read from a script: a low temperature keeps the delivery (wording and tone) the same from line to line.
+        ...(guidedSession ? { temperature: Number(process.env.GUIDED_TEMPERATURE ?? 0.3) } : {}),
         inputAudioTranscription: {},
         outputAudioTranscription: {},
         systemInstruction: dynamicSystemInstruction,
@@ -1594,6 +1680,8 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
         onmessage: (message: LiveServerMessage) => {
           if (isClosed || clientWs.readyState !== WebSocket.OPEN) return;
           transcriptLog.feed(message);
+          const heard = (message.serverContent as any)?.inputTranscription?.text;
+          if (heard) { guidedLearnerSpokeAt = Date.now(); guidedLearnerText += String(heard); if (guidedVoiceClock) armGuidedWatchdog(); }
 
           // 1. Audio chunks from model
           const modelParts = message.serverContent?.modelTurn?.parts;
@@ -1603,6 +1691,11 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
                 if (guidedVoiceClock) {
                   console.log(`[guided] voice resumed ${Date.now() - guidedVoiceClock.at}ms after ${guidedVoiceClock.tool}`);
                   guidedVoiceClock = null;
+                  guidedNudges = 0;
+                  guidedLastNudgeAt = 0;
+                  guidedLearnerText = '';
+                  guidedAudioFrames = 0;
+                  clearGuidedWatchdog();
                 }
                 clientWs.send(
                   JSON.stringify({
@@ -1672,6 +1765,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
                 sendToolResponse(call, reply.response);
                 if (reply.changed) clientWs.send(JSON.stringify({ type: 'guided_state', state: guidedSession.state }));
                 guidedVoiceClock = { at: Date.now(), tool: call.name };
+                armGuidedWatchdog();
                 continue;
               }
 
@@ -1799,6 +1893,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
       const msg = JSON.parse(rawData.toString());
 
       if ((msg.type === 'audio' || msg.type === 'audio_in') && msg.data) {
+        guidedAudioFrames++;
         liveSession.sendRealtimeInput({
           audio: {
             data: msg.data,
@@ -1806,6 +1901,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
           },
         });
       } else if (msg.type === 'text' && msg.text) {
+        if (guidedSession) { guidedLearnerSpokeAt = Date.now(); guidedLearnerText += ` ${String(msg.text)}`; console.log(`[guided] typed by learner: "${String(msg.text).slice(0, 120)}"`); if (guidedVoiceClock) armGuidedWatchdog(); }
         observer?.add('child', String(msg.text)); // side-channel only
         liveSession.sendClientContent({
           turns: [{ role: 'user', parts: [{ text: msg.text }] }],
@@ -1826,6 +1922,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
 
   clientWs.on('close', () => {
     isClosed = true;
+    clearGuidedWatchdog();
     console.log('[WebSocket] Client disconnected');
     if (liveSession) {
       try {

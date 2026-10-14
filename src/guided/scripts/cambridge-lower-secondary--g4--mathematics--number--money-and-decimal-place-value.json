@@ -1,0 +1,295 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--money-and-decimal-place-value",
+  "title": "Money and decimal place value",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open warmly with the shop-price idea. Say what we are learning: how the dot in a price splits dollars from cents, and what the digits after the dot mean. Mention colours: pink tenths, yellow hundredths. No questions: this is the explaining part.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Money and the decimal point"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "$3.45",
+          "say": "Look at this price on the board, three dollars forty-five. We all know what it means in a shop, but today I want to show you what the digits are really doing, because it's the key to something called decimals.",
+          "style": "point"
+        },
+        {
+          "id": "l2",
+          "text": "The dot (decimal point) separates whole dollars from parts of a dollar",
+          "say": "The little dot is called the decimal point. Everything to the left of it is whole dollars. Everything to the right is a piece of a dollar, less than one whole one.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Teach tenths and hundredths with money: 100 cents in a dollar; one tenth of a dollar is 10 cents (a dime); one hundredth is 1 cent. Mark 3.45 IN PLACE: tenths pink, hundredths yellow. The tutor does the talking.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Tenths and hundredths"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l3",
+          "text": "100 cents = $1",
+          "say": "First, a fact about money: one dollar is a hundred cents.",
+          "style": "rule"
+        },
+        {
+          "id": "l4",
+          "text": "one tenth of a dollar = 10 cents = $0.10",
+          "say": "If I cut a dollar into ten equal parts, each part is a tenth, and it's worth ten cents. That's a dime.",
+          "style": "point"
+        },
+        {
+          "id": "l5",
+          "text": "one hundredth of a dollar = 1 cent = $0.01",
+          "say": "If I cut the dollar into a hundred equal parts, each part is a hundredth, and it's worth one cent.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "3 . 45",
+          "say": "So let's go back to our price, three dollars forty-five.",
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "3 . {{4|ul.p|tenths}}{{5|ul|hundredths}}",
+          "say": "The first digit after the dot is the tenths place, so the 4 is four tenths, four dimes. The second digit is the hundredths place, so the 5 is five hundredths, five cents.",
+          "style": "point",
+          "annotates": "l6"
+        },
+        {
+          "id": "l8",
+          "text": "$3.45 = 3 dollars + 4 dimes + 5 cents",
+          "say": "So three dollars forty-five is three whole dollars, four dimes and five cents. The dot kept the dollars on one side and the pieces on the other.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Expanded form of a decimal: 3.45 = 3 + 0.4 + 0.05. Link each part to money. Then show the pattern: each place is ten times smaller than the one to its left. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Expanded form of money"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l9",
+          "text": "3.45 = 3 + {{0.4|ul.p}} + {{0.05|ul}}",
+          "say": "We can partition a decimal just like a whole number. Three, plus nought point four, which is forty cents, plus nought point nought five, which is five cents.",
+          "style": "work"
+        },
+        {
+          "id": "l10",
+          "text": "ones → tenths → hundredths: each place is 10 times smaller",
+          "say": "Look at the pattern as we move right. A tenth is ten times smaller than a one, and a hundredth is ten times smaller than a tenth. Ten dimes make a dollar, and ten pennies make a dime.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "The five-cents trap: $0.05 vs $0.5. Show that 5 cents needs a zero to hold the tenths place, and that $2.5 means $2.50. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The zero that matters"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l11",
+          "text": "5 cents",
+          "say": "Let's try writing five cents as a decimal. A lot of people write nought point five.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "$0.5 = 5 tenths = 50 cents (NOT 5 cents)",
+          "say": "But nought point five has the 5 in the tenths place. That's five dimes, which is fifty cents! Quite a difference.",
+          "style": "point"
+        },
+        {
+          "id": "l13",
+          "text": "5 cents = $0.05",
+          "say": "To get five cents, the 5 must sit in the hundredths place, so we put a zero in the tenths place to hold it open: nought point nought five.",
+          "style": "rule"
+        },
+        {
+          "id": "l14",
+          "text": "$2.5 → $2.50",
+          "say": "And in the other direction, a price like two point five means five tenths, fifty cents, so in money we write two dollars fifty, with a zero at the end.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "apply",
+      "say": "Do one TOGETHER, $4.27. Each question is written on the board before the answer. Praise the reasoning in one sentence.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together: $4.27"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l15",
+          "text": "$4.27",
+          "say": "Now you help me. Four dollars twenty-seven.",
+          "style": "point"
+        },
+        {
+          "id": "l16",
+          "text": "The 2 is in the tenths place",
+          "say": "Yes, the first place after the dot is tenths.",
+          "style": "work",
+          "ask": {
+            "prompt": "In $4.27, which place is the 2 in?",
+            "board": "The 2 is in the ___ place",
+            "lookFor": "The tenths place.",
+            "onMiss": "Ask: which place comes first after the decimal point?"
+          }
+        },
+        {
+          "id": "l17",
+          "text": "2 tenths = 2 dimes = 20 cents",
+          "say": "Two tenths is two dimes, which is twenty cents.",
+          "style": "work",
+          "ask": {
+            "prompt": "How many cents is the 2 worth?",
+            "board": "The 2 is worth ___ cents",
+            "lookFor": "20 cents (2 tenths = 2 dimes).",
+            "onMiss": "Ask: one tenth of a dollar is how many cents?"
+          }
+        },
+        {
+          "id": "l18",
+          "text": "4.27 = 4 + {{0.2|ul.p}} + {{0.07|ul}}",
+          "say": "And the 7 is seven hundredths, seven cents. So four plus nought point two plus nought point nought seven.",
+          "style": "work",
+          "ask": {
+            "prompt": "Partition $4.27 into dollars, tenths and hundredths.",
+            "board": "4.27 = ? + ? + ?",
+            "lookFor": "4 + 0.2 + 0.07.",
+            "onMiss": "Ask: how many whole dollars? Then tenths? Then hundredths?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "apply",
+      "say": "The child works alone: 7 dollars and 9 cents as a decimal; 35 cents as dollars; and $6.8 written properly as money. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn: write it as money"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l19",
+          "text": "7 dollars and 9 cents",
+          "say": "Your turn to lead. First, seven dollars and nine cents.",
+          "style": "point"
+        },
+        {
+          "id": "l20",
+          "text": "$7.09",
+          "say": "Seven whole dollars, no dimes, nine cents: seven point nought nine.",
+          "style": "work",
+          "ask": {
+            "prompt": "Write seven dollars and nine cents as a decimal.",
+            "board": "7 dollars 9 cents = $?",
+            "lookFor": "$7.09 (zero in the tenths place).",
+            "onMiss": "Ask: how many dimes are there? What goes in the tenths place?"
+          }
+        },
+        {
+          "id": "l21",
+          "text": "35 cents = $0.35",
+          "say": "Thirty-five cents is three dimes and five cents: nought point three five.",
+          "style": "work",
+          "ask": {
+            "prompt": "Write 35 cents as dollars.",
+            "board": "35 cents = $?",
+            "lookFor": "$0.35.",
+            "onMiss": "Ask: 100 cents make a dollar. How many dimes and how many cents are in 35 cents?"
+          }
+        },
+        {
+          "id": "l22",
+          "text": "$6.8 = $6.80",
+          "say": "A price shown as six point eight is eight tenths, eighty cents, so in money we write six dollars eighty.",
+          "style": "work",
+          "ask": {
+            "prompt": "How would a shop write $6.8 as a price?",
+            "board": "$6.8 as money = ?",
+            "lookFor": "$6.80.",
+            "onMiss": "Ask: how many cents are 8 tenths of a dollar?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "check",
+      "say": "Compare 0.6 and 0.06 in money and explain the zero.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Which is more?"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l23",
+          "text": "$0.6 and $0.06",
+          "say": "Last one. Sixty cents and six cents are both short amounts, but which is more?",
+          "style": "point",
+          "ask": {
+            "prompt": "Which is worth more, $0.6 or $0.06, and how do you know?",
+            "board": "$0.6 or $0.06?",
+            "lookFor": "$0.6: it is 6 tenths (60 cents); $0.06 is only 6 cents.",
+            "onMiss": "Ask: how many cents is each? Which place is the 6 in, in each?"
+          }
+        },
+        {
+          "id": "l24",
+          "text": "The place of a digit decides its value, even after the dot",
+          "say": "So the same digit, 6, means sixty cents in one and six cents in the other. After the dot, just like before it, place decides value.",
+          "style": "rule",
+          "ask": {
+            "prompt": "In your own words, why do we write the zero in $0.06?",
+            "board": "Why the zero in 0.06?",
+            "lookFor": "It holds the tenths place open so the 6 stays in the hundredths place.",
+            "onMiss": "Ask: if the zero was missing, which place would the 6 be in?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

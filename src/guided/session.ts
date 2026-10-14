@@ -103,9 +103,10 @@ export class GuidedSession {
             log: 'next_line -> done', changed: false,
           };
         }
+        const itemsBefore = this.board.items.length;
         this.board = r.state;
         if (r.action === 'ask') {
-          return { response: { result: 'ask', instruction: askInstruction(r.line) }, log: `next_line -> ask ${r.line.id}`, changed: false };
+          return { response: { result: 'ask', instruction: askInstruction(r.line) }, log: `next_line -> ask ${r.line.id}`, changed: this.board.items.length !== itemsBefore };
         }
         budget.lineWritten = true;
         const left = linesRemaining(this.board, this.script);

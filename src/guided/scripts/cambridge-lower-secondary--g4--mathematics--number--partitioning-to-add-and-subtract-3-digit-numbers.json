@@ -1,0 +1,349 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--partitioning-to-add-and-subtract-3-digit-numbers",
+  "title": "Partitioning to add and subtract 3-digit numbers",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: partitioning made multiplying easy, and it makes adding and subtracting big numbers easy too. Colours: blue hundreds, pink tens, yellow ones. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Adding big numbers by splitting"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "326 + 243",
+          "say": "Here's a sum with three-digit numbers: three hundred and twenty-six plus two hundred and forty-three. Looks big, but we're going to split each number into hundreds, tens and ones, and then add like with like. Blue for hundreds, pink for tens, yellow for ones.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Partition both numbers into hundreds, tens, ones, marked IN PLACE. Then add the matching parts. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Split both numbers"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "326 = {{300|ul.b}} + {{20|ul.p}} + {{6|ul}}",
+          "say": "First, three hundred and twenty-six: three hundred, twenty, and six.",
+          "style": "work"
+        },
+        {
+          "id": "l3",
+          "text": "243 = {{200|ul.b}} + {{40|ul.p}} + {{3|ul}}",
+          "say": "And two hundred and forty-three: two hundred, forty, and three.",
+          "style": "work"
+        },
+        {
+          "id": "l4",
+          "text": "300 + 200 = 500",
+          "say": "Now add like with like. Hundreds with hundreds: three hundred plus two hundred is five hundred.",
+          "style": "work"
+        },
+        {
+          "id": "l5",
+          "text": "20 + 40 = 60",
+          "say": "Tens with tens: twenty plus forty is sixty.",
+          "style": "work"
+        },
+        {
+          "id": "l6",
+          "text": "6 + 3 = 9",
+          "say": "Ones with ones: six and three make nine.",
+          "style": "work"
+        },
+        {
+          "id": "l7",
+          "text": "500 + 60 + 9 = 569",
+          "say": "Put them back together: five hundred and sixty-nine.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Adding when the ones or tens make more than ten: 258 + 167. The ones make 15, the tens make 110. Add the parts then combine. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "When the parts are big: 258 + 167"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l8",
+          "text": "258 + 167  =  200 + 50 + 8  and  100 + 60 + 7",
+          "say": "Let's try one where the parts get big. Two hundred and fifty-eight plus one hundred and sixty-seven. Split both of them.",
+          "style": "point"
+        },
+        {
+          "id": "l9",
+          "text": "200 + 100 = 300      50 + 60 = 110      8 + 7 = 15",
+          "say": "Hundreds: three hundred. Tens: fifty plus sixty is a hundred and ten. Ones: eight plus seven is fifteen. Don't worry that the tens and ones are big.",
+          "style": "work"
+        },
+        {
+          "id": "l10",
+          "text": "300 + 110 + 15 = 425",
+          "say": "Just add the three answers together: three hundred and a hundred and ten is four hundred and ten, and fifteen more makes four hundred and twenty-five.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "Subtraction trap: a friend subtracts the smaller digit from the bigger in each column for 452 - 237 and gets 225. Check by adding back 225 + 237 = 462, not 452. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea for subtracting"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l11",
+          "text": "452 − 237",
+          "say": "Subtracting can be tricky. Four hundred and fifty-two minus two hundred and thirty-seven. A friend of mine did the ones like this: you can't do two minus seven, so I'll just do seven minus two. Then they carried on: fifty minus thirty is twenty, four hundred minus two hundred is two hundred.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "Friend: 5 + 20 + 200 = 225",
+          "say": "That gave them two hundred and twenty-five. Let's check it by adding back. If two twenty-five is right, then two twenty-five plus two thirty-seven should give four fifty-two.",
+          "style": "point"
+        },
+        {
+          "id": "l13",
+          "text": "225 + 237 = 462, not 452",
+          "say": "But it makes four hundred and sixty-two. So the answer is wrong. Swapping the digits changes the problem. When the top digit is smaller we must not flip it, we have to exchange.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "Subtraction with exchanging: 452 - 237. Ones 2 < 7, so exchange one ten for ten ones: 452 = 400 + 40 + 12. Then subtract the parts. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Exchanging: 452 − 237"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l14",
+          "text": "452 = {{400|ul.b}} + {{50|ul.p}} + {{2|ul}}",
+          "say": "Let's do it properly. First partition four hundred and fifty-two: four hundred, fifty, and two.",
+          "style": "work"
+        },
+        {
+          "id": "l15",
+          "text": "Ones: 2 is smaller than 7. Exchange 1 ten for 10 ones.",
+          "say": "We need to take away seven ones, but we only have two. So we borrow properly: we exchange one ten for ten ones.",
+          "style": "point"
+        },
+        {
+          "id": "l16",
+          "text": "So 452 = 400 + {{40|ul.p}} + {{12|ul}}",
+          "say": "Now we have forty and twelve, instead of fifty and two. It's the same number, written differently.",
+          "style": "work"
+        },
+        {
+          "id": "l17",
+          "text": "237 = 200 + 30 + 7",
+          "say": "Partition two hundred and thirty-seven as well.",
+          "style": "work"
+        },
+        {
+          "id": "l18",
+          "text": "12 − 7 = 5      40 − 30 = 10      400 − 200 = 200",
+          "say": "Ones: twelve minus seven is five. Tens: forty minus thirty is ten. Hundreds: four hundred minus two hundred is two hundred.",
+          "style": "work"
+        },
+        {
+          "id": "l19",
+          "text": "200 + 10 + 5 = 215",
+          "say": "Add the parts: two hundred and fifteen.",
+          "style": "work"
+        },
+        {
+          "id": "l20",
+          "text": "Check: 215 + 237 = 452",
+          "say": "And we can check by adding back: two fifteen plus two thirty-seven is four fifty-two. It matches.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "State the two methods in one line each, and the check. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The rules"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l21",
+          "text": "ADD: split, add like with like, combine",
+          "say": "For adding, we split both numbers, add the matching parts, then put the totals together.",
+          "style": "rule"
+        },
+        {
+          "id": "l22",
+          "text": "SUBTRACT: split, exchange if a part is too small, subtract like with like",
+          "say": "For subtracting, we split too, but if a top part is too small we exchange first, then take away matching parts.",
+          "style": "rule"
+        },
+        {
+          "id": "l23",
+          "text": "Check a subtraction by ADDING back",
+          "say": "And then the safety net: add your answer back to the number you took away. You should land on where you started.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER: 365 + 248. Questions written on the board first. Operands in the intro line.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together: 365 + 248"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l24",
+          "text": "365 + 248  =  300 + 60 + 5  and  200 + 40 + 8",
+          "say": "Now you help me. Three hundred and sixty-five plus two hundred and forty-eight, split into their parts.",
+          "style": "point"
+        },
+        {
+          "id": "l25",
+          "text": "300 + 200 = 500",
+          "say": "Hundreds first.",
+          "style": "work",
+          "ask": {
+            "prompt": "What do the hundreds make: 300 + 200?",
+            "board": "300 + 200 = ?",
+            "lookFor": "500.",
+            "onMiss": "Ask: 3 hundreds and 2 hundreds make how many hundreds?"
+          }
+        },
+        {
+          "id": "l26",
+          "text": "60 + 40 = 100",
+          "say": "Now the tens.",
+          "style": "work",
+          "ask": {
+            "prompt": "And the tens: 60 + 40?",
+            "board": "60 + 40 = ?",
+            "lookFor": "100.",
+            "onMiss": "Ask: 6 tens and 4 tens make how many tens?"
+          }
+        },
+        {
+          "id": "l27",
+          "text": "5 + 8 = 13",
+          "say": "And the ones.",
+          "style": "work",
+          "ask": {
+            "prompt": "And the ones: 5 + 8?",
+            "board": "5 + 8 = ?",
+            "lookFor": "13.",
+            "onMiss": "Ask: what do 5 and 8 make? Try 5 + 5 first, then 3 more."
+          }
+        },
+        {
+          "id": "l28",
+          "text": "500 + 100 + 13 = 613",
+          "say": "So we combine.",
+          "style": "work",
+          "ask": {
+            "prompt": "Now combine all three answers. What is 365 + 248?",
+            "board": "365 + 248 = ?",
+            "lookFor": "613 (500 + 100 + 13).",
+            "onMiss": "Ask: add 500 and 100 first, then the 13."
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "check",
+      "say": "The child works alone: 674 - 231 (no exchange) and 534 - 217 (exchange), then explain why we exchange. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l29",
+          "text": "674 − 231     534 − 217",
+          "say": "Your turn to lead. Six hundred and seventy-four minus two hundred and thirty-one, and five hundred and thirty-four minus two hundred and seventeen.",
+          "style": "point"
+        },
+        {
+          "id": "l30",
+          "text": "674 − 231 = 443",
+          "say": "No exchanging needed: every top part is big enough.",
+          "style": "work",
+          "ask": {
+            "prompt": "Work out 674 − 231 by partitioning.",
+            "board": "674 − 231 = ?",
+            "lookFor": "443 (600 − 200 = 400, 70 − 30 = 40, 4 − 1 = 3).",
+            "onMiss": "Ask: subtract the hundreds, then the tens, then the ones."
+          }
+        },
+        {
+          "id": "l31",
+          "text": "534 − 217 = 317",
+          "say": "The ones need an exchange: four is smaller than seven.",
+          "style": "work",
+          "ask": {
+            "prompt": "Work out 534 − 217. Do you need to exchange?",
+            "board": "534 − 217 = ?",
+            "lookFor": "317 (exchange: 534 = 500 + 20 + 14; 14 − 7 = 7, 20 − 10 = 10, 500 − 200 = 300).",
+            "onMiss": "Ask: is 4 big enough to take 7 from? What can you exchange?"
+          }
+        },
+        {
+          "id": "l32",
+          "text": "Exchange = swap 1 ten for 10 ones (or 1 hundred for 10 tens)",
+          "say": "One last thought.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why do we exchange when a top part is smaller?",
+            "board": "Why exchange?",
+            "lookFor": "So there are enough ones/tens to subtract: 1 ten becomes 10 ones, the number stays the same.",
+            "onMiss": "Ask: when we swap 1 ten for 10 ones, does the number change?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

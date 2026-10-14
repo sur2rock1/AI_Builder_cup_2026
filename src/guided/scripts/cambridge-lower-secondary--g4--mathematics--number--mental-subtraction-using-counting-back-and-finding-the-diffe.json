@@ -1,0 +1,271 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--mental-subtraction-using-counting-back-and-finding-the-diffe",
+  "title": "Mental subtraction: counting back and finding the difference",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: two sums that look alike but need different thinking. Say we will learn two mental ways to subtract and how to choose. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Two ways to subtract"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "74 − 13     81 − 76",
+          "say": "Here are two subtractions. They look alike, but they want different thinking. If you pick the right way, you can do both in your head, and quickly.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Subtraction has two meanings: taking away (so we count back) and the gap between two numbers (so we find the difference by counting up). Explain with a number line. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Two meanings of subtract"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "take away  →  count BACK",
+          "say": "Subtracting can mean taking away. Then we start at the big number and count back.",
+          "style": "rule"
+        },
+        {
+          "id": "l3",
+          "text": "difference  →  the GAP between two numbers",
+          "say": "Subtracting can also mean finding the gap between two numbers, how far apart they are on the number line. Then we count up from the smaller to the bigger.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Counting back for 74 - 13: split 13 into 10 and 3. Go back a ten, then back 3. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Counting back: 74 − 13"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l4",
+          "text": "74 − 13     13 = 10 + 3",
+          "say": "Seventy-four minus thirteen. The number we take away is small, so counting back is perfect. We split thirteen into ten and three.",
+          "style": "point"
+        },
+        {
+          "id": "l5",
+          "text": "74 − 10 = 64",
+          "say": "Count back the ten first: seventy-four, back ten, is sixty-four.",
+          "style": "work"
+        },
+        {
+          "id": "l6",
+          "text": "64 − 3 = 61",
+          "say": "Then back the three: sixty-three, sixty-two, sixty-one. So seventy-four minus thirteen is sixty-one.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "Counting back for 81 - 76 would be silly. Show it, then switch to finding the difference. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "When counting back is a bad idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l7",
+          "text": "81 − 76",
+          "say": "Now eighty-one minus seventy-six. We could count back seventy-six steps from eighty-one. Seventy-six steps! You'd be there all day and you'd surely lose count.",
+          "style": "point"
+        },
+        {
+          "id": "l8",
+          "text": "76 and 81 are CLOSE together",
+          "say": "But look at the two numbers. They're really close together. The answer is just the little gap between them.",
+          "style": "point"
+        },
+        {
+          "id": "l9",
+          "text": "81 − 76 = 5",
+          "say": "So we count up from seventy-six, up to eighty-one, and count the steps. How? Next.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "Finding the difference by counting up in jumps, bridging a ten: 76 -> 80 is 4, 80 -> 81 is 1, total 5. Then 302 - 297. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Finding the difference"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "76 → 80 = 4",
+          "say": "From seventy-six, jump up to the next ten, eighty. That's four.",
+          "style": "work"
+        },
+        {
+          "id": "l11",
+          "text": "80 → 81 = 1",
+          "say": "Then from eighty up to eighty-one is one more.",
+          "style": "work"
+        },
+        {
+          "id": "l12",
+          "text": "4 + 1 = 5",
+          "say": "Add the jumps: four plus one. The gap, the difference, is five.",
+          "style": "work"
+        },
+        {
+          "id": "l13",
+          "text": "302 − 297     297 → 300 is 3,  300 → 302 is 2",
+          "say": "The same trick works on bigger numbers that are close together. Three hundred and two minus two hundred and ninety-seven. From two ninety-seven, jump to three hundred: three. Then up to three-oh-two: two.",
+          "style": "point"
+        },
+        {
+          "id": "l14",
+          "text": "3 + 2 = 5",
+          "say": "Three plus two, so the difference is five.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "How to choose: small number taken away -> count back; two numbers close together -> find the difference. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Choosing your way"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l15",
+          "text": "Taking away a SMALL number  →  count back",
+          "say": "If the number you take away is small, count back.",
+          "style": "rule"
+        },
+        {
+          "id": "l16",
+          "text": "Two numbers CLOSE together  →  find the difference",
+          "say": "If the two numbers are close together, count up the gap.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do two TOGETHER. Questions written on the board first. Operands are written in the intro line.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do two together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l17",
+          "text": "93 − 21     52 − 49",
+          "say": "Now you help me with two. The first is ninety-three minus twenty-one, and the second is fifty-two minus forty-nine.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "93 − 21 = 72",
+          "say": "Twenty-one is small: back twenty to seventy-three, back one more to seventy-two.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which way would you do 93 − 21, and what is the answer?",
+            "board": "93 − 21 = ?",
+            "lookFor": "72 (count back: 93 − 20 = 73, then − 1).",
+            "onMiss": "Ask: is 21 small or big? So do we count back or find the gap?"
+          }
+        },
+        {
+          "id": "l19",
+          "text": "49 → 50 → 52, difference = 3",
+          "say": "Forty-nine and fifty-two are close together, so we find the gap: one to fifty, two more to fifty-two. Three.",
+          "style": "work",
+          "ask": {
+            "prompt": "52 − 49: what is the difference? How did you find it?",
+            "board": "52 − 49 = ?",
+            "lookFor": "3 (49 to 50 is 1, then 50 to 52 is 2).",
+            "onMiss": "Ask: are 49 and 52 close together? How far is it from 49 to 52?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "check",
+      "say": "The child works alone: 85 - 12 and 100 - 97, then explain why they chose different methods. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l20",
+          "text": "85 − 12     100 − 97",
+          "say": "Your turn to lead. Eighty-five minus twelve, and a hundred minus ninety-seven.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "85 − 12 = 73",
+          "say": "Twelve is small, so count back.",
+          "style": "work",
+          "ask": {
+            "prompt": "Work out 85 − 12 and say which way you used.",
+            "board": "85 − 12 = ?",
+            "lookFor": "73 (count back: 85 − 10 = 75, then − 2).",
+            "onMiss": "Ask: is 12 a big or a small number to take away?"
+          }
+        },
+        {
+          "id": "l22",
+          "text": "100 − 97 = 3",
+          "say": "Ninety-seven is very close to a hundred, so we find the gap.",
+          "style": "work",
+          "ask": {
+            "prompt": "Now 100 − 97. Which way is quicker and why?",
+            "board": "100 − 97 = ?",
+            "lookFor": "3: the numbers are close, so count up the gap.",
+            "onMiss": "Ask: how far is it from 97 up to 100?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

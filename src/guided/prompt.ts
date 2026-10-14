@@ -13,6 +13,7 @@
 
 import type { Beat, BoardItem, BoardLine, GuidedBoardState, GuidedScript } from './types';
 import { DEFAULT_PACE, paceGuidance, type Pace } from './pace';
+import { describeMarks, stripMarks } from './marks';
 
 export function guidedBoardBlock(script: GuidedScript): string {
   const outline = script.beats
@@ -21,8 +22,13 @@ export function guidedBoardBlock(script: GuidedScript): string {
   return `THE BOARD (guided lesson)
 You are teaching from a prepared lesson for this concept: "${script.title}". It is a list of BEATS (outline below).
 The board is ONE page that only grows: nothing is ever wiped. The learner reads it while you talk.
-Teach like a chalkboard teacher: SAY what you write as it appears, in words, then explain it in one sentence. Never skip a step:
-every number on the board must come from a line above it, and you say where it came from.
+Teach like a good chalkboard teacher talking to a child: warm, conversational, flowing ("So...", "Now look at this...", "See the 3 here?").
+The board holds a short note; YOUR VOICE holds the explanation. Talk while you write, using the suggested wording almost word for word - it has been written to flow from one line to the next.
+Do NOT read the board text aloud and then explain it again - say each idea ONCE, and never repeat or re-introduce what the previous line already said.
+VOICE: keep exactly the same calm, steady, friendly voice, pace and energy from the first line to the last. No sudden excitement, no change of
+volume or pitch from line to line, no exclamations like "Great!" or "Awesome!" between lines. Never skip a step: every number on the board must come
+from a line above it, and you say where it came from. When a line has chalk marks (underline, circle, colour, label), point at them as they
+appear ("I'm underlining the 3 - that's our ones"): the learner sees the mark and hears what it means.
 
 HOW A BEAT WORKS
  1. Call advance_beat to start the next beat. It tells you what the beat adds to the board and what to do.
@@ -39,10 +45,17 @@ WHEN THE LEARNER INTERRUPTS OR ASKS SOMETHING ELSE
  - If the answer needs working or a fact worth keeping, put it on the board line by line with write_aside
    (the first call also passes their question). Say each line as you write it, exactly as in the lesson.
    A one-word reply ("yes", "that's right") needs no board.
- - When their question is answered, check briefly ("Does that help?"), then call resume_lesson. It tells you exactly where you stopped.
+ - When their question is answered, check briefly that it helped, then call resume_lesson. It tells you exactly where you stopped.
    Say in one sentence where we were, then carry on from that point - do not restart the beat.
 
 RULES
+ - FLOW: a real teacher does not stop after every statement. Never end a turn with a check-in question of your own and never wait for a reply
+   unless the lesson itself tells you to ask. Say the line, explain it in a sentence, and move straight on to the next call.
+   An occasional rhetorical tag inside your flow is natural; just do not pause for an answer.
+   This lesson's own questions (the lines that ask) are the ONLY checks of understanding: they replace the general "check understanding after every chunk" habit.
+   Check in on your own only if the learner has been silent for a long time, sounds unsure, or says they are lost.
+   While you are TEACHING (everything before the practice questions) just explain: no quizzing, no asking what they think. The questions come later, in the practice, and they are written on the board.
+   After EVERY tool result you must speak (or call the next tool). Never go silent waiting for the learner unless the lesson told you to ask a question.
  - Never call advance_beat while a question is unanswered or lines of the beat are still unwritten.
  - If the learner does not know, say that is fine, teach the point a different way, call record_confusion_signal, and ask once more.
    After that give the answer plainly (call next_line to write it) and move on - never leave them stuck and never stop.
@@ -59,15 +72,16 @@ ${outline}`;
 function describeItem(it: BoardItem): string {
   switch (it.type) {
     case 'heading': return `heading: ${it.text}`;
-    case 'point': return `line: ${it.text}`;
+    case 'point': return `line: ${stripMarks(it.text)}`;
     case 'rule': return `rule box: ${it.text}`;
     case 'exception': return `watch-out line: ${it.text}`;
     case 'compare': return `${it.side} column${it.title ? ` (${it.title})` : ''}: ${it.text}`;
-    case 'work': return `worked lines: ${it.lines.join(' | ')}`;
+    case 'work': return `worked lines: ${it.lines.map(stripMarks).join(' | ')}`;
     case 'picture': return `picture: ${it.ref}${it.step && it.step !== 'all' ? ` up to step ${it.step}` : ''}`;
     case 'slot': return `blank for the learner (${it.id}): ${it.label}`;
-    case 'line': return `line: ${it.text}`;
+    case 'line': return `line: ${stripMarks(it.text)}`;
     case 'aside': return `side note: ${it.text}`;
+    case 'question': return `question written up: ${stripMarks(it.text)}`;
   }
 }
 
@@ -77,12 +91,12 @@ export function beatInstruction(script: GuidedScript, index: number, pace: Pace 
   if (beat.lines?.length) {
     out.push(`BEAT ${index + 1} of ${script.beats.length} (${beat.kind}) - written LINE BY LINE (${beat.lines.length} lines).`);
     if (beat.board.length) out.push(`ALREADY ON THE BOARD FOR THIS BEAT: ${beat.board.map(describeItem).join(' ; ')}`);
-    out.push(`WHAT THIS BEAT IS FOR: ${beat.say}`);
+    out.push(`BACKGROUND (for you only, do not say it aloud): ${beat.say}`);
     out.push(paceGuidance(pace));
-    out.push('Say one short sentence to set it up, then call next_line for the first line.');
+    out.push('Do NOT say anything yet. Call next_line now: the first line carries the opening words, so nothing is said twice.');
     return out.join('\n');
   }
-  out.push(`BEAT ${index + 1} of ${script.beats.length} (${beat.kind}). Start speaking now - the board is writing this while you talk.`);
+  out.push(`BEAT ${index + 1} of ${script.beats.length} (${beat.kind}). SPEAK NOW - start speaking - the board is writing this while you talk.`);
   out.push(`ON THE BOARD (in this order - talk through each as it appears): ${beat.board.map(describeItem).join(' ; ')}`);
   out.push(`GET ACROSS: ${beat.say}`);
   out.push(paceGuidance(pace));
@@ -99,26 +113,33 @@ export function beatInstruction(script: GuidedScript, index: number, pace: Pace 
 
 /** next_line wrote a line. */
 export function lineInstruction(line: BoardLine, answered: boolean, left: number, pace: Pace = DEFAULT_PACE): string {
+  const plain = stripMarks(line.text);
+  const marks = describeMarks(line.text);
   const out = [
     answered
-      ? `The learner's answer is now WRITTEN: "${line.text}". Confirm it warmly (or, if they got it wrong, gently show why this is right): ${line.say}`
-      : `WRITTEN NOW: "${line.text}". SAY IT: ${line.say}`,
-    'Read the line aloud in words as it appears, then that one sentence of explanation. Do not add other lines.',
+      ? `The learner's answer is now WRITTEN: "${plain}". Confirm it warmly (or, if they got it wrong, gently show why this is right). Suggested wording: ${line.say}`
+      : line.annotates
+        ? `You are MARKING UP a line that is already on the board ("${plain}"); nothing new is written. Suggested wording: ${line.say}`
+        : `WRITTEN NOW: "${plain}". Suggested wording: ${line.say}`,
+    marks ? `CHALK MARKS appearing on it: ${marks}. Point at them as you speak ("I'm underlining...").` : '',
+    'SPEAK NOW - never stay silent after a tool result. Say the suggested wording almost word for word, in the same calm, even, warm voice as every other line. '
+      + 'Do not add an opening ("Okay", "Great", "So"), a recap, or a second version of the same idea. The learner can see the board: do not read the board text out and then say it again. '
+      + 'Then go straight on.',
     left > 0 ? `Then call next_line (${left} more line${left === 1 ? '' : 's'} in this beat).` : 'That was the last line of this beat. Then call advance_beat.',
-  ];
-  if (pace === 'slow') out.push('Slow pace: after explaining, check briefly ("Okay so far?") and wait before the next line.');
+  ].filter(Boolean);
   return out.join('\n');
 }
 
 /** next_line reached a line whose answer is held back. */
 export function askInstruction(line: BoardLine): string {
+  const written = (line.ask!.board?.trim() || line.ask!.prompt).trim();
   return [
-    'DO NOT WRITE YET - the next line is the answer, so it stays hidden.',
-    `ASK: ${line.ask!.prompt}`,
-    'Then STOP and wait for the learner.',
+    `THE QUESTION IS NOW WRITTEN ON THE BOARD: "${stripMarks(written)}". The answer is not written yet - it stays hidden until the learner replies.`,
+    `SPEAK NOW: ask the learner this question ALOUD, in your own words (do not just read the board): ${line.ask!.prompt}`,
+    'Only AFTER you have asked it out loud, stop and wait for the learner. Give them a real chance to think.',
     `A GOOD ANSWER: ${line.ask!.lookFor}`,
     `IF THEY MISS: ${line.ask!.onMiss}`,
-    'When they have answered (or you have helped them to it): assess_child_reasoning, follow it, then call next_line - it writes the answer while you confirm it.',
+    'When they have answered (or you have helped them to it): assess_child_reasoning, follow it, then call next_line - it writes the answer under the question while you confirm it.',
   ].join('\n');
 }
 

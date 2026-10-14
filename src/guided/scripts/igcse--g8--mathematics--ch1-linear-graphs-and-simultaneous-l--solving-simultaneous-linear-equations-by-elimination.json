@@ -1,0 +1,525 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-elimination",
+  "title": "Solving simultaneous linear equations by elimination",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: a clever trick where we make one letter vanish. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Make a letter vanish"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "x + y = 10     x − y = 2",
+          "say": "Two equations, two unknowns. Look at the y terms: a plus y in one, a minus y in the other. What if we could make the y's disappear? That's the idea of elimination.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Adding two equations is allowed: equal things added to equal things stay equal. Add them and the y terms cancel. Mark the y terms that cancel IN PLACE. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Add the equations"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "Equal + equal = equal",
+          "say": "Here's the rule that makes it legal. If two things are equal, and we add equal things to both sides, they stay equal. So we may add whole equations together.",
+          "style": "rule"
+        },
+        {
+          "id": "l3",
+          "text": "x + y = 10     x − y = 2",
+          "say": "Let's add our two equations, left side with left side, and right side with right side.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "(x + y) + (x − y) = 10 + 2",
+          "say": "The left sides added: x plus y plus x minus y. The right sides added: ten plus two.",
+          "style": "work"
+        },
+        {
+          "id": "l5",
+          "text": "x + {{y|circle.p}} + x {{− y|circle.p}}",
+          "say": "Look at the pink bits: the plus y and the minus y cancel each other out. That's elimination. The y has vanished.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "2x = 12",
+          "say": "What's left is two x on the left, and twelve on the right.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Finish the problem: x = 6, then back-substitute for y = 4, and check in both equations. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Finish and check"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l7",
+          "text": "x + y = 10     x − y = 2     2x = 12",
+          "say": "We have two x equals twelve. Divide both sides by two.",
+          "style": "point"
+        },
+        {
+          "id": "l8",
+          "text": "x = 12 ÷ 2 = 6",
+          "say": "So x is six.",
+          "style": "work"
+        },
+        {
+          "id": "l9",
+          "text": "6 + y = 10   →   y = 4",
+          "say": "Now put x equals six back into either original equation. Six plus y equals ten, so y is four.",
+          "style": "work"
+        },
+        {
+          "id": "l10",
+          "text": "Check:  6 + 4 = 10 ✓   6 − 4 = 2 ✓",
+          "say": "And always check in both equations: six plus four is ten, and six minus four is two. It works.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "method",
+      "say": "Same sign, so subtract: 3x + 2y = 16 and 3x - y = 1. Subtracting the second removes x; careful with 2y - (-y) = 3y. Then x = 2. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "When the signs are the same"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l11",
+          "text": "3x + 2y = 16     3x − y = 1",
+          "say": "Now a different one. Both equations have a plus three x. If we add them we get six x, which doesn't help. But if we subtract them, the three x's cancel.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "(3x + 2y) − (3x − y) = 16 − 1",
+          "say": "So we subtract the second equation from the first, the whole of it, in brackets.",
+          "style": "work"
+        },
+        {
+          "id": "l13",
+          "text": "3x − 3x = 0",
+          "say": "The x terms vanish.",
+          "style": "work"
+        },
+        {
+          "id": "l14",
+          "text": "2y − (−y) = 3y",
+          "say": "And now the careful part. Two y take away minus y. Taking away a minus is the same as adding, so two y plus y, which is three y.",
+          "style": "work"
+        },
+        {
+          "id": "l15",
+          "text": "3y = 15   →   y = 5",
+          "say": "On the right, sixteen minus one is fifteen. So three y equals fifteen, and y is five.",
+          "style": "work"
+        },
+        {
+          "id": "l16",
+          "text": "3x − 5 = 1   →   3x = 6   →   x = 2",
+          "say": "Put y equals five into three x minus y equals one: three x minus five is one, so three x is six, so x is two.",
+          "style": "work"
+        },
+        {
+          "id": "l17",
+          "text": "Check:  3(2) + 2(5) = 16 ✓",
+          "say": "And the check in the other equation: six plus ten is sixteen. Good.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "contrast",
+      "say": "A friend simplifies 2y - (-y) as y. Test it with y = 5. Detective tone. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l18",
+          "text": "2y − (−y) = y ?     (try y = 5)",
+          "say": "A friend of mine wrote that two y minus minus y equals just y. Let's test it with a real number, y equals five.",
+          "style": "point"
+        },
+        {
+          "id": "l19",
+          "text": "2(5) = 10",
+          "say": "Two fives is ten.",
+          "style": "work"
+        },
+        {
+          "id": "l19a",
+          "text": "−(−5) = +5",
+          "say": "And minus minus five is plus five.",
+          "style": "work"
+        },
+        {
+          "id": "l19b",
+          "text": "10 + 5 = 15",
+          "say": "So ten plus five is fifteen.",
+          "style": "work"
+        },
+        {
+          "id": "l20",
+          "text": "15 = 3y, not y",
+          "say": "Fifteen is three times five, so the answer is three y, not y. Subtracting a negative adds.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "method",
+      "say": "Coefficients that don't match: 13x - 6y = 20 and 7x + 4y = 18. Multiply the first by 2 and the second by 3 so the y terms are -12y and +12y. Multiply EVERY term, both sides. Then add. Write each multiplication on its own line. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "When nothing matches"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l21",
+          "text": "13x − 6y = 20     7x + 4y = 18     (×2 and ×3)",
+          "say": "Sometimes nothing matches. Thirteen and seven, minus six and four. We have to make something match first. Let's aim at the y terms: six and four both go into twelve.",
+          "style": "point"
+        },
+        {
+          "id": "l22",
+          "text": "13x × 2 = 26x",
+          "say": "Multiply the whole first equation by two. Every term, including the right-hand side. Thirteen x becomes twenty-six x.",
+          "style": "work"
+        },
+        {
+          "id": "l23",
+          "text": "6y × 2 = 12y",
+          "say": "Six y becomes twelve y, still with its minus sign.",
+          "style": "work"
+        },
+        {
+          "id": "l24",
+          "text": "20 × 2 = 40",
+          "say": "And the right-hand side, twenty, becomes forty. If we skipped this, the equation would no longer balance.",
+          "style": "work"
+        },
+        {
+          "id": "l25",
+          "text": "7x × 3 = 21x",
+          "say": "Now the second equation, multiply by three. Seven x becomes twenty-one x.",
+          "style": "work"
+        },
+        {
+          "id": "l26",
+          "text": "4y × 3 = 12y",
+          "say": "Four y becomes twelve y.",
+          "style": "work"
+        },
+        {
+          "id": "l27",
+          "text": "18 × 3 = 54",
+          "say": "And eighteen becomes fifty-four.",
+          "style": "work"
+        },
+        {
+          "id": "l28",
+          "text": "26x − 12y = 40     21x + 12y = 54",
+          "say": "Now the two new equations. See the minus twelve y and plus twelve y? Opposite signs, so we add.",
+          "style": "point"
+        },
+        {
+          "id": "l29",
+          "text": "26x + 21x = 47x",
+          "say": "Adding: twenty-six x plus twenty-one x is forty-seven x.",
+          "style": "work"
+        },
+        {
+          "id": "l30",
+          "text": "40 + 54 = 94",
+          "say": "And forty plus fifty-four is ninety-four.",
+          "style": "work"
+        },
+        {
+          "id": "l31",
+          "text": "47x = 94   →   x = 2",
+          "say": "So forty-seven x equals ninety-four, and x is two.",
+          "style": "work"
+        },
+        {
+          "id": "l32",
+          "text": "7(2) + 4y = 18   →   y = 1",
+          "say": "Back in the second original equation: fourteen plus four y equals eighteen. Four y is four, so y is one. The solution is x equals two, y equals one.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "rule",
+      "say": "The decision rule, SSS: same sign subtract, different signs add; if no match, multiply first. Always multiply both sides. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The rules of elimination"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l33",
+          "text": "SAME sign  →  SUBTRACT      (Same Sign Subtract)",
+          "say": "To remember which: same sign, subtract. If the letter you want to remove has the same sign in both equations, subtract.",
+          "style": "rule"
+        },
+        {
+          "id": "l34",
+          "text": "DIFFERENT signs  →  ADD",
+          "say": "If one is plus and the other is minus, add.",
+          "style": "rule"
+        },
+        {
+          "id": "l35",
+          "text": "No match?  Multiply whole equations first (both sides!)",
+          "say": "If the numbers don't match, multiply one or both equations, every term, to make them match.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "apply",
+      "say": "Do one TOGETHER: 2x + 3y = 13 and 2x - y = 1. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l36",
+          "text": "2x + 3y = 13     2x − y = 1",
+          "say": "Now you help me. We'll remove x.",
+          "style": "point"
+        },
+        {
+          "id": "l37",
+          "text": "Same sign (+2x and +2x)  →  SUBTRACT",
+          "say": "Right: both have plus two x, so we subtract.",
+          "style": "work",
+          "ask": {
+            "prompt": "Should we add or subtract the equations to remove x? Why?",
+            "board": "Add or subtract?",
+            "lookFor": "Subtract, because the 2x terms have the same sign.",
+            "onMiss": "Ask: what are the signs of the two x terms? Same or different?"
+          }
+        },
+        {
+          "id": "l38",
+          "text": "3y − (−y) = 4y",
+          "say": "The y terms: three y minus minus y is four y.",
+          "style": "work"
+        },
+        {
+          "id": "l39",
+          "text": "13 − 1 = 12",
+          "say": "And the right-hand sides: thirteen minus one.",
+          "style": "work"
+        },
+        {
+          "id": "l40",
+          "text": "4y = 12   →   y = 3",
+          "say": "So four y equals twelve.",
+          "style": "work",
+          "ask": {
+            "prompt": "Solve 4y = 12 for y.",
+            "board": "y = ?",
+            "lookFor": "y = 3.",
+            "onMiss": "Ask: divide both sides by 4."
+          }
+        },
+        {
+          "id": "l41",
+          "text": "2x − 3 = 1   →   x = 2",
+          "say": "Put y equals three into the second equation.",
+          "style": "work",
+          "ask": {
+            "prompt": "Put y = 3 into 2x − y = 1. What is x?",
+            "board": "x = ?",
+            "lookFor": "x = 2 (2x − 3 = 1, so 2x = 4).",
+            "onMiss": "Ask: 2x minus 3 equals 1. What does 2x equal?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "apply",
+      "say": "The child works alone: x + 2y = 10 and x - 2y = 2 (add), then 4x + y = 14 and 2x + y = 8 (subtract). Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l42",
+          "text": "x + 2y = 10     x − 2y = 2",
+          "say": "Your turn to lead. First pair. Remove y.",
+          "style": "point"
+        },
+        {
+          "id": "l43",
+          "text": "Opposite signs (+2y and −2y)  →  ADD",
+          "say": "Opposite signs.",
+          "style": "work",
+          "ask": {
+            "prompt": "Add or subtract to remove y? Why?",
+            "board": "Add or subtract?",
+            "lookFor": "Add, because +2y and −2y have opposite signs.",
+            "onMiss": "Ask: what are the signs of the two y terms?"
+          }
+        },
+        {
+          "id": "l44",
+          "text": "2x = 10 + 2 = 12",
+          "say": "Add the left sides and the right sides.",
+          "style": "work",
+          "ask": {
+            "prompt": "Add the equations. What is 2x equal to?",
+            "board": "2x = ?",
+            "lookFor": "2x = 12.",
+            "onMiss": "Ask: the y terms cancel. What is 10 + 2?"
+          }
+        },
+        {
+          "id": "l45",
+          "text": "x = 12 ÷ 2 = 6",
+          "say": "Divide.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is x?",
+            "board": "x = ?",
+            "lookFor": "x = 6.",
+            "onMiss": "Ask: divide both sides of 2x = 12 by 2."
+          }
+        },
+        {
+          "id": "l46",
+          "text": "y = (10 − 6) ÷ 2 = 2",
+          "say": "Back in the first equation.",
+          "style": "work",
+          "ask": {
+            "prompt": "Find y by putting x = 6 into x + 2y = 10.",
+            "board": "y = ?",
+            "lookFor": "y = 2 (6 + 2y = 10, so 2y = 4).",
+            "onMiss": "Ask: 6 plus 2y is 10. What is 2y?"
+          }
+        },
+        {
+          "id": "l47",
+          "text": "4x + y = 14     2x + y = 8",
+          "say": "Second pair.",
+          "style": "point"
+        },
+        {
+          "id": "l48",
+          "text": "Same sign (+y and +y)  →  SUBTRACT",
+          "say": "The y terms are both plus.",
+          "style": "work",
+          "ask": {
+            "prompt": "To remove y here, add or subtract?",
+            "board": "Add or subtract?",
+            "lookFor": "Subtract, because both y terms are +y.",
+            "onMiss": "Ask: are the y signs the same or different?"
+          }
+        },
+        {
+          "id": "l49",
+          "text": "2x = 14 − 8 → x = 3",
+          "say": "Subtract the second from the first.",
+          "style": "work",
+          "ask": {
+            "prompt": "Subtract the equations. What is x?",
+            "board": "x = ?",
+            "lookFor": "x = 3 (2x = 6).",
+            "onMiss": "Ask: 4x − 2x = 2x. And 14 − 8 = ?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b10",
+      "kind": "check",
+      "say": "Explain why the rule works. Reward reasoning.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Say it in your own words"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l50",
+          "text": "Same sign: subtract.   Different signs: add.",
+          "say": "Last one.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why do we subtract when the signs are the same, but add when they are different?",
+            "board": "Why subtract / add?",
+            "lookFor": "We want the terms to cancel to 0: same sign terms cancel when subtracted (3x − 3x), opposite signs cancel when added (+y − y).",
+            "onMiss": "Ask: what do we want the two terms to add up to?"
+          }
+        },
+        {
+          "id": "l51",
+          "text": "Multiply EVERY term, including the right side",
+          "say": "And the one slip to avoid.",
+          "style": "point",
+          "ask": {
+            "prompt": "When you multiply an equation to make coefficients match, what must you multiply?",
+            "board": "What must I multiply?",
+            "lookFor": "Every term, including the right-hand side, so the equation stays balanced.",
+            "onMiss": "Ask: what happens to the balance if you skip the right-hand side?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

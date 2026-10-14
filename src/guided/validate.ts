@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────────────────────────
 
 import { BEAT_KINDS, type GuidedScript, type BoardItem, type BoardLine } from './types';
+import { markProblems, stripMarks } from './marks';
 
 export interface ScriptIssues { errors: string[]; warnings: string[] }
 
@@ -18,24 +19,28 @@ export const LIMITS = {
   minBeats: 6,
   maxBeats: 12,
   maxItemsPerBeat: 6,
-  maxItemsTotal: 30,
+  maxItemsTotal: 150,   // the board scrolls; this only catches a runaway script
   maxLineChars: 90,
   maxHeadingChars: 48,
   maxSayChars: 700,
   maxLinesPerBeat: 14,
-  maxLineSayChars: 320,
+  maxLineSayChars: 520,
 };
 
 /** Minimal view of a stored picture, enough to check references. */
 export interface PictureRef { steps?: Array<{ id: string }> }
 
 function textOf(item: BoardItem): string[] {
+  return rawTextOf(item).map(stripMarks);
+}
+
+function rawTextOf(item: BoardItem): string[] {
   switch (item.type) {
     case 'heading': case 'point': case 'rule': case 'exception': return [item.text];
     case 'compare': return [item.text, item.title ?? ''];
     case 'work': return item.lines;
     case 'slot': return [item.label];
-    case 'line': case 'aside': return [item.text];
+    case 'line': case 'aside': case 'question': return [item.text];
     default: return [];
   }
 }
@@ -147,7 +152,7 @@ export function validateScript(
       }
     });
 
-    if (b.lines) checkLines(b.lines, items, at, err, warn);
+    if (b.lines) checkLines(b.lines, items, at, b.kind, err, warn);
     for (const l of b.lines ?? []) {
       if (l.picture && opts.pictures) {
         const pic = opts.pictures[l.picture.ref];
@@ -162,6 +167,7 @@ export function validateScript(
       warn(`${at}: worked lines are written together with the question - the answer may be visible before the learner replies (use a line-by-line beat)`);
     }
 
+    if (b.ask && !PRACTICE_KINDS.includes(b.kind)) warn(`${at}: a question inside a "${b.kind}" beat - questions belong in the apply / check beats, after the idea has been taught`);
     if (b.ask) {
       if (!b.ask.prompt?.trim()) err(`${at}: ask has no prompt`);
       if (!b.ask.lookFor?.trim()) err(`${at}: ask has no lookFor`);
@@ -179,7 +185,12 @@ export function validateScript(
   return { errors, warnings };
 }
 
-function checkLines(lines: BoardLine[], boardItems: BoardItem[], at: string, err: (m: string) => void, warn: (m: string) => void): void {
+/** Kinds of beat where the learner may be asked something: teaching beats explain, they do not quiz. */
+export const PRACTICE_KINDS: readonly string[] = ['apply', 'check'];
+
+const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+function checkLines(lines: BoardLine[], boardItems: BoardItem[], at: string, beatKind: string, err: (m: string) => void, warn: (m: string) => void): void {
   if (lines.length === 0) { err(`${at}: "lines" is empty`); return; }
   if (lines.length > LIMITS.maxLinesPerBeat) err(`${at}: ${lines.length} lines (limit ${LIMITS.maxLinesPerBeat})`);
   const ids = new Set<string>();
@@ -187,17 +198,41 @@ function checkLines(lines: BoardLine[], boardItems: BoardItem[], at: string, err
   lines.forEach((l, k) => {
     const where = `${at} line ${k + 1} (${l.id})`;
     if (!l.id || ids.has(l.id)) err(`${where}: id missing or duplicated`);
+    const earlier = new Set(ids);
     ids.add(l.id);
     if (!l.text?.trim()) err(`${where}: empty text`);
-    else if (l.text.length > LIMITS.maxLineChars) warn(`${where}: line is ${l.text.length} chars (limit ${LIMITS.maxLineChars})`);
+    markProblems(l.text ?? '').forEach((m) => err(`${where}: ${m}`));
+    const plain = stripMarks(l.text ?? '');
+    if (plain.length > LIMITS.maxLineChars) warn(`${where}: line is ${plain.length} chars (limit ${LIMITS.maxLineChars})`);
     if (!l.say?.trim()) err(`${where}: "say" is empty - the tutor must say every line it writes`);
-    else if (l.say.length > LIMITS.maxLineSayChars) warn(`${where}: "say" is ${l.say.length} chars (limit ${LIMITS.maxLineSayChars})`);
+    else {
+      if (l.say.length > LIMITS.maxLineSayChars) warn(`${where}: "say" is ${l.say.length} chars (limit ${LIMITS.maxLineSayChars})`);
+      if (/\{\{|\}\}/.test(l.say)) err(`${where}: "say" must not contain mark syntax - it is spoken`);
+      if (norm(l.say).includes(norm(plain)) && plain.length > 12) warn(`${where}: "say" repeats the board text word for word - the tutor would say the same thing twice`);
+    }
     if (l.ask) {
       if (!l.ask.prompt?.trim() || !l.ask.lookFor?.trim() || !l.ask.onMiss?.trim()) err(`${where}: ask needs prompt, lookFor and onMiss`);
+      const qb = l.ask.board?.trim();
+      if (qb) {
+        markProblems(qb).forEach((m) => err(`${where}: ask.board ${m}`));
+        const q = stripMarks(qb);
+        if (q.length > LIMITS.maxLineChars) warn(`${where}: the question written on the board is ${q.length} chars (limit ${LIMITS.maxLineChars})`);
+        if (plain.length > 3 && norm(q).includes(norm(plain))) err(`${where}: the question written on the board ("${q}") contains the answer ("${plain}")`);
+      }
+      if (!PRACTICE_KINDS.includes(beatKind)) warn(`${where}: a question inside a "${beatKind}" beat - questions belong in the apply / check beats, after the idea has been taught`);
+    }
+    if (l.annotates) {
+      // Marking up a line already on the board: it must point at an earlier line of this beat and change none of its words.
+      const target = lines.find((x) => x.id === l.annotates);
+      if (!earlier.has(l.annotates)) err(`${where}: annotates "${l.annotates}", which is not an earlier line of this beat`);
+      else if (target && stripMarks(target.text) !== plain) err(`${where}: annotates "${l.annotates}" but the words differ ("${stripMarks(target.text)}" vs "${plain}") - marks may not change the text`);
+      if (l.ask) err(`${where}: a line that only adds marks cannot ask a question`);
+      if (!/\{\{/.test(l.text ?? '')) warn(`${where}: annotates "${l.annotates}" but adds no marks`);
+      return;
     }
     // Working lines must trace every number; a rule (formula) or a statement may introduce values.
-    const missing = (l.style ?? 'work') === 'work' ? untracedNumbers(l.text ?? '', seen) : [];
-    if (missing.length) err(`${where}: "${l.text}" uses ${missing.join(', ')} which is not written on any line above it - a step is missing`);
-    numbersIn(l.text ?? '').forEach((x) => seen.add(x));
+    const missing = (l.style ?? 'work') === 'work' ? untracedNumbers(plain, seen) : [];
+    if (missing.length) err(`${where}: "${plain}" uses ${missing.join(', ')} which is not written on any line above it - a step is missing`);
+    numbersIn(plain).forEach((x) => seen.add(x));
   });
 }

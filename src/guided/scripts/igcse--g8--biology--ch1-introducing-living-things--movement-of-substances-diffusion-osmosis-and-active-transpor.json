@@ -1,0 +1,420 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--biology--ch1-introducing-living-things--movement-of-substances-diffusion-osmosis-and-active-transpor",
+  "title": "Movement of substances: diffusion, osmosis and active transport",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: smell of baking spreading through a house; the same idea moves substances in and out of cells. Playful. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "How do substances move?"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "baking smell: kitchen → whole house",
+          "say": "Think about baking bread in the kitchen. A few minutes later you can smell it in the bedroom. Nobody carried it there. Particles spread out all by themselves. The same idea is how substances move in and out of cells, and today we meet three ways it happens.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Diffusion: net movement of particles from higher to lower concentration, down a concentration gradient, due to random movement. Use ink in water. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Diffusion"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "ink drop in water:  crowded at the drop, none elsewhere",
+          "say": "Put a drop of ink in water. At first the ink particles are crowded together at the drop, and there is none anywhere else.",
+          "style": "point"
+        },
+        {
+          "id": "l3",
+          "text": "particles move randomly, in every direction",
+          "say": "All the particles are constantly moving about randomly, in every direction.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "more leave the crowded part than arrive  →  they spread out",
+          "say": "Because there are so many at the drop, more particles move away from there than move back into it. So overall, they spread out.",
+          "style": "point"
+        },
+        {
+          "id": "l5",
+          "text": "{{Diffusion|ul.p}}: net movement of particles from a region of {{higher concentration|ul}} to a region of {{lower concentration|ul.b}}, down a concentration gradient",
+          "say": "That's diffusion: the net movement of particles from where there are lots to where there are few, down a concentration gradient. It needs no energy from the cell.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "contrast",
+      "say": "A friend says particles stop moving once the ink is evenly spread. Test: they keep moving; there is just no net movement. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea: particles stop"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l6",
+          "text": "ink evenly spread: do particles freeze?",
+          "say": "A friend of mine says that once the ink has spread out evenly, the particles stop moving. Let's test that.",
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "Particles always have energy, so they keep moving",
+          "say": "Particles never stop. The water is still warm, so they keep moving randomly.",
+          "style": "point"
+        },
+        {
+          "id": "l8",
+          "text": "Same number cross each way  →  NO NET movement",
+          "say": "What changes is that now as many particles cross in one direction as in the other. So the overall, the net, movement is zero. That's called dynamic equilibrium: still moving, but no net change.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "show",
+      "say": "Osmosis with a U-tube and the picture: sugar solution on one side, water on the other, partially permeable membrane. Water moves from dilute (high water potential) to concentrated (low water potential). Sugar is too big to pass. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Osmosis"
+        },
+        {
+          "type": "picture",
+          "ref": "main",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l9",
+          "text": "U-tube,  membrane in the middle:  pure water on the left,  sugar solution on the right",
+          "say": "Osmosis is a special kind of diffusion, just for water. Imagine a U-shaped tube with a membrane across the middle. Pure water on one side, and a sugar solution on the other. The levels start equal.",
+          "picture": {
+            "ref": "main",
+            "step": "s1"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l10",
+          "text": "partially permeable membrane:  small water molecules pass,  big sugar molecules cannot",
+          "say": "The membrane has tiny pores. Small water molecules can squeeze through, but the big sugar molecules cannot.",
+          "picture": {
+            "ref": "main",
+            "step": "s2"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "{{Osmosis|ul.p}}: net movement of water molecules from a region of {{high water potential|ul.b}} (dilute) to {{low water potential|ul}} (concentrated), through a partially permeable membrane",
+          "say": "So water moves from the dilute side, where there's lots of water, to the concentrated side, where there's less. That's osmosis: from high water potential to low, through a partially permeable membrane.",
+          "picture": {
+            "ref": "main",
+            "step": "s3"
+          },
+          "style": "rule"
+        },
+        {
+          "id": "l12",
+          "text": "the water level RISES on the sugar side",
+          "say": "And over time the level on the sugar side rises, because water has moved in.",
+          "picture": {
+            "ref": "main",
+            "step": "s4"
+          },
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "contrast",
+      "say": "A friend says sugar particles move across during osmosis to even things out. Test: the sugar is too big for the pores; only water moves. And a friend says concentrated sugar solution has a high water concentration. Test it. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's ideas: who moves?"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l13",
+          "text": "sugar molecules cross to even things out?",
+          "say": "A friend of mine says the sugar moves across to even things out. But look at the membrane again.",
+          "style": "point"
+        },
+        {
+          "id": "l14",
+          "text": "Sugar molecules are too big for the pores: only WATER moves",
+          "say": "The sugar is too big for the pores, so it can't cross. In osmosis, it's the water that moves.",
+          "style": "rule"
+        },
+        {
+          "id": "l15",
+          "text": "concentrated sugar solution:  lots of sugar,  LESS room for water",
+          "say": "Another friend says a strong sugar solution has lots of water, because it's a strong solution. But think: in the same amount of liquid, more sugar crowded in means less space for water.",
+          "style": "point"
+        },
+        {
+          "id": "l16",
+          "text": "Concentrated solution  =  LOW water potential",
+          "say": "So a concentrated solution has a low water potential, and a dilute solution has a high water potential. That's why water moves into the concentrated side.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "show",
+      "say": "Osmosis in cells: plant cell in pure water becomes turgid; animal cell bursts (lysis). In concentrated solution: plant cell plasmolyses; animal cell shrinks (crenation). Mark the four results. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Osmosis in plant and animal cells"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l17",
+          "text": "In PURE WATER:   water flows INTO the cell",
+          "say": "Now put cells in solutions. In pure water, the inside of the cell is more concentrated, so water flows in.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "plant cell:  swells until the wall stops it  →  {{turgid|ul.p}} (firm)",
+          "say": "A plant cell swells, but the strong cell wall stops it bursting. It becomes firm, which we call turgid.",
+          "style": "point"
+        },
+        {
+          "id": "l19",
+          "text": "animal cell:  no wall  →  swells and bursts  →  {{lysis|ul.b}}",
+          "say": "An animal cell has no wall, so it keeps swelling until it bursts. That's called lysis.",
+          "style": "point"
+        },
+        {
+          "id": "l20",
+          "text": "In a CONCENTRATED solution:   water flows OUT of the cell",
+          "say": "In a concentrated solution, the outside has lower water potential, so water flows out of the cell.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "plant cell:  membrane pulls away from the wall  →  {{plasmolysed|ul.p}}",
+          "say": "A plant cell loses water, its membrane pulls away from the wall, and it's plasmolysed.",
+          "style": "point"
+        },
+        {
+          "id": "l22",
+          "text": "animal cell:  shrinks and wrinkles  →  {{crenation|ul.b}}",
+          "say": "An animal cell shrinks and goes wrinkly. That's called crenation.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "show",
+      "say": "Active transport: movement against the concentration gradient, using energy from respiration and carrier proteins. Example: root hair cells taking in nitrate. Compare with diffusion. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Active transport"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l23",
+          "text": "Sometimes a cell needs MORE of something than outside has",
+          "say": "Sometimes a cell needs to take in a substance even though there's already more of it inside than outside. Diffusion would move it the wrong way.",
+          "style": "point"
+        },
+        {
+          "id": "l24",
+          "text": "{{Active transport|ul.p}}: movement of particles from LOWER to HIGHER concentration, against the gradient",
+          "say": "So cells use active transport: moving particles from where there's less to where there's more, against the concentration gradient.",
+          "style": "rule"
+        },
+        {
+          "id": "l25",
+          "text": "needs energy from respiration  and  carrier proteins in the membrane",
+          "say": "That's like pushing something uphill, so it needs energy, released by respiration, and special carrier proteins in the membrane.",
+          "style": "rule"
+        },
+        {
+          "id": "l26",
+          "text": "root hair cells take in nitrate ions from soil water",
+          "say": "For example, root hair cells take in nitrate ions from the soil, even though the cell already has more nitrate than the soil water.",
+          "style": "point"
+        },
+        {
+          "id": "l27",
+          "text": "Diffusion and osmosis: NO energy.   Active transport: needs energy.",
+          "say": "So diffusion and osmosis need no energy, but active transport does.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "apply",
+      "say": "Do it TOGETHER: a root hair cell has a higher concentration of nitrate ions than the soil, yet nitrate moves in. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's work one out together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l28",
+          "text": "nitrate: more inside the root hair cell than in the soil",
+          "say": "Now you help me. A root hair cell has more nitrate inside than the soil water outside. Yet nitrate moves into the cell.",
+          "style": "point"
+        },
+        {
+          "id": "l29",
+          "text": "Against the concentration gradient",
+          "say": "Yes.",
+          "style": "work",
+          "ask": {
+            "prompt": "Is nitrate moving with or against its concentration gradient?",
+            "board": "With or against?",
+            "lookFor": "Against: from low concentration (soil) to high (inside the cell).",
+            "onMiss": "Ask: is it moving from more to less, or from less to more?"
+          }
+        },
+        {
+          "id": "l30",
+          "text": "Active transport",
+          "say": "So which process is it?",
+          "style": "work",
+          "ask": {
+            "prompt": "Which process moves the nitrate in: diffusion, osmosis or active transport?",
+            "board": "Process:",
+            "lookFor": "Active transport.",
+            "onMiss": "Ask: which process can move particles against the gradient?"
+          }
+        },
+        {
+          "id": "l31",
+          "text": "It uses energy from respiration",
+          "say": "And what does it use?",
+          "style": "work",
+          "ask": {
+            "prompt": "What does the cell need to use for this?",
+            "board": "The cell needs:",
+            "lookFor": "Energy released by respiration.",
+            "onMiss": "Ask: pushing something uphill needs what?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "apply",
+      "say": "The child works alone: red blood cell in pure water; plant cell in concentrated sugar solution; the smell of baking spreading. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l32",
+          "text": "red blood cell in pure water      plant cell in strong sugar solution      baking smell",
+          "say": "Your turn to lead. Three situations.",
+          "style": "point"
+        },
+        {
+          "id": "l33",
+          "text": "The red blood cell swells and bursts (lysis)",
+          "say": "First.",
+          "style": "work",
+          "ask": {
+            "prompt": "What happens to a red blood cell in pure water, and why?",
+            "board": "Red blood cell:",
+            "lookFor": "It takes in water by osmosis, swells and bursts (lysis) because it has no cell wall.",
+            "onMiss": "Ask: which way does the water move? Is there a cell wall to stop it?"
+          }
+        },
+        {
+          "id": "l34",
+          "text": "The plant cell loses water: plasmolysed",
+          "say": "Second.",
+          "style": "work",
+          "ask": {
+            "prompt": "What happens to a plant cell in a strong sugar solution?",
+            "board": "Plant cell:",
+            "lookFor": "It loses water by osmosis and becomes plasmolysed: the membrane pulls away from the wall.",
+            "onMiss": "Ask: is the outside more or less concentrated? Which way does the water go?"
+          }
+        },
+        {
+          "id": "l35",
+          "text": "The baking smell spreads by diffusion",
+          "say": "Third.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which process spreads the smell of baking through the house?",
+            "board": "Process:",
+            "lookFor": "Diffusion.",
+            "onMiss": "Ask: particles spreading from high concentration to low: which process?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b10",
+      "kind": "check",
+      "say": "Compare the three processes in the child's own words. Reward reasoning.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Say it in your own words"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l36",
+          "text": "diffusion  /  osmosis  /  active transport",
+          "say": "One last.",
+          "style": "point",
+          "ask": {
+            "prompt": "Why does active transport need energy from respiration, but diffusion does not?",
+            "board": "Why energy?",
+            "lookFor": "Active transport moves particles against the gradient, which needs energy; diffusion goes down the gradient, which happens by itself.",
+            "onMiss": "Ask: which one is like rolling downhill, and which is like pushing uphill?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

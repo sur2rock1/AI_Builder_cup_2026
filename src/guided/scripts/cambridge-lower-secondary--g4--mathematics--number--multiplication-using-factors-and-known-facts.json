@@ -1,0 +1,307 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--multiplication-using-factors-and-known-facts",
+  "title": "Multiplication using factors and known facts",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: you don't need to learn every fact separately; one fact you know can unlock many you don't. Playful tone. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "One fact unlocks many"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "6 × 7 = 42     6 × 14 = ?",
+          "say": "Here's something nobody tells you: you don't have to memorise every multiplication fact. Say you know six times seven is forty-two. Then six times fourteen, which you may not know, is almost free. Let me show you.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Doubling: 14 is double 7, so 6 x 14 is double 6 x 7 = 84. Explain in words: if one factor is doubled and the other stays the same, the product doubles. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Doubling a factor"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "6 × 7 = 42     6 × 14 = ?",
+          "say": "We know six sevens are forty-two. We want six fourteens.",
+          "style": "point"
+        },
+        {
+          "id": "l3",
+          "text": "14 = 2 × 7",
+          "say": "Look at fourteen: it's double seven. It's two sevens.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "6 × 14 = 2 × 42 = 84",
+          "say": "So six fourteens is two lots of six sevens. Two forty-twos. Double forty-two is eighty-four.",
+          "style": "work"
+        },
+        {
+          "id": "l5",
+          "text": "Double one factor  →  the product doubles",
+          "say": "The rule: double one of the numbers, keep the other the same, and the answer doubles.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Halving and swapping: from 6 x 8 = 48 find 3 x 8: 3 is half of 6, so half of 48 = 24. Also order doesn't matter: 8 x 6 = 6 x 8. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Halving and swapping"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l6",
+          "text": "6 × 8 = 48     3 × 8 = ?",
+          "say": "The same idea works the other way round. We know six eights are forty-eight. What about three eights?",
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "3 is half of 6, so half of 48",
+          "say": "Three is half of six, so three eights is half of forty-eight.",
+          "style": "point"
+        },
+        {
+          "id": "l8",
+          "text": "3 × 8 = 24",
+          "say": "Half of forty-eight is twenty-four.",
+          "style": "work"
+        },
+        {
+          "id": "l9",
+          "text": "8 × 6 = 6 × 8 = 48",
+          "say": "And one more trick: you can swap the order. Eight sixes are the same as six eights. So every fact you learn gives you two.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend thinks 6 x 14 = 42 + 14 = 56 (adds 7 more). Test: 6 x 10 is already 60. Detective tone. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "6 × 7 = 42     6 × 14 = ?     (6 × 10 = 60)",
+          "say": "A friend of mine said: fourteen is seven more than seven, so I add fourteen to forty-two. That gives fifty-six. Let's test it.",
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "42 + 14 = 56",
+          "say": "Here's their sum, fifty-six.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "6 × 10 = 60 is already bigger than 56",
+          "say": "But six tens is already sixty, and six fourteens has even more than six tens. So fifty-six is too small.",
+          "style": "point"
+        },
+        {
+          "id": "l13",
+          "text": "Doubling a factor DOUBLES the answer. It doesn't add on.",
+          "say": "Doubling the factor doubles the whole answer. It doesn't just add a bit on.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "Splitting a factor: 5 x 12 where 12 = 3 x 4. Multiply by 3, then by 4. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Splitting a factor"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l14",
+          "text": "5 × 12     12 = 3 × 4",
+          "say": "Here's another trick. Five times twelve. Twelve can be split into three times four, two smaller factors.",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "5 × 3 = 15",
+          "say": "So multiply by the three first: five threes are fifteen.",
+          "style": "work"
+        },
+        {
+          "id": "l16",
+          "text": "15 × 4 = 60",
+          "say": "Then by the four: fifteen fours are sixty. So five twelves are sixty.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "The toolkit in four lines. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your toolkit"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l17",
+          "text": "DOUBLE one factor  →  double the answer",
+          "say": "First tool: double one of the numbers, and the answer doubles as well.",
+          "style": "rule"
+        },
+        {
+          "id": "l18",
+          "text": "HALVE one factor  →  halve the answer",
+          "say": "Second tool: halve one of the numbers, and the answer halves too.",
+          "style": "rule"
+        },
+        {
+          "id": "l19",
+          "text": "SWAP the order  →  same answer",
+          "say": "Third tool: swap which number comes first, and nothing changes.",
+          "style": "rule"
+        },
+        {
+          "id": "l20",
+          "text": "SPLIT a factor into smaller factors, multiply one after the other",
+          "say": "And fourth: break a factor into smaller ones, and multiply one step at a time.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER: 4 x 8 = 32, find 4 x 16. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l21",
+          "text": "4 × 8 = 32     4 × 16 = ?",
+          "say": "Now you help me. We know four eights are thirty-two. We want four sixteens.",
+          "style": "point"
+        },
+        {
+          "id": "l22",
+          "text": "16 = 2 × 8",
+          "say": "Yes, sixteen is double eight.",
+          "style": "work",
+          "ask": {
+            "prompt": "How are 16 and 8 related?",
+            "board": "16 is ___ 8",
+            "lookFor": "16 is double 8.",
+            "onMiss": "Ask: what do you multiply 8 by to get 16?"
+          }
+        },
+        {
+          "id": "l23",
+          "text": "4 × 16 = 2 × 32 = 64",
+          "say": "So the answer doubles too: double thirty-two.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is 4 × 16?",
+            "board": "4 × 16 = ?",
+            "lookFor": "64 (double 32).",
+            "onMiss": "Ask: if 16 is double 8, what happens to the answer 32?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "check",
+      "say": "The child works alone: 5 x 6 = 30 so 5 x 12; 9 x 4 = 36 so 9 x 8; then explain why doubling works. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l24",
+          "text": "5 × 6 = 30     5 × 12 = ?     9 × 4 = 36     9 × 8 = ?     (12 = 2 × 6)",
+          "say": "Your turn to lead. Two facts you know, and two you can now work out without learning them.",
+          "style": "point"
+        },
+        {
+          "id": "l25",
+          "text": "5 × 12 = 2 × 30 = 60",
+          "say": "Twelve is double six, so double thirty.",
+          "style": "work",
+          "ask": {
+            "prompt": "Use 5 × 6 = 30 to work out 5 × 12.",
+            "board": "5 × 12 = ?",
+            "lookFor": "60 (12 is double 6, so double 30).",
+            "onMiss": "Ask: how is 12 related to 6? So what happens to 30?"
+          }
+        },
+        {
+          "id": "l26",
+          "text": "9 × 8 = 2 × 36 = 72",
+          "say": "Eight is double four, so double thirty-six.",
+          "style": "work",
+          "ask": {
+            "prompt": "Use 9 × 4 = 36 to work out 9 × 8.",
+            "board": "9 × 8 = ?",
+            "lookFor": "72 (8 is double 4, so double 36).",
+            "onMiss": "Ask: how is 8 related to 4?"
+          }
+        },
+        {
+          "id": "l27",
+          "text": "Twice as many groups gives twice as many in total",
+          "say": "The reason it works.",
+          "style": "point",
+          "ask": {
+            "prompt": "In your own words: why does doubling a factor double the answer?",
+            "board": "Why does it double?",
+            "lookFor": "Doubling one factor means twice as many equal groups (or twice as big), so twice the total.",
+            "onMiss": "Ask: 5 groups of 6, then 5 groups of 12: how much bigger is each group?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

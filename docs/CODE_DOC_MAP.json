@@ -163,6 +163,25 @@
         "docs/CURRICULUM.md",
         "DECISIONS.md"
       ]
+    },
+    {
+      "sourceGlobs": [
+        "src/parent/**",
+        "scripts/seed-story-learner.ts"
+      ],
+      "docs": [
+        "docs/PARENT_VIEW.md",
+        "docs/FUNCTIONAL_SPEC.md"
+      ]
+    },
+    {
+      "sourceGlobs": [
+        "src/guided/**",
+        "scripts/generate-guided.ts"
+      ],
+      "docs": [
+        "docs/GUIDED_TUTOR.md"
+      ]
     }
   ]
 }

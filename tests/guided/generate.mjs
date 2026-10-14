@@ -29,7 +29,7 @@ ok(prompt.includes('NEVER SKIP A STEP') && prompt.includes('"main"') && prompt.i
 // a lesson that meets every rule
 const pic = pictures[0];
 const line = (id, text, say, extra = {}) => ({ id, text, say, style: 'work', ...extra });
-const ask = (prompt) => ({ prompt, lookFor: 'the reason', onMiss: 'a hint' });
+const ask = (prompt) => ({ prompt, board: 'water moves ... ?', lookFor: 'the reason', onMiss: 'a hint' });
 const goodLesson = {
   version: 1, conceptId: concept.id, title: 'Osmosis',
   beats: [
@@ -42,6 +42,10 @@ const goodLesson = {
     { id: 'b7', kind: 'check', say: 'Check.', board: [], lines: [line('k1', 'plant cell: wall stops it bursting', 'Check.', { style: 'point', ask: ask('Why does a plant cell not burst?') })] },
   ],
 };
+// teaching beats explain, they do not quiz: strip questions from them and give the practice beats four
+goodLesson.beats.forEach((b) => { if (!['apply', 'check'].includes(b.kind)) b.lines.forEach((l) => delete l.ask); });
+goodLesson.beats[5].lines.push(line('a2', 'cell in salt water → water moves out', 'And the other way.', { style: 'point', ask: ask('A cell is in very salty water. Which way does water move?') }));
+goodLesson.beats[6].lines.push(line('k2', 'osmosis needs a membrane', 'Why the membrane matters.', { style: 'point', ask: ask('What must be there for osmosis to happen?') }));
 ok(G.normalizeScript(goodLesson, concept.id, 'x') !== null, 'the sample lesson normalises');
 
 const badLesson = JSON.parse(JSON.stringify(goodLesson));
@@ -86,6 +90,14 @@ function fakeModel(replies) {
   ok(r.errors.some((e) => /only a heading and a picture/.test(e)) && r.errors.some((e) => /asked lines|asks the learner/.test(e)) && r.errors.some((e) => /no step "nope"/.test(e)),
     'D: block text, too few questions and a missing picture step are all caught');
 }
+{ // D2: a question in the middle of teaching, or an asked line with no question for the board, is caught
+  const early = JSON.parse(JSON.stringify(goodLesson));
+  early.beats[1].lines[0].ask = ask('What do you think osmosis is?');      // define beat
+  delete early.beats[5].lines[0].ask.board;                                // apply beat, nothing to write on the board
+  const m = fakeModel([early, early, early]);
+  const r = await G.generateGuidedLesson(source, pictures, pictureRefs, m, { maxAttempts: 3 });
+  ok(r.withheld && r.errors.some((e) => /still being taught/.test(e)) && r.errors.some((e) => /needs "ask\.board"/.test(e)), 'D2: a question during teaching and an asked line without a board question are both caught');
+}
 { // E: garbage answer, then a good one
   const m = fakeModel(['not json', goodLesson, { issues: [{ severity: 'warning', where: 'b1/o1', problem: 'a bit dull' }] }]);
   const r = await G.generateGuidedLesson(source, pictures, pictureRefs, m, {});
@@ -97,7 +109,7 @@ function fakeModel(replies) {
   ok(r.script && r.warnings.some((w) => /^check: .*step is missing/.test(w)), 'F: last draft with only a "number from nowhere" flag goes to the critic and ships with a warning');
 }
 { // the prompt explains asked lines (the answer is written after the learner replies)
-  ok(/never the question, never "ask: \.\.\."/.test(prompt) && /must NOT state the answer/.test(prompt), 'prompt spells out how an asked line works');
+  ok(/TEACH FIRST, ASK AFTER/.test(prompt) && /ask\.board/.test(prompt) && /must NOT state the answer/.test(prompt), 'prompt spells out how an asked line works (teach first, question written on the board)');
   ok(/do not report that/.test(G.buildCriticPrompt(source, pictures, goodLesson)), 'critic is told how asked lines run (no false alarms)');
 }
 console.log(failed ? `\n${failed} check(s) failed` : '\nall generator checks passed');

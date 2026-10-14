@@ -3,7 +3,7 @@
 // NEXT session (the mode is chosen when the voice connection opens).
 
 import React from 'react';
-import type { TutorMode } from './mode';
+import { SHOW_MODE_TOGGLE, type TutorMode } from './mode';
 import { PACES, type Pace } from './pace';
 
 interface Props {
@@ -46,12 +46,19 @@ export const TutorModeSwitch: React.FC<Props> = ({ value, onChange, locked, pace
   const tag = 'pl-2 pr-1 text-[10px] uppercase tracking-[0.14em] text-white/45';
   return (
     <div className="flex items-center gap-2">
-      <div className={pill} title={locked ? 'Applies to your next session' : 'Choose how the tutor teaches this lesson'}>
-        <span className={tag}>Tutor</span>
-        {btn('standard', 'Standard')}
-        {btn('guided', 'Guided')}
-        {locked && <span className="pr-2 pl-1 text-[10px] text-white/45">next session</span>}
-      </div>
+      {SHOW_MODE_TOGGLE ? (
+        <div className={pill} title={locked ? 'Applies to your next session' : 'Choose how the tutor teaches this lesson'}>
+          <span className={tag}>Tutor</span>
+          {btn('standard', 'Standard')}
+          {btn('guided', 'Guided')}
+          {locked && <span className="pr-2 pl-1 text-[10px] text-white/45">next session</span>}
+        </div>
+      ) : (
+        <div className={pill} title="Guided lesson: the tutor teaches step by step on the board">
+          <span className={tag}>Mode</span>
+          <span className="px-3 py-1 text-[12px] font-medium rounded-full bg-white text-[#0C0F16]">Guided</span>
+        </div>
+      )}
       {value === 'guided' && pace && onPaceChange && (
         <div className={pill} title="How fast the tutor goes. Changes apply from the next step of the lesson.">
           <span className={tag}>Pace</span>

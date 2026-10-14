@@ -1,0 +1,381 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--biology--ch1-introducing-living-things--characteristics-and-needs-of-living-things",
+  "title": "Characteristics and needs of living things",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: how do we really know something is alive? A cat, a rock, a growing crystal. Curious and friendly. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "What does 'alive' mean?"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "cat   rock   plant   crystal",
+          "say": "Look at this list. A cat, a rock, a plant, and a crystal. We all know the cat and the plant are alive, and the rock is not. But how do we know? And what about a crystal, which actually grows? Scientists use a checklist of seven life processes, and today we learn it.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "The seven life processes, MRS GREN, one line each with a quick example. Mark the first letter of each IN PLACE as a pink circle on the second line version if wanted; here write them with the letters marked. The tutor explains each in a sentence. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The seven life processes: MRS GREN"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "{{M|circle.p}}ovement  -  an organism, or parts of it, can move",
+          "say": "The seven life processes spell a silly name, M R S G R E N. The first is movement: living things can move, or move parts of themselves, like a plant turning towards the light.",
+          "style": "point"
+        },
+        {
+          "id": "l3",
+          "text": "{{R|circle.p}}espiration  -  releasing energy from food",
+          "say": "Respiration. Living things release energy from their food. We'll look closely at this one.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "{{S|circle.p}}ensitivity  -  detecting and responding to changes",
+          "say": "Sensitivity. Living things detect changes around them and respond, like snatching your hand off a hot pan.",
+          "style": "point"
+        },
+        {
+          "id": "l5",
+          "text": "{{G|circle.p}}rowth  -  getting bigger and developing",
+          "say": "Growth. Living things get bigger and develop.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "{{R|circle.p}}eproduction  -  making new individuals",
+          "say": "Reproduction. Living things make more living things.",
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "{{E|circle.p}}xcretion  -  getting rid of toxic waste",
+          "say": "Excretion. Living things get rid of poisonous waste their bodies make. Another one to look at closely.",
+          "style": "point"
+        },
+        {
+          "id": "l8",
+          "text": "{{N|circle.p}}utrition  -  taking in food",
+          "say": "And nutrition. Living things take in the materials they need, like food.",
+          "style": "point"
+        },
+        {
+          "id": "l9",
+          "text": "Alive = does ALL seven",
+          "say": "A thing is alive only if it carries out all seven. Not just one or two.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Respiration: glucose + oxygen -> carbon dioxide + water + energy, in every living cell. Distinguish from breathing: breathing moves air, respiration is the chemical reaction in cells. Colours: yellow for food, pink for energy. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Respiration: energy from food"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l10",
+          "text": "{{glucose|ul}} + oxygen  →  carbon dioxide + water + {{energy|ul.p}}",
+          "say": "Respiration is a chemical reaction. Glucose, a sugar from food, reacts with oxygen. That gives carbon dioxide, water, and the important part, energy.",
+          "style": "work"
+        },
+        {
+          "id": "l11",
+          "text": "happens inside EVERY living cell",
+          "say": "And it happens inside every single living cell, in plants, animals, even tiny microbes.",
+          "style": "rule"
+        },
+        {
+          "id": "l12",
+          "text": "Breathing = moving air in and out.   Respiration = the reaction in cells.",
+          "say": "So here's the difference. Breathing is moving air in and out of your lungs. Respiration is the chemical reaction that releases energy, inside cells. They're related because breathing brings in the oxygen, but they are not the same thing.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "show",
+      "say": "Excretion vs egestion. Excretion removes toxic waste made by the cells' chemistry, e.g. carbon dioxide and urea. Egestion removes undigested food, which never entered body cells. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Excretion and egestion"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l13",
+          "text": "Excretion = removing toxic waste made by cells",
+          "say": "Excretion means getting rid of waste that was made by the chemical reactions in your cells, like carbon dioxide from respiration, or urea.",
+          "style": "rule"
+        },
+        {
+          "id": "l14",
+          "text": "carbon dioxide (breathed out)    urea (in urine)",
+          "say": "So breathing out carbon dioxide counts as excretion. So does the urea you lose in urine.",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "Egestion = removing undigested food (faeces)",
+          "say": "Egestion is different. Faeces are mostly food that was never digested and never entered the cells of your body. It just went straight through your gut.",
+          "style": "rule"
+        },
+        {
+          "id": "l16",
+          "text": "Never entered a cell  →  not made by cells  →  NOT excretion",
+          "say": "So because it was never inside a cell, never part of the cells' chemistry, egestion is not excretion.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "contrast",
+      "say": "A friend says respiration is the same as breathing. Test with an amoeba (no lungs): it still respires. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea: respiration is breathing"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l17",
+          "text": "amoeba:  one cell, no lungs, no chest",
+          "say": "A friend of mine says respiration just means breathing. Let's test that with an amoeba. It's a single cell that has no lungs, and no chest muscles.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "It still needs energy  →  it still respires",
+          "say": "But an amoeba moves and grows, and that needs energy. So it must be respiring, even though it can't breathe with lungs.",
+          "style": "point"
+        },
+        {
+          "id": "l19",
+          "text": "Respiration happens in cells.  Breathing is just one way to bring in oxygen.",
+          "say": "So respiration is the reaction inside cells. Breathing is only one way some animals bring in the oxygen it needs.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "contrast",
+      "say": "A friend says plants don't excrete because they have no urine. Test: in daylight, photosynthesis makes oxygen that leaves through stomata. Excretion is about waste from cells' chemistry, not about urine. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea: plants don't excrete"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l20",
+          "text": "plants: no urine, no sweat",
+          "say": "Another friend says plants don't excrete, because they don't have urine or sweat. Let's test it.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "daytime:  photosynthesis makes oxygen the plant does not need",
+          "say": "In daylight a plant's cells make more oxygen than they use. The extra is a waste product of their chemistry.",
+          "style": "point"
+        },
+        {
+          "id": "l22",
+          "text": "The extra oxygen leaves through the stomata  =  excretion",
+          "say": "That extra oxygen leaves the leaf through tiny holes called stomata. Waste from the cells' chemistry leaving the body: that is excretion. Plants also lose waste when they shed leaves.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "show",
+      "say": "What living things need to survive: water, mineral nutrients, warmth, gases. The biosphere. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "What living things need"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l23",
+          "text": "water      mineral nutrients      warmth      gases",
+          "say": "To carry out all seven processes, living things need four things: water, mineral nutrients, warmth, and gases, oxygen for respiration, and carbon dioxide for plants to make food.",
+          "style": "point"
+        },
+        {
+          "id": "l24",
+          "text": "biosphere = all the places on Earth where life exists",
+          "say": "And the biosphere is the name for all the places on Earth where life exists: the land, the oceans, rivers, and the lower atmosphere, all added together.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "apply",
+      "say": "Do it TOGETHER: is a growing salt crystal alive? Test it against the seven life processes. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's test a crystal"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l25",
+          "text": "A salt crystal in warm salty water gets bigger over several days",
+          "say": "Now you help me. A salt crystal sits in a dish of salty water. Over several days, as the water evaporates, it gets bigger. Is it alive?",
+          "style": "point"
+        },
+        {
+          "id": "l26",
+          "text": "The crystal shows GROWTH",
+          "say": "Yes, getting bigger is growth.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which life process does the crystal seem to show?",
+            "board": "Life process shown:",
+            "lookFor": "Growth.",
+            "onMiss": "Ask: what is happening to its size?"
+          }
+        },
+        {
+          "id": "l27",
+          "text": "But it does not respire, feed, respond, reproduce, excrete or move by itself",
+          "say": "But think about the rest of the list.",
+          "style": "work",
+          "ask": {
+            "prompt": "Name two life processes the crystal does NOT do.",
+            "board": "Not done:",
+            "lookFor": "Any two of: respiration, nutrition, excretion, sensitivity, reproduction, movement.",
+            "onMiss": "Ask: does a crystal eat? Does it respond when you touch it?"
+          }
+        },
+        {
+          "id": "l28",
+          "text": "Only grows by adding material from outside: NOT alive",
+          "say": "So we say the crystal is not alive. It gets bigger only because new salt is deposited on it, not because it does all seven processes.",
+          "style": "work",
+          "ask": {
+            "prompt": "So is the crystal alive? Why not?",
+            "board": "Alive?",
+            "lookFor": "Not alive: it only does one of the seven life processes.",
+            "onMiss": "Ask: does it do all seven? What is the rule for being alive?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "apply",
+      "say": "The child works alone: excretion or egestion for carbon dioxide breathed out and faeces; and a sensitivity example. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l29",
+          "text": "carbon dioxide from the lungs      faeces      a dog flinching from a hot stove",
+          "say": "Your turn to lead. Three examples.",
+          "style": "point"
+        },
+        {
+          "id": "l30",
+          "text": "Carbon dioxide from the lungs: EXCRETION",
+          "say": "First.",
+          "style": "work",
+          "ask": {
+            "prompt": "Is breathing out carbon dioxide excretion or egestion?",
+            "board": "Excretion or egestion?",
+            "lookFor": "Excretion: it is a waste made by the cells' chemistry (respiration).",
+            "onMiss": "Ask: was carbon dioxide made inside cells?"
+          }
+        },
+        {
+          "id": "l31",
+          "text": "Faeces: EGESTION",
+          "say": "Second.",
+          "style": "work",
+          "ask": {
+            "prompt": "Is passing faeces excretion or egestion? Why?",
+            "board": "Excretion or egestion?",
+            "lookFor": "Egestion: faeces are undigested food that never entered body cells.",
+            "onMiss": "Ask: did the undigested food ever get inside a cell?"
+          }
+        },
+        {
+          "id": "l32",
+          "text": "A dog flinching from a hot stove: SENSITIVITY",
+          "say": "Third.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which life process is the dog showing?",
+            "board": "Life process:",
+            "lookFor": "Sensitivity: it detected a change and responded.",
+            "onMiss": "Ask: it noticed something around it and responded. Which letter of MRS GREN?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b10",
+      "kind": "check",
+      "say": "Explain respiration vs breathing in the child's own words. Reward reasoning.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Say it in your own words"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l33",
+          "text": "Respiration releases energy in cells; breathing moves air",
+          "say": "One last, and it's a big one.",
+          "style": "point",
+          "ask": {
+            "prompt": "In your own words, how is respiration different from breathing?",
+            "board": "What is the difference?",
+            "lookFor": "Breathing is moving air in and out of the lungs; respiration is the chemical reaction in cells that releases energy from food using oxygen.",
+            "onMiss": "Ask: where does each one happen? In the lungs or in the cells?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

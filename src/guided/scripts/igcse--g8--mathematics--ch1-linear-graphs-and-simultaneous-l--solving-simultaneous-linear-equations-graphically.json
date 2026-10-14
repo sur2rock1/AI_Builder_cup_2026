@@ -1,0 +1,359 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-graphically",
+  "title": "Solving simultaneous linear equations graphically",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: two equations, one answer that works for both. We find it by drawing. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Two equations, one answer"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "y = x + 1     y = −x + 5",
+          "say": "Here are two equations at the same time. We call them simultaneous equations. We want one pair of x and y that works for both of them together. And there's a lovely way to find it: draw them.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Each equation is a line; the solution is the point on BOTH lines. Check (2, 3) works in both. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Solution = the crossing point"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "y = x + 1     y = −x + 5     (2, 3)",
+          "say": "Each equation is a straight line. A point on the first line makes the first equation true. A point on the second line makes the second true. So a point on both lines makes both true. That's the solution.",
+          "style": "rule"
+        },
+        {
+          "id": "l3",
+          "text": "y = x + 1:  3 = 2 + 1  ✓",
+          "say": "Let's test the point two, three. In the first equation, y is three, and x plus one is two plus one, which is three. True.",
+          "style": "work"
+        },
+        {
+          "id": "l4",
+          "text": "y = −x + 5:  3 = −2 + 5  ✓",
+          "say": "In the second, minus x plus five is minus two plus five, which is three. Also true. So two, three works in both: it's the solution.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Make a table of points for each line and see that they share (2, 3). No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Finding the crossing from tables"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l5",
+          "text": "y = x + 1     y = −x + 5",
+          "say": "How would we find that point if we didn't know it? Draw both lines using a few points each.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "Line 1:  (0, 1)   (2, 3)   (4, 5)",
+          "say": "For the first line, x zero gives y one, x two gives three, x four gives five.",
+          "style": "work"
+        },
+        {
+          "id": "l7",
+          "text": "Line 2:  (0, 5)   (2, 3)   (4, 1)",
+          "say": "For the second line, x zero gives y five, x two gives three, x four gives one.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "Both lines pass through (2, 3)",
+          "say": "Look: both lists contain two, three. That's where the lines cross. The crossing point is the solution: x equals two, y equals three.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "show",
+      "say": "Three possible outcomes. Intersect: one solution. Parallel: none. Same line: infinitely many. Step the picture through the three cases. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Three things can happen"
+        },
+        {
+          "type": "picture",
+          "ref": "main",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l9",
+          "text": "y = x + 1 & y = x + 3  (parallel);   y = 2x + 1 & 2y = 4x + 2  (same line)",
+          "say": "Two straight lines can meet in three different ways. Let me show you, with some examples as we go.",
+          "picture": {
+            "ref": "main",
+            "step": "s1"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l10",
+          "text": "Different gradients  →  cross ONCE  →  1 solution",
+          "say": "If the gradients are different, the lines cross at exactly one point, so there's exactly one solution. Like our first example.",
+          "picture": {
+            "ref": "main",
+            "step": "s2"
+          },
+          "style": "rule"
+        },
+        {
+          "id": "l11",
+          "text": "Same gradient, different intercepts  →  parallel  →  NO solution",
+          "say": "If the gradients are the same but the lines start in different places, like y equals x plus one and y equals x plus three, they're parallel and never meet. No solution.",
+          "picture": {
+            "ref": "main",
+            "step": "s3"
+          },
+          "style": "rule"
+        },
+        {
+          "id": "l12",
+          "text": "The very same line  →  every point shared  →  INFINITELY many solutions",
+          "say": "And if two equations are secretly the same line, like y equals two x plus one and two y equals four x plus two, every point is shared, so there are infinitely many solutions.",
+          "picture": {
+            "ref": "main",
+            "step": "s4"
+          },
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "contrast",
+      "say": "A friend says two lines must always cross. Test with y = x + 1 and y = x + 3: setting them equal gives 1 = 3, impossible. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l13",
+          "text": "y = x + 1     y = x + 3",
+          "say": "A friend of mine insists any two lines must cross somewhere. Let's test it on these two.",
+          "style": "point"
+        },
+        {
+          "id": "l14",
+          "text": "x + 1 = x + 3   →   1 = 3 ?!",
+          "say": "If they crossed, there'd be an x that makes the two y-values equal, so x plus one would equal x plus three. Take x away from both sides and we get one equals three. Impossible!",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "Always 2 apart: they never meet",
+          "say": "The second line is always two units above the first. They're parallel, so no crossing, so no solution.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "contrast",
+      "say": "Reading a graph inaccurately. A friend reads the crossing of y = x + 1 and y = -x + 5 as (2, 4). Test it by substituting into BOTH equations. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's reading"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l16",
+          "text": "y = x + 1     y = −x + 5     friend says (2, 4)",
+          "say": "From a hand-drawn graph, a friend reads the crossing as two, four. Graphs can be a bit off, so let's check it properly.",
+          "style": "point"
+        },
+        {
+          "id": "l17",
+          "text": "y = x + 1:  4 = 2 + 1 ?  No, 2 + 1 = 3  ✗",
+          "say": "Put it into the first equation. The y would be four, but x plus one is two plus one, which is three. It fails, so it's not on the first line.",
+          "style": "work"
+        },
+        {
+          "id": "l18",
+          "text": "(2, 3) works in both  ✓",
+          "say": "The point two, three, though, works in both equations.",
+          "style": "work"
+        },
+        {
+          "id": "l19",
+          "text": "ALWAYS check a graph answer in BOTH equations",
+          "say": "So after reading a point off a graph, always substitute it into both equations. That's what turns an estimate into a proven answer.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER: y = 2x and y = -x + 6. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l20",
+          "text": "y = 2x     y = −x + 6     x = 2",
+          "say": "Now you help me. Two lines, and we'll try x equals two on both of them.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "y = 2(2) = 4",
+          "say": "The first line.",
+          "style": "work",
+          "ask": {
+            "prompt": "For y = 2x, what is y when x = 2?",
+            "board": "x = 2 gives y = ?",
+            "lookFor": "y = 4.",
+            "onMiss": "Ask: what is 2 times 2?"
+          }
+        },
+        {
+          "id": "l22",
+          "text": "y = −2 + 6 = 4",
+          "say": "The second line.",
+          "style": "work",
+          "ask": {
+            "prompt": "For y = −x + 6, what is y when x = 2?",
+            "board": "x = 2 gives y = ?",
+            "lookFor": "y = 4.",
+            "onMiss": "Ask: minus 2 plus 6 is?"
+          }
+        },
+        {
+          "id": "l23",
+          "text": "Both give y = 4: the solution is (2, 4)",
+          "say": "Both lines give the same y at x equals two, so they cross there.",
+          "style": "work",
+          "ask": {
+            "prompt": "So what is the solution of the pair of equations?",
+            "board": "Solution = (x, y) = ?",
+            "lookFor": "(2, 4).",
+            "onMiss": "Ask: both lines give y = 4 at x = 2. What is the point?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "apply",
+      "say": "The child works alone: y = x - 1 and y = -x + 7 at x = 4; then how many solutions for y = 3x + 2 and y = 3x - 1. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l24",
+          "text": "y = x − 1     y = −x + 7     x = 4",
+          "say": "Your turn to lead. Try x equals four on both lines.",
+          "style": "point"
+        },
+        {
+          "id": "l25",
+          "text": "y = 4 − 1 = 3  and  y = −4 + 7 = 3",
+          "say": "Both lines give the same y.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is y on each line when x = 4? What is the solution?",
+            "board": "Both give y = ?  Solution = ?",
+            "lookFor": "y = 3 on both, so the solution is (4, 3).",
+            "onMiss": "Ask: work out 4 − 1, then −4 + 7."
+          }
+        },
+        {
+          "id": "l26",
+          "text": "y = 3x + 2     y = 3x − 1",
+          "say": "Last one: how many solutions here?",
+          "style": "point",
+          "ask": {
+            "prompt": "How many solutions do y = 3x + 2 and y = 3x − 1 have, and why?",
+            "board": "Number of solutions = ?",
+            "lookFor": "None: the same gradient (3) but different intercepts, so parallel lines that never meet.",
+            "onMiss": "Ask: compare the gradients. Compare the intercepts."
+          }
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "check",
+      "say": "Explain how to know the number of solutions without drawing. Reward reasoning.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Say it in your own words"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l27",
+          "text": "1 solution · 0 solutions · infinitely many",
+          "say": "The big picture.",
+          "style": "point",
+          "ask": {
+            "prompt": "How can you tell, from the equations alone, whether two lines cross once, never, or are the same line?",
+            "board": "How do I decide?",
+            "lookFor": "Compare gradients: different means one solution; the same gradient with different intercepts means none; the same gradient and intercept means infinitely many.",
+            "onMiss": "Ask: what do you look at first, the gradient or the intercept?"
+          }
+        },
+        {
+          "id": "l28",
+          "text": "Check in BOTH equations",
+          "say": "And the safety net.",
+          "style": "point",
+          "ask": {
+            "prompt": "Once you read a solution off a graph, how do you prove it is right?",
+            "board": "How to prove it?",
+            "lookFor": "Substitute x and y into both equations; both must be true.",
+            "onMiss": "Ask: how many equations must the point satisfy?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

@@ -1,0 +1,391 @@
+{
+  "version": 1,
+  "conceptId": "igcse--g8--mathematics--ch2-linear-inequalities--inequality-notation-and-properties-of-inequalities",
+  "title": "Inequality notation and properties of inequalities",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open like a teacher: not everything in maths is equal; sometimes we just say bigger or smaller. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "When things are not equal"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "x > 4",
+          "say": "Most of the equations you've seen say that two things are equal. But in real life we often say things like: you must be taller than this, or you need at least that many points. Maths has symbols for that, and today we learn them, and how to work with them.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "The four symbols and what they mean, with a number example each. Stress at least and at most. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The four symbols"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "5 > 3      >  means  greater than",
+          "say": "The first symbol, which looks like an arrow head. Five is greater than three. The open end of the symbol faces the bigger number.",
+          "style": "rule"
+        },
+        {
+          "id": "l3",
+          "text": "2 < 7      <  means  less than",
+          "say": "Two is less than seven. The point of the symbol faces the smaller number.",
+          "style": "rule"
+        },
+        {
+          "id": "l4",
+          "text": "x ≥ 4      ≥  means  greater than or equal to  (at least)",
+          "say": "With a little line underneath, we also allow equal. x is at least four means x can be four, or anything bigger.",
+          "style": "rule"
+        },
+        {
+          "id": "l5",
+          "text": "x ≤ 4      ≤  means  less than or equal to  (at most)",
+          "say": "And x is at most four means x can be four, or anything smaller.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Adding or subtracting the same number on both sides keeps the inequality; so does multiplying by a positive number. Show with 3 < 7. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "What you can do to both sides"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l6",
+          "text": "3 < 7",
+          "say": "Here's a true statement, three is less than seven. What can we do to both sides without breaking it?",
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "Add 2 to both sides:   3 + 2 < 7 + 2   →   5 < 9  ✓",
+          "say": "Add two to both sides: five and nine. Five is still less than nine. Still true. Subtracting works the same way.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "Multiply both sides by 2:   3 × 2 < 7 × 2   →   6 < 14  ✓",
+          "say": "Multiply both sides by two, a positive number: six and fourteen. Still true. Dividing by a positive number is also fine.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "show",
+      "say": "The surprise: multiplying or dividing by a NEGATIVE number flips the inequality. 3 < 7 times -2 gives -6 and -14; -6 > -14. Explain with the number line. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The twist: negative numbers"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l9",
+          "text": "3 < 7     (times −2)",
+          "say": "Now the surprise. Same starting statement.",
+          "style": "point"
+        },
+        {
+          "id": "l10",
+          "text": "Multiply both sides by −2:   3 × (−2) = −6,   7 × (−2) = −14",
+          "say": "Multiply both sides by minus two. Three times minus two is minus six. Seven times minus two is minus fourteen.",
+          "style": "work"
+        },
+        {
+          "id": "l11",
+          "text": "−6  and  −14  on the number line:  −14 is further LEFT",
+          "say": "Where are they on the number line? Minus fourteen is much further to the left, so it's the smaller one.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "−6 > −14   ← the sign FLIPPED",
+          "say": "So minus six is greater than minus fourteen. The less-than turned into a greater-than.",
+          "style": "rule"
+        },
+        {
+          "id": "l13",
+          "text": "Multiply or divide by a NEGATIVE  →  FLIP the sign",
+          "say": "That's the golden rule. Multiply or divide both sides by a negative number, and the inequality sign flips.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "contrast",
+      "say": "Strict vs inclusive. x > 4 does NOT include 4 (open circle), x >= 4 does (solid dot). A friend says x > 4 includes 4. Test with 4 > 4. The picture steps through. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Is 4 included?"
+        },
+        {
+          "type": "picture",
+          "ref": "contrast:strict-vs-inclusive-confusion",
+          "step": "s1"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l14",
+          "text": "x > 4      x ≥ 4",
+          "say": "A friend of mine says x greater than four includes four, so they'd mark four with a solid dot. Let's test it.",
+          "style": "point"
+        },
+        {
+          "id": "l15",
+          "text": "Is 4 > 4 true?   No!  4 is not greater than 4",
+          "say": "If x were four, would four be greater than four? No. So four is not allowed for x greater than four.",
+          "picture": {
+            "ref": "contrast:strict-vs-inclusive-confusion",
+            "step": "s2"
+          },
+          "style": "point"
+        },
+        {
+          "id": "l16",
+          "text": "x > 4:  open circle ○ at 4  (4 not included)",
+          "say": "So for strictly greater than, we draw an open circle at four. It says: stop just short of this number.",
+          "picture": {
+            "ref": "contrast:strict-vs-inclusive-confusion",
+            "step": "s3"
+          },
+          "style": "rule"
+        },
+        {
+          "id": "l17",
+          "text": "x ≥ 4:  solid dot ● at 4  (4 included)",
+          "say": "But for greater than or equal to, four is allowed, because four is equal to four. So we draw a solid dot.",
+          "picture": {
+            "ref": "contrast:strict-vs-inclusive-confusion",
+            "step": "s4"
+          },
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "contrast",
+      "say": "Forgetting to flip: -2x < 6. A friend answers x < -3. Test with x = 0, which makes -2x < 6 true but x < -3 false. Correct: x > -3. Detective tone, no questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l18",
+          "text": "−2x < 6",
+          "say": "Here's an inequality: minus two x is less than six. We want x on its own, so we divide by minus two.",
+          "style": "point"
+        },
+        {
+          "id": "l19",
+          "text": "Friend: x < −3     (forgot to flip)",
+          "say": "A friend divides six by minus two to get minus three, and keeps the sign. They say x is less than minus three. Let's test it with a simple value of x. Try the value zero.",
+          "style": "point"
+        },
+        {
+          "id": "l20",
+          "text": "−2(0) = 0",
+          "say": "Put zero into the original. Minus two times zero is zero.",
+          "style": "work"
+        },
+        {
+          "id": "l21",
+          "text": "0 < 6 is TRUE, so x = 0 is a solution.  But 0 < −3 is FALSE",
+          "say": "Zero is less than six, so zero is a solution of the original. But zero is not less than minus three. So their answer wrongly rules out zero.",
+          "style": "point"
+        },
+        {
+          "id": "l22",
+          "text": "Divide by −2  →  FLIP:   x > −3",
+          "say": "The fix: dividing by a negative flips the sign. The correct answer is x greater than minus three.",
+          "style": "rule"
+        },
+        {
+          "id": "l23",
+          "text": "Check x = 0:   0 > −3  ✓",
+          "say": "And now zero is allowed, which matches.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "rule",
+      "say": "The rules summarised. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The rules"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l24",
+          "text": "Add / subtract the same number  →  sign stays",
+          "say": "One. Add or subtract the same number on both sides: the sign stays.",
+          "style": "rule"
+        },
+        {
+          "id": "l25",
+          "text": "Multiply / divide by a POSITIVE  →  sign stays",
+          "say": "Two. Multiply or divide by a positive number: the sign stays.",
+          "style": "rule"
+        },
+        {
+          "id": "l26",
+          "text": "Multiply / divide by a NEGATIVE  →  sign FLIPS",
+          "say": "Three. Multiply or divide by a negative number: the sign flips.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "apply",
+      "say": "Do three TOGETHER. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do it together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l27",
+          "text": "6 > 2",
+          "say": "Now you help me. Start with six is greater than two.",
+          "style": "point"
+        },
+        {
+          "id": "l28",
+          "text": "9 > 5",
+          "say": "Add three to both sides.",
+          "style": "work",
+          "ask": {
+            "prompt": "Add 3 to both sides of 6 > 2. What do you get?",
+            "board": "? > ?",
+            "lookFor": "9 > 5.",
+            "onMiss": "Ask: 6 + 3 and 2 + 3."
+          }
+        },
+        {
+          "id": "l29",
+          "text": "−6 < −2",
+          "say": "Now multiply both sides by minus one.",
+          "style": "work",
+          "ask": {
+            "prompt": "Multiply both sides of 6 > 2 by −1. What do you get?",
+            "board": "? ? ?",
+            "lookFor": "−6 < −2 (the sign flips).",
+            "onMiss": "Ask: is −6 to the left or right of −2? And what did we say about negatives?"
+          }
+        },
+        {
+          "id": "l30",
+          "text": "−3x > 12",
+          "say": "One more with a letter: minus three x is greater than twelve.",
+          "style": "point"
+        },
+        {
+          "id": "l31",
+          "text": "x < −4",
+          "say": "Divide both sides by minus three, and flip.",
+          "style": "work",
+          "ask": {
+            "prompt": "Solve −3x > 12.",
+            "board": "x ? ?",
+            "lookFor": "x < −4 (dividing by −3 flips the sign).",
+            "onMiss": "Ask: 12 ÷ (−3) is −4. Did we divide by a negative? What happens to the sign?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b9",
+      "kind": "apply",
+      "say": "The child works alone: x - 5 >= 2 and -x < 3. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l32",
+          "text": "x − 5 ≥ 2     −x < 3",
+          "say": "Your turn to lead. Two inequalities to solve.",
+          "style": "point"
+        },
+        {
+          "id": "l33",
+          "text": "x ≥ 7",
+          "say": "Add five to both sides; the sign stays.",
+          "style": "work",
+          "ask": {
+            "prompt": "Solve x − 5 ≥ 2.",
+            "board": "x ? ?",
+            "lookFor": "x ≥ 7.",
+            "onMiss": "Ask: what do you add to both sides to get x on its own?"
+          }
+        },
+        {
+          "id": "l34",
+          "text": "x > −3",
+          "say": "Multiply both sides by minus one: a negative, so the sign flips.",
+          "style": "work",
+          "ask": {
+            "prompt": "Solve −x < 3.",
+            "board": "x ? ?",
+            "lookFor": "x > −3 (multiplying by −1 flips the sign).",
+            "onMiss": "Ask: −x means −1 times x. What do you multiply by? What happens to the sign?"
+          }
+        },
+        {
+          "id": "l35",
+          "text": "A negative changes the order: bigger becomes smaller",
+          "say": "The reason it flips.",
+          "style": "point",
+          "ask": {
+            "prompt": "In your own words: why does the sign flip when you multiply by a negative?",
+            "board": "Why does it flip?",
+            "lookFor": "Negatives reverse the order on the number line: a bigger number becomes a smaller (further left) negative.",
+            "onMiss": "Ask: 3 < 7 but −3 and −7: which is bigger?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

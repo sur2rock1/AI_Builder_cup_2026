@@ -1,0 +1,301 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--adding-and-subtracting-near-multiples-of-10",
+  "title": "Adding and subtracting near multiples of 10",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open with a playful 'shortcut' hook: 45 + 19 looks awkward but there is a trick, and we will learn it. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A shortcut for 9s and 1s"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "45 + 19",
+          "say": "Forty-five plus nineteen. Ugh, nineteen is awkward. But nineteen is just one tiny step away from a number we love, and that's the secret.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Near multiples of 10: numbers just over or under, ending in 9, 8, 1 or 2. 19 = 20 - 1, 21 = 20 + 1, 29 = 30 - 1. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Numbers next to a ten"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l2",
+          "text": "19 = 20 − 1",
+          "say": "A near multiple of ten is a number sitting right next to a multiple of ten. Nineteen is just one less than twenty.",
+          "style": "rule"
+        },
+        {
+          "id": "l3",
+          "text": "21 = 20 + 1",
+          "say": "Twenty-one is just one more than twenty.",
+          "style": "rule"
+        },
+        {
+          "id": "l4",
+          "text": "29 = 30 − 1      38 = 40 − 2      32 = 30 + 2",
+          "say": "Twenty-nine is one less than thirty, thirty-eight is two less than forty, and thirty-two is two more than thirty.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Add 19 by adding 20 and then taking 1 back (compensate). Walk through 45 + 19 = 64. Use a story: pay with a 20 note, get 1 change. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Adding 19"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l5",
+          "text": "45 + 19 = 45 + {{20|ul.p}} − {{1|ul}}",
+          "say": "So to add nineteen, I add twenty instead, because twenty is easy, and then I fix it.",
+          "style": "point"
+        },
+        {
+          "id": "l6",
+          "text": "45 + 20 = 65",
+          "say": "Forty-five plus twenty is sixty-five.",
+          "style": "work"
+        },
+        {
+          "id": "l7",
+          "text": "65 − 1 = 64",
+          "say": "But I added one too many, because nineteen is one less than twenty. So I take that one back: sixty-four.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "Add a bit too much, then take the extra back",
+          "say": "That fix-up has a name, compensating. Like paying with a twenty-dollar note for something that costs nineteen: you hand over too much, then get one dollar change.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend adds 20 and then ADDS 1 (45 + 19 = 66). Test with an estimate and show the fix goes the other way. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l9",
+          "text": "45 + 19 → 45 + 20 + 1 = 66 ?",
+          "say": "A friend of mine did the first step the same, adding twenty to get sixty-five. But then they added one more, and said sixty-six.",
+          "style": "point"
+        },
+        {
+          "id": "l10",
+          "text": "19 is LESS than 20, so 45 + 19 is less than 65",
+          "say": "Let's test it. Nineteen is smaller than twenty, so forty-five plus nineteen must be less than forty-five plus twenty. It can't be sixty-six!",
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "Added too much → take it BACK",
+          "say": "We added too much, so the fix is to take away. Always ask: did I add too much or too little?",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "Subtracting 19 and adding/subtracting 21: 63 - 19 = 63 - 20 + 1; 36 + 21 = 36 + 20 + 1; 58 - 21 = 58 - 20 - 1. Explain the direction of the fix each time. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The other cases"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l11b",
+          "text": "63 − 19     36 + 21     58 − 21     (use 20, fix by 1)",
+          "say": "Three more to try, using the same idea: round to twenty, then fix by one.",
+          "style": "point"
+        },
+        {
+          "id": "l12",
+          "text": "63 − 19 = 63 − 20 + 1 = 44",
+          "say": "To subtract nineteen, take away twenty, which is one too many, so give one back. Sixty-three minus twenty is forty-three, plus one is forty-four.",
+          "style": "work"
+        },
+        {
+          "id": "l13",
+          "text": "36 + 21 = 36 + 20 + 1 = 57",
+          "say": "To add twenty-one, add twenty, and then one more, because twenty-one is one more than twenty. Fifty-six, fifty-seven.",
+          "style": "work"
+        },
+        {
+          "id": "l14",
+          "text": "58 − 21 = 58 − 20 − 1 = 37",
+          "say": "To subtract twenty-one, take away twenty, then one more. Thirty-eight, then thirty-seven.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "Summary rule with direction: 19 or 29 etc: +/-ten then fix opposite; 21 or 31: do the same direction. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The rule in one line"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l15",
+          "text": "Round to the nearby ten, then FIX the difference",
+          "say": "So the whole trick: round the awkward number to its nearby ten, do the easy sum, then fix the small difference.",
+          "style": "rule"
+        },
+        {
+          "id": "l16",
+          "text": "Rounded UP (19, 29): undo.   Rounded DOWN (21, 31): carry on.",
+          "say": "If we rounded up, as with nineteen, we fix by going back. If we rounded down, as with twenty-one, we carry on in the same direction.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER: 52 + 29. Questions written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together: 52 + 29"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l17",
+          "text": "52 + 29     (29 is 1 less than 30)",
+          "say": "Now you help me. Fifty-two plus twenty-nine.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "29 is near 30",
+          "say": "Twenty-nine is one less than thirty, so we'll add thirty.",
+          "style": "work",
+          "ask": {
+            "prompt": "29 is close to which multiple of ten?",
+            "board": "29 is close to ___",
+            "lookFor": "30.",
+            "onMiss": "Ask: what ten is just above 29?"
+          }
+        },
+        {
+          "id": "l19",
+          "text": "52 + 30 = 82",
+          "say": "Fifty-two plus thirty is eighty-two.",
+          "style": "work",
+          "ask": {
+            "prompt": "What is 52 + 30?",
+            "board": "52 + 30 = ?",
+            "lookFor": "82.",
+            "onMiss": "Ask: add 3 tens to 52."
+          }
+        },
+        {
+          "id": "l20",
+          "text": "82 − 1 = 81",
+          "say": "But we added one too many, so one comes back.",
+          "style": "work",
+          "ask": {
+            "prompt": "Did we add too much or too little? So what do we do to fix it?",
+            "board": "Fix: 82 ___ 1 = ?",
+            "lookFor": "Too much, so subtract 1: 81.",
+            "onMiss": "Ask: is 29 more or less than 30?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "check",
+      "say": "The child works alone: 74 - 19; 38 + 21; explain the fix. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l20b",
+          "text": "74 − 19     38 + 21",
+          "say": "Your turn to lead. Two sums to do.",
+          "style": "point"
+        },
+        {
+          "id": "l21",
+          "text": "74 − 19 = 55",
+          "say": "First, seventy-four minus nineteen.",
+          "style": "work",
+          "ask": {
+            "prompt": "Work out 74 − 19. Tell me your steps.",
+            "board": "74 − 19 = ?",
+            "lookFor": "55 (74 − 20 = 54, then + 1).",
+            "onMiss": "Ask: take away 20 first. Was that too much or too little?"
+          }
+        },
+        {
+          "id": "l22",
+          "text": "38 + 21 = 59",
+          "say": "Now thirty-eight plus twenty-one.",
+          "style": "work",
+          "ask": {
+            "prompt": "Work out 38 + 21.",
+            "board": "38 + 21 = ?",
+            "lookFor": "59 (38 + 20 = 58, then + 1).",
+            "onMiss": "Ask: add 20 first. Is 21 more or less than 20?"
+          }
+        },
+        {
+          "id": "l23",
+          "text": "Check: did I go over or under? Then fix the other way",
+          "say": "One more idea to remember.",
+          "style": "point",
+          "ask": {
+            "prompt": "In your own words: when do we take the extra back, and when do we add on?",
+            "board": "When do we take back?",
+            "lookFor": "Take back when we added/took too much (rounded up, like 19); carry on when 21 is more than 20.",
+            "onMiss": "Ask: is 19 more or less than 20? Is 21?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

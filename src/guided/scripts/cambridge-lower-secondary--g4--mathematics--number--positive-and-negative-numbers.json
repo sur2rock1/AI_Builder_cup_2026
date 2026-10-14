@@ -1,0 +1,289 @@
+{
+  "version": 1,
+  "conceptId": "cambridge-lower-secondary--g4--mathematics--number--positive-and-negative-numbers",
+  "title": "Positive and negative numbers",
+  "beats": [
+    {
+      "id": "b1",
+      "kind": "orient",
+      "say": "Open with a cold morning: the temperature goes below zero. Say we will meet numbers smaller than zero. Light and curious. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Numbers below zero"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l1",
+          "text": "-3°C",
+          "say": "Imagine it's a very cold morning, and the weather says minus three degrees. Minus three? How can a number be less than zero? That's today's mystery.",
+          "style": "point"
+        },
+        {
+          "id": "l2",
+          "text": "Today: negative numbers",
+          "say": "Until now you've used numbers from zero upwards. Today we cross zero and go the other way, into negative numbers.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "kind": "define",
+      "say": "Number line: zero in the middle, positives to the right, negatives to the left with a minus sign. Bigger as you go right, smaller as you go left. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The number line"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l3",
+          "text": "-3  -2  -1   0   1   2   3",
+          "say": "Here's a number line, with zero in the middle. Zero is special: it's neither positive nor negative.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "right → positive, bigger     left → negative, smaller",
+          "say": "Numbers to the right of zero are positive, and they get bigger as we go right. Numbers to the left of zero are negative. They have a minus sign, and they get smaller as we go left.",
+          "style": "rule"
+        },
+        {
+          "id": "l5",
+          "text": "-3 is 3 steps LEFT of zero",
+          "say": "So minus three is three steps to the left of zero.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "Thermometer: a vertical number line. Above zero positive, below zero negative. Show temperatures falling 2, 1, 0, -1, -2. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The thermometer"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l6",
+          "text": "a thermometer is a number line standing up",
+          "say": "A thermometer is just a number line standing upright. Going up, the numbers get bigger. Going down, they get smaller.",
+          "style": "point"
+        },
+        {
+          "id": "l7",
+          "text": "2°C → 1°C → 0°C → -1°C → -2°C",
+          "say": "Let's watch it get colder. Two degrees, one degree, zero, and then it keeps going: minus one, minus two. Every step down is one degree colder.",
+          "style": "work"
+        },
+        {
+          "id": "l8",
+          "text": "-2°C is colder than 0°C",
+          "say": "Minus two is two degrees below freezing. It's colder than zero, so minus two is less than zero.",
+          "style": "point"
+        }
+      ]
+    },
+    {
+      "id": "b4",
+      "kind": "contrast",
+      "say": "A friend thinks -8 is bigger than -2 because 8 is bigger than 2. Test it: which is colder? Show -8 is further left, so smaller. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "A friend's idea"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l9",
+          "text": "-8  or  -2 ?",
+          "say": "A friend of mine says minus eight is bigger than minus two, because eight is bigger than two. Let's test it like detectives. Think about temperatures.",
+          "style": "point"
+        },
+        {
+          "id": "l10",
+          "text": "-8°C is much colder than -2°C",
+          "say": "Minus eight degrees is far colder than minus two degrees. The colder one is the smaller number.",
+          "style": "point"
+        },
+        {
+          "id": "l11",
+          "text": "-8 < -2",
+          "say": "On the number line, minus eight is further to the left, so it's less. With negatives, a bigger digit means further below zero, so a smaller number.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b5",
+      "kind": "method",
+      "say": "Ordering mixed numbers using the number line: -5, 2, -1, 0. Place each, read left to right. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Ordering with a number line"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l12",
+          "text": "-5   2   -1   0",
+          "say": "Let's order these four, from smallest to greatest. The number line is our friend.",
+          "style": "point"
+        },
+        {
+          "id": "l13",
+          "text": "-5  -1  0  2",
+          "say": "Minus five is furthest left, then minus one, then zero, then two on the right. Reading left to right gives smallest to greatest.",
+          "style": "work"
+        },
+        {
+          "id": "l14",
+          "text": "Left to right = smallest to greatest",
+          "say": "Whenever you're stuck, picture the number line and read left to right.",
+          "style": "rule"
+        }
+      ]
+    },
+    {
+      "id": "b6",
+      "kind": "rule",
+      "say": "Moving across zero: temperature at -4 rises by 3 -> -1; at 2 falls by 5 -> -3. Count steps on the line. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Counting across zero"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l15",
+          "text": "It is -4°C and the temperature rises by 3",
+          "say": "Say it's minus four degrees and it warms up by three. Warming up means moving right.",
+          "style": "point"
+        },
+        {
+          "id": "l16",
+          "text": "-4 → -3 → -2 → -1",
+          "say": "One step to minus three, two steps to minus two, three steps to minus one. We're still below zero.",
+          "style": "work"
+        },
+        {
+          "id": "l17",
+          "text": "It is 2°C and the temperature falls by 5",
+          "say": "Now it's two degrees and it drops by five. Dropping means moving left, and we'll cross zero on the way.",
+          "style": "point"
+        },
+        {
+          "id": "l18",
+          "text": "2 → 1 → 0 → -1 → -2 → -3",
+          "say": "Five steps down: one, zero, minus one, minus two, minus three. Crossing zero is where people slip, so count the steps one by one.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b7",
+      "kind": "apply",
+      "say": "Do one TOGETHER: order -6, 3, -2, 0 from smallest. Questions are written on the board first.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Let's do one together"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l19",
+          "text": "-6   3   -2   0",
+          "say": "Now you help me. Put these four numbers in order, smallest first.",
+          "style": "point"
+        },
+        {
+          "id": "l20",
+          "text": "Smallest is -6: furthest left",
+          "say": "The one furthest to the left is minus six.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which of these is the smallest?",
+            "board": "Smallest = ?",
+            "lookFor": "-6.",
+            "onMiss": "Ask: which one is furthest left on the number line, or coldest as a temperature?"
+          }
+        },
+        {
+          "id": "l21",
+          "text": "-6  -2  0  3",
+          "say": "Then minus two, then zero, then three.",
+          "style": "work",
+          "ask": {
+            "prompt": "Now the whole order, smallest to greatest.",
+            "board": "-6, 3, -2, 0 in order = ?",
+            "lookFor": "-6, -2, 0, 3.",
+            "onMiss": "Ask: which negative is nearer to zero, -6 or -2?"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b8",
+      "kind": "check",
+      "say": "The child works alone: 1) temperature 3 falls by 7; 2) colder, -7 or -4; 3) why -7 is smaller. Hints only if stuck.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "Your turn"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l22",
+          "text": "3°C falls by 7",
+          "say": "Your turn to lead. The temperature is three degrees and it falls by seven.",
+          "style": "point",
+          "ask": {
+            "prompt": "What is the temperature now?",
+            "board": "3 - 7 = ?",
+            "lookFor": "-4 (3 down to 0 is 3 steps, then 4 more below zero).",
+            "onMiss": "Ask: how many steps to get from 3 down to 0? How many are left over?"
+          }
+        },
+        {
+          "id": "l23",
+          "text": "-7 is colder than -4",
+          "say": "Minus seven is colder than minus four.",
+          "style": "work",
+          "ask": {
+            "prompt": "Which is colder, -7°C or -4°C?",
+            "board": "Colder = ?",
+            "lookFor": "-7°C.",
+            "onMiss": "Ask: which is further below zero?"
+          }
+        },
+        {
+          "id": "l24",
+          "text": "A bigger number after the minus sign = further below zero = smaller",
+          "say": "The minus sign flips things around. The further below zero, the smaller the number.",
+          "style": "rule",
+          "ask": {
+            "prompt": "In your own words: why is -7 less than -4, even though 7 is more than 4?",
+            "board": "Why is -7 < -4?",
+            "lookFor": "-7 is further left / further below zero, so it is smaller.",
+            "onMiss": "Ask: picture the number line. Which one is further left?"
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "authored",
+    "generatedAt": "2026-10-14T00:00:00.000Z"
+  }
+}

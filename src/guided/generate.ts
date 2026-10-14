@@ -14,7 +14,7 @@
 import { isQuotaError } from '../ai/gateway';
 import type { JsonModel } from '../quality/model';
 import { BEAT_KINDS, type Beat, type BoardItem, type BoardLine, type GuidedScript, type LineStyle } from './types';
-import { validateScript, LIMITS, type PictureRef } from './validate';
+import { validateScript, LIMITS, PRACTICE_KINDS, type PictureRef } from './validate';
 
 // ─── What the generator is given ──────────────────────────────────
 
@@ -93,15 +93,19 @@ const SHAPE = `{
     { "id": "b1", "kind": "orient", "say": "<what this beat is for, 1-2 sentences, guidance for the tutor>",
       "board": [ { "type": "heading", "text": "<max 40 chars>" } ],
       "lines": [ { "id": "l1", "text": "<what is written>", "say": "<what the tutor says as it appears>", "style": "point" } ] },
-    { "id": "b2", "kind": "show", "say": "...",
+    { "id": "b2", "kind": "show", "say": "... (teaching beat: the tutor works the example, no asked lines)",
       "board": [ { "type": "heading", "text": "..." }, { "type": "picture", "ref": "<picture key>", "step": "<step id>" } ],
       "lines": [
         { "id": "given", "text": "Two points:  (2, 1)  and  (2, 5)", "say": "Let's take two points on the line x = 2: two-comma-one and two-comma-five.", "style": "work" },
         { "id": "rise", "text": "rise = 5 − 1 = 4", "say": "Rise is how far we go up: y goes from 1 to 5, so 5 minus 1 is 4.", "style": "work" },
-        { "id": "run", "text": "run = 2 − 2 = 0", "say": "Run is 2 minus 2, which is 0 - we do not move across at all.", "style": "work",
-          "ask": { "prompt": "Your turn: x goes from 2 to 2. What is the run?", "lookFor": "0, because both x values are 2", "onMiss": "Point to the two x values on the board - how far across is 2 to 2?" },
-          "picture": { "ref": "<picture key>", "step": "<later step id>" } },
+        { "id": "run", "text": "run = 2 − 2 = 0", "say": "Run is 2 minus 2, which is 0 - we do not move across at all.", "style": "work" },
         { "id": "rule", "text": "gradient = rise ÷ run", "say": "...", "style": "rule" }
+      ] },
+    { "id": "b6", "kind": "apply", "say": "We do one together: the learner answers the steps they can now do.",
+      "board": [ { "type": "heading", "text": "Your turn: (3, 1) and (3, 6)" } ],
+      "lines": [
+        { "id": "run2", "text": "run = 3 − 3 = 0", "say": "Yes - both x values are 3, so we do not move across: run is 0.", "style": "work",
+          "ask": { "board": "run = ?", "prompt": "Both points have x = 3. What is the run?", "lookFor": "0, because both x values are 3", "onMiss": "Look at the two x values on the board - how far across is 3 to 3?" } }
       ] }
   ]
 }`;
@@ -135,36 +139,50 @@ ${pictures.length ? pictures.map((p) => `  • "${p.key}" - ${p.title}\n${p.step
 const METHOD = `THE METHOD (non-negotiable). Teach like the best chalkboard teacher: SAY a line, WRITE it, explain it, next line.
 1. Every beat is written LINE BY LINE in "lines". "board" may hold only a heading and/or one picture, shown as the beat starts.
 2. One line = one idea or one operation. Max ${LIMITS.maxLineChars - 20} characters. Never two steps in one line.
-3. "say" is what the tutor says as the line appears: read the line aloud in words, then at most one sentence of why. Max 2 sentences.
+3. "say" is what the tutor SAYS while the line is written: natural, conversational teacher talk to a child ("So...", "Now look at this..."), 2 to 4 short sentences.
+   The board line is a short NOTE; the voice carries the explanation. NEVER read the board text out and then repeat it in other words: say each idea once.
+   When the line has chalk marks, the talk points at them ("I'm underlining the 3 - that's our ones").
 4. NEVER SKIP A STEP. In working, go: what is given → unpack it (name each value) → the rule/formula in words → substitute → calculate → what it means.
    Every number used on a line with "=" must already be written on a line ABOVE it in the same beat (only the final result after the last "=" may be new).
-5. INTERACTIVE: at least 4 lines across the lesson are ASKED lines (they have "ask"). How an asked line works, in order:
-     a) the tutor asks "ask.prompt" - nothing is written yet;
+5. TEACH FIRST, ASK AFTER. A teacher explains an idea fully before quizzing it. So:
+     - In the teaching beats (orient, define, show, analogy, contrast, rule, exception, method) there are NO asked lines. The tutor explains,
+       works the example(s) completely itself ("I do"), and lets the child simply watch and listen. No "what do you think?", no quiz in the middle of an explanation.
+     - Questions come ONLY in the "apply" and "check" beats, once the idea has been taught and demonstrated. There the child does the steps
+       (first together with the tutor on a new example, then alone on a fresh one) and the tutor asks at each step the child can do.
+   How an asked line works, in order:
+     a) the question is WRITTEN ON THE BOARD ("ask.board", short, the way a teacher writes it, e.g. "20 × 5 = ?") and the tutor asks it in "ask.prompt";
      b) the learner answers (with "ask.onMiss" as a hint if they are stuck);
-     c) only then is "text" written on the board, while the tutor says "say" to confirm it.
+     c) only then is "text" written on the board UNDER the question, while the tutor says "say" to confirm it.
    So for an asked line:
-     - "text" is the ANSWER, written as a normal board line (e.g. "64 × 2 = 128 chromatids") - never the question, never "ask: ...";
-     - "ask.prompt" is the question; it must not contain the answer;
+     - "text" is the ANSWER, written as a normal board line (e.g. "64 × 2 = 128 chromatids");
+     - "ask.board" is the question as written on the board; it must NOT contain the answer. "ask.prompt" is the same question in spoken words;
      - "say" is spoken AFTER the learner answered: it confirms and explains the answer ("Yes - each of the 64 doubles, so 128.");
      - "ask.onMiss" is a HINT that points to what is on the board - it must NOT state the answer or the calculation that gives it;
      - "ask.lookFor" says what a good answer contains (the reasoning, not only the result).
    The answer must not appear anywhere BEFORE it is asked: not in an earlier line or its "say", not in the heading,
    and not in a picture step shown before it (check each step's caption and "shows"; move the picture on with the
    asked line's own "picture" field, so it changes only when the answer is written).
-   GOOD: earlier line "Parent cell: 64 chromosomes"; asked line text "64 × 2 = 128 chromatids", prompt "Each chromosome copies itself. How many chromatids now?", onMiss "Look at the 64 on the board - what happens to each one?", say "Right - 64 doubled is 128 chromatids."
+   GOOD: earlier line "Parent cell: 64 chromosomes"; asked line text "64 × 2 = 128 chromatids", board "64 × 2 = ?", prompt "Each chromosome copies itself. How many chromatids now?", onMiss "Look at the 64 on the board - what happens to each one?", say "Right - 64 doubled is 128 chromatids."
    BAD: an earlier line "Room = organ" and then asking "If a brick is a cell, what is a room?" (answer already shown).
+   BAD: asking the child to name or predict something in the middle of the explanation, before the idea has been taught.
 8. Do not repeat a line in other words. Each line adds something new.
+9. VISUAL MARKS. Teach with the chalk, like a real teacher. Inside "text" you may mark words with {{text|style}} or {{text|style|label}}:
+   styles ul (underline), circle, box, hl (highlighter); add a colour after a dot: ul.p pink, ul.b blue, ul.g green (default yellow); the label is written under the mark.
+   Example: "{{2|ul.p|tens}}{{3|ul|ones}}" underlines the 2 in pink labelled tens and the 3 in yellow labelled ones.
+   To mark digits already on the board, add a line with "annotates": "<earlier line id>" whose text is the SAME words again with marks added (nothing new is written; the row is redrawn).
+   Use marks to show where each part comes from (tens/ones, which number is multiplied by which, the step being added), not as decoration. Never put marks in "say".
 6. Use the standard terms of the syllabus for this grade, define each new term in words before using it, and keep sentences short for this age.
 7. Teach ONLY what is in the key facts and worked examples. Do not add facts, numbers or claims from elsewhere.
 
-LESSON SHAPE: 7 to 10 beats.
-  b1 "orient": 1-3 lines - what we are learning and why it matters (no question yet).
-  then "define" / "show" / "analogy" / "method" beats that build the idea step by step, using a worked example line by line;
+LESSON SHAPE: 8 to 10 beats. The first half TEACHES (no questions); the second half PRACTISES (questions on the board).
+  b1 "orient": 1-3 lines - what we are learning and why it matters (no question).
+  then "define" / "show" / "analogy" / "method" beats that build the idea step by step. The tutor works the key worked example COMPLETELY, line by line, explaining each step - the child watches. No asked lines in these beats;
   at least one line with "style": "rule" states the key rule or definition;
-  1-2 "contrast" beats that each take one misconception: write the wrong idea, test it, show why it fails, write the correct idea;
-  an "apply" beat: the learner works a fresh practice item, with asked lines for each step they can do;
-  a final "check" beat: one asked line that tests the core idea.
-Total lines: 25 to 40. Kinds allowed: ${BEAT_KINDS.join(', ')}. Line styles: "work" (working), "point" (a statement), "rule" (boxed rule).`;
+  1-2 "contrast" beats that each take one misconception: write the idea, test it, show why it fails, write the correct idea - all explained by the tutor, no asked lines;
+  an "apply" beat, "we do it together": a NEW example worked with the child - the tutor sets it up, the child answers the steps they can now do (asked lines, the question written on the board each time);
+  a second "apply" beat, "your turn": a fresh practice item the child works alone, an asked line per step;
+  a final "check" beat: a transfer item in a new setting, ending with one asked line that tests the core idea (ask WHY, not only what).
+Total lines: 28 to 45 (the board scrolls, so a long lesson is fine). Kinds allowed: ${BEAT_KINDS.join(', ')}. Line styles: "work" (working), "point" (a statement), "rule" (boxed rule).`;
 
 export function buildGuidedPrompt(src: ConceptSource, pictures: PictureInfo[]): string {
   return `You are writing a prepared lesson for an AI voice tutor that teaches one child at a time on a shared chalkboard.
@@ -199,14 +217,16 @@ export function buildCriticPrompt(src: ConceptSource, pictures: PictureInfo[], s
 The tutor says each line's "say" while the line is written. Lines with "ask" are hidden until the child answers.
 
 How the lesson runs: the tutor says each line's "say" as the line is written. An ASKED line (it has "ask") works like this:
-the tutor asks "ask.prompt" with nothing written; the learner answers; THEN the line's "text" is written and its "say" is spoken to confirm it.
+the tutor asks "ask.prompt" and the question ("ask.board") is written on the board; the learner answers; THEN the line's "text" is written under it and its "say" is spoken to confirm it.
 So the "say" and "text" of an asked line coming AFTER the question is correct - do not report that.
 The source material is everything listed below (key facts, worked examples, misconceptions, practice items, pictures).
 
 Report an ERROR for any of:
   - a fact, number or calculation that is wrong, or not supported by the source material below;
   - a skipped step: a line that does not follow from the lines above it, or a value used before it is worked out;
-  - an answer revealed before its question: in an earlier line or an earlier line's "say", the heading, the ask.prompt itself, the ask.onMiss hint, or a picture step shown before it (check captions and "shows");
+  - an answer revealed before its question: in an earlier line or an earlier line's "say", the heading, the ask.prompt or ask.board itself, the ask.onMiss hint, or a picture step shown before it (check captions and "shows");
+  - a question asked while the idea is still being taught (an asked line in a define / show / analogy / contrast / rule / exception / method beat): questions belong only in apply / check beats;
+  - the tutor reading the board text out and then saying the same thing again in other words (the "say" should explain, not echo);
   - a "say" that does not match its line, or a misconception stated as if it were true without being corrected;
   - wrong or non-standard terminology for this grade.
 Report a WARNING for: wording too hard for the grade, a line with two ideas, a weak hint, or a dull or confusing analogy.
@@ -242,13 +262,14 @@ export function normalizeScript(raw: any, conceptId: string, fallbackTitle: stri
     });
     const lineIds = new Set<string>();
     const lines: BoardLine[] = arr(b?.lines).flatMap((l: any, k: number): BoardLine[] => {
-      const text = s(l?.text, 140);
+      const text = s(l?.text, 240);
       if (!text) return [];
       let lid = s(l?.id, 24) || `l${k + 1}`;
       if (lineIds.has(lid)) lid = `${lid}_${k + 1}`;
       lineIds.add(lid);
-      const line: BoardLine = { id: lid, text, say: s(l?.say, 500), style: STYLES.includes(l?.style) ? l.style : 'work' };
-      if (l?.ask && s(l.ask.prompt)) line.ask = { prompt: s(l.ask.prompt, 300), lookFor: s(l.ask.lookFor, 300), onMiss: s(l.ask.onMiss, 300) };
+      const line: BoardLine = { id: lid, text, say: s(l?.say, 520), style: STYLES.includes(l?.style) ? l.style : 'work' };
+      if (s(l?.annotates)) line.annotates = s(l.annotates, 24);
+      if (l?.ask && s(l.ask.prompt)) line.ask = { prompt: s(l.ask.prompt, 300), ...(s(l.ask.board) ? { board: s(l.ask.board, 160) } : {}), lookFor: s(l.ask.lookFor, 300), onMiss: s(l.ask.onMiss, 300) };
       if (l?.picture && s(l.picture.ref)) line.picture = { ref: s(l.picture.ref, 120), ...(s(l.picture.step) ? { step: s(l.picture.step, 20) } : {}) };
       return [line];
     });
@@ -291,10 +312,17 @@ function generatedRules(script: GuidedScript): string[] {
     if (b.ask) out.push(`beat ${i + 1} (${b.id}) has a beat-level "ask" - put questions on lines instead`);
     if (b.board.some((x) => x.type !== 'heading' && x.type !== 'picture')) out.push(`beat ${i + 1} (${b.id}) writes text in "board" - only a heading and a picture may go there; write text as lines`);
   });
+  script.beats.forEach((b, i) => {
+    if (!PRACTICE_KINDS.includes(b.kind)) {
+      b.lines?.forEach((l) => { if (l.ask) out.push(`beat ${i + 1} (${b.id}, ${b.kind}) line ${l.id} asks a question while the idea is still being taught - move the question into an "apply" or "check" beat and let the tutor explain it here`); });
+    }
+    b.lines?.forEach((l) => { if (l.ask && !l.ask.board?.trim()) out.push(`beat ${i + 1} (${b.id}) line ${l.id}: an asked line needs "ask.board" - the short question written on the board`); });
+  });
   const asks = script.beats.reduce((n, b) => n + (b.lines?.filter((l) => l.ask).length ?? 0), 0);
-  if (asks < 4) out.push(`only ${asks} asked lines - the lesson needs at least 4 lines where the learner answers first`);
+  if (asks < 4) out.push(`only ${asks} asked lines - the practice beats need at least 4 lines where the learner answers first`);
+  if (!script.beats.some((b) => b.kind === 'apply') || !script.beats.some((b) => b.kind === 'check')) out.push('the lesson needs an "apply" beat and a "check" beat for the questions');
   const total = script.beats.reduce((n, b) => n + (b.lines?.length ?? 0), 0);
-  if (total > 45) out.push(`${total} lines in total - keep it to 40 or fewer`);
+  if (total > 45) out.push(`${total} lines in total - keep it to 45 or fewer`);
   return out;
 }
 

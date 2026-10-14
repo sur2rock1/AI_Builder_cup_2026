@@ -1766,3 +1766,39 @@ environment; the user must run `npm run pregen -- --visuals-only` and review wit
 **Context.** The tutor stage was desktop-only (percentage-positioned overlays, fixed 310 px rail, `100vh`, body scroll locked, no `viewport-fit`, audio contexts created after the mic prompt).
 **Decision.** (1) `index.html`: `viewport-fit=cover`, theme-color, iOS web-app metas. (2) `index.css`: `#root` is the scroll container, `.h-app`/`.min-h-app` use `dvh` with `vh` fallback, safe-area padding, inputs ≥16 px below 1024 px (stops iOS focus-zoom), text selectable in inputs, reduced-motion. (3) `ImmersiveStage`: below 1024 px a stacked layout (compact header, board, tutor status, subtitle, rail, pinned control bar with scrollable chips); desktop markup unchanged. (4) `GuidedBoard`: stacks text over picture below 640 px, smaller chalk. (5) Side panels clamp to `min(320/340px, 100vw)`. (6) `audio.ts`: contexts created/resumed inside the tap before `getUserMedia`; Safari/iOS/Firefox use the device sample rate and resample to 16 kHz; resume on tab return.
 **Evidence.** tsc clean; `vite build` OK; headless-Chromium screenshots (`layout-preview.html`, `?view=stage|guided`) at 360×740, 375×667, 390×844, 844×390, 768×1024, 1024×768, 1440×900: no horizontal overflow. **NOT verified:** a real iPhone/Android device, real mic/voice on iOS Safari (resampling path is new), the login/subject/onboarding screens at phone width, WebGL on low-end phones. Phone testing over plain `http://<LAN-IP>` cannot use the microphone (needs https) — test on the deployed Cloud Run URL.
+
+## D-2026-10-14-1 — Parent View: plain-language, evidence-linked report beside the engineering portal
+
+- **Date:** 2026-10-14 (submission 18 Oct)
+- **Context:** `ParentPortal.tsx` showed mastery %, ladder levels, move/strategy ids. Parents can't read it and it can't be explained in a 3-minute demo. Needed: show how Ananta understands the child and how it uses that to teach better.
+- **Options:** (a) restyle the existing portal; (b) new parent-facing view in a separate code path with the old portal one tap away; (c) a chart dashboard.
+- **Decision:** (b). New `src/parent/*`; `App.tsx` renders `ParentHome` (Parent view ⇄ Under the hood). `ParentPortal.tsx` is unchanged.
+- **Reason:** protects the working portal (judges/teachers still get the detail); lets the parent view hide internals entirely; honours the standing "new behaviour behind a switch" preference.
+- **Key choices:** no mastery % or ladder codes shown (BKT drops to ~30% after a fixed mix-up; would mislead); deterministic story steps quote the child's own words; Gemini writes only the letter / "what helps" / home tip and every sentence must cite real evidence ids or is deleted; offline template fallback; narrative cached on the profile, regenerated when answer count changes.
+- **Trade-offs:** story captions are deterministic rather than AI-written (reliability over flourish); demo child's answers are simulated; first load shows template text for a few seconds.
+- **Evidence:** `npm run test:parent` (25 assertions), `tsc` and `vite build` clean, rendered at 1100px and 390px. See docs/PARENT_VIEW.md.
+- **Defect found after release to the owner (same day):** the Biology tab showed a Maths letter because the repositories ignore `EventFilter.subjectId`; fixed by filtering in `src/parent/report.ts` (`eventsForSubject`) + empty state + regression test. Repositories left unchanged (Firestore would need an index).
+
+## D-2026-10-14-2 — Guided is the default tutor mode; the Standard/Guided toggle is hidden
+
+- **Date:** 2026-10-14 (submission 18 Oct)
+- **Context:** the demo and future versions use the guided chalkboard tutor. Standard is to be reviewed later.
+- **Decision:** `DEFAULT_TUTOR_MODE = 'guided'` (`src/guided/mode.ts`). `SHOW_MODE_TOGGLE = false` hides the toggle; the top bar shows a fixed "Mode: Guided" label (plus Pace). The server still falls back to standard for a concept with no guided lesson.
+- **Standard is kept, not deleted:** reachable with `?tutor=standard` (browser) or `TUTOR_MODE=standard` (server). Set `SHOW_MODE_TOGGLE = true` to bring the toggle back. A mode remembered in session storage is ignored while the toggle is hidden.
+- **Trade-off:** concepts without a guided lesson silently run standard, so the "Guided" label only appears where a lesson exists.
+- **Evidence:** `tsc` clean; `tests/guided/generate.mjs` passes; `run.mjs` mode-resolution assertions updated (that file already crashed further down before this change).
+
+## D-2026-10-14-3 — A PDF upload also generates guided lessons (runtime store, no rebuild)
+
+- **Date:** 2026-10-14
+- **Context:** guided is the default tutor, but only `npm run guided:first-chapter` made guided lessons, into `src/guided/generated` (bundled at build time). A PDF uploaded to a running or deployed server produced standard lessons only, so every new concept silently fell back to standard.
+- **Options:** (a) write into `src/guided/generated` (needs rebuild/redeploy; Cloud Run's disk is ephemeral); (b) a runtime store the server re-reads; (c) generate lazily at the first session (child waits minutes).
+- **Decision:** (b). `pdfIngest.ts` chains `generate-guided.ts --runtime --skip-existing` after pregen. Lessons go to Firestore `guidedScripts` (+ `data/guided/runtime/` locally); `server.ts` re-reads every 10 s. Precedence runtime > generated > hand-written. `DISABLE_GUIDED_GENERATION=true` turns it off.
+- **Trade-offs:** many paid Gemini calls per uploaded course; needs credits; a lesson that fails the checks is withheld and that concept keeps the standard tutor. The 10 s refresh means a new lesson appears with a short delay.
+- **Evidence:** `tsc` clean; `tests/guided/runtime.mts` (9 checks); `generate-guided.ts --runtime --skip-existing --dry-run` lists only concepts without a lesson. The full upload → generation chain has NOT been run end to end (needs Gemini credits).
+
+## D-2026-10-14-4 — Author the guided lesson library by hand
+Context: guided is the default tutor; only 5 lessons existed. Options: Gemini-generate all, or author in the pilot's voice. Decision: 30 lessons authored (15 Grade-4, 9 Grade-8 Maths ch1–2, 6 Grade-8 Biology ch1), all validator-clean; old generated horizontal/vertical lesson retired. Trade-off: not yet tested in live voice; PDF uploads still use generation. Evidence: all 30 pass validate.ts with 0 errors.
+
+## D-2026-10-14-5 — Speak the script, not a paraphrase
+Context: live test of Grade-4 topic 1 showed doubled openings, changing tone and cramped labelled digits. Cause: beatInstruction asked for a spoken set-up sentence before the first line; lines were "in your own words" with no tone rule or temperature; labelled marks had no minimum width. Decision: open beats with next_line, speak scripted wording nearly verbatim, GUIDED_TEMPERATURE 0.3, widen labelled marks. Trade-off: less improvised, less varied speech. Evidence: tests/guided/voice.mts; not yet re-verified live.
