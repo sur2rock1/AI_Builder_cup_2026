@@ -1,0 +1,78 @@
+# Evaluation: diagnosis accuracy (EV-01)
+
+_Added 2026-10-15. Code: `evals/diagnosis/`. Decision: D-2026-10-15-2._
+
+## The question
+
+Ananta's central claim is that it notices when a child gives the **right answer for the wrong reason**, and that it does this without crying wolf at children who really do understand. This evaluation measures that claim on one component: `assessReasoning()` in `src/adaptive/reasoningAssessor.ts`, the same function the live tutor calls after every answer.
+
+## What is measured
+
+A fixed set of 45 labelled exchanges (`evals/diagnosis/cases.json`) is run through the assessor. Each case is one question, the expected answer, what the child said and how they explained it, plus the label a person decided was correct.
+
+| Gold label | Cases | Meaning |
+|---|---|---|
+| `clear_reasoning` | 10 | Right answer, sound method |
+| `misconception_behind_correct` | 10 | Right answer, broken method (**the trap**) |
+| `wrong_answer` | 16 | Wrong answer (9 driven by a catalogued misconception, 5 not, 2 containing a prompt-injection attempt) |
+| `needs_clarification` | 5 | Right answer, explanation too thin to judge |
+| `no_reasoning_given` | 4 | Right answer, no explanation at all |
+
+The cases span five real concepts from the curriculum library (snapshotted in `evals/diagnosis/concepts.json`, so the run does not need the local `data/` folder): Grade 8 Maths (horizontal and vertical lines; elimination; inequalities), Grade 8 Biology (diffusion and osmosis) and Grade 4 Maths (place value).
+
+## Headline metrics
+
+| Metric | Definition |
+|---|---|
+| **Hidden-misconception recall** | Of the 10 trap cases, how many were classified `misconception_behind_correct` |
+| **False-alarm rate on sound reasoning** | Of the 10 sound cases, how many were wrongly flagged as a trap |
+| **Right misconception named** | For trap cases, whether the catalogue id the assessor selected includes the labelled one |
+| **Exact classification** | Predicted class equals the gold class (5 classes). A second figure merges "thin" and "no reasoning", which people also find hard to tell apart |
+| **Latency** | Wall-clock time per diagnosis (p50, p95, max) |
+
+All rates come with a 95% Wilson confidence interval. With n = 10 the intervals are wide (a perfect 10/10 still has a lower bound of 72%). Quote the interval, not just the point estimate.
+
+Safety checks reported alongside: the assessor probes whenever it is not clearly satisfied; the probe or guidance does not contain the expected answer (checkable for answers of 5+ characters only); injected instructions inside a child's answer do not produce `clear_reasoning`; and no misconception id is attached to a case that has none in the catalogue.
+
+## Baselines
+
+1. **Answer-checking only**: what most quiz software does. It cannot question a correct answer, so its recall on trap cases is 0% by construction.
+2. **Plain Gemini prompt** ("does the child understand?") on the same model, given the correct answer and the child's explanation. This is generous to the baseline. It does not use the closed misconception catalogue or the correct-answer-trap instruction, so the comparison shows what those two design choices add.
+
+## How to run it
+
+```
+npm run eval:diagnosis          # real run: needs GEMINI_API_KEY in .env.local, takes a few minutes
+npm run eval:diagnosis:dry      # pipeline self-test with SYNTHETIC outputs, never quote these
+npm run test:eval               # offline unit tests of the scoring code
+npm run eval:diagnosis:report   # rebuild the report files from the last saved run
+```
+
+Options: `--no-naive` skips the plain-prompt baseline, `--only A,C` runs some concepts, `--limit 10` runs the first ten cases.
+
+## Where the results are
+
+Each run writes a folder `evals/diagnosis/results/<run id>/`, copied to `evals/diagnosis/results/latest/`:
+
+- `report.html`: open in a browser. Headline cards, baseline comparison, confusion matrix, per-concept and per-confidence accuracy, every case with a Misses filter and the assessor's full reading of each exchange.
+- `summary.md`: paste into the deck or this document.
+- `cases.csv`: open in Excel or Google Sheets.
+- `results.json`: raw record of every case; the other files can be rebuilt from it.
+
+On Windows: `start evals\diagnosis\results\latest\report.html`.
+
+The report states the model, date, git commit, a hash of the assessor source and a hash of the case file, so a number can always be traced to the code and data that produced it. Dry runs go to `results/dry-*` and `latest-dry/`, carry a red banner and are git-ignored.
+
+If every model fails for a case, the assessor returns a conservative fallback. The runner retries up to three times, then marks the case **fell back** and leaves it out of the scores rather than counting it as a pass or a miss. The report shows how many fell back; re-run if that is not zero.
+
+## Limits (say these in the deck)
+
+- 45 cases, written by the development team, not independent annotators. Child utterances are written by adults and are not real children.
+- The trap set is only 10 cases, so one case moves the rate by 10 points.
+- Labels were fixed before the first run. If the prompt or labels change afterwards, record why here and re-run. A first-run number must not be presented as a final one after tuning.
+- It measures the single-answer assessor, not the whole tutoring loop, learning gains or real children.
+- BUILD_PLAN T24 asked for 40+ items per demo concept; this is a smaller first version across five concepts. **Before submission a second person should read the labels**; BUILD_PLAN T24 calls for human label review.
+
+## Results
+
+_Not yet run against Gemini. Run `npm run eval:diagnosis`, then paste `summary.md` here and note the date, model and commit._

@@ -30,6 +30,10 @@ added by the admin only — full design in [docs/CURRICULUM.md](docs/CURRICULUM.
 
 Tests for this: `npm run test:curriculum`.
 
+## Evaluation
+
+`npm run eval:diagnosis` measures how often the reasoning assessor catches a right answer reached by a broken method, and how often it wrongly flags a sound one, on 45 labelled cases. Results open as an HTML report at `evals/diagnosis/results/latest/report.html`. Method and limits: [docs/EVALUATION.md](docs/EVALUATION.md).
+
 ## Parent view
 
 The Parent portal opens on a plain-language report — what Ananta has learned about the child, how it worked it out (with a *See why* link to the child's real answer behind every sentence), its plan for the next lesson and a home activity; **Under the hood** switches to the detailed engineering view. Design: [docs/PARENT_VIEW.md](docs/PARENT_VIEW.md).

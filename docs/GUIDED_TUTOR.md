@@ -116,7 +116,7 @@ and the Pace buttons. `?tutor=standard` or `TUTOR_MODE=standard` restores the st
 
 | Source | How it is made | Where it lives | Served |
 |---|---|---|---|
-| Hand-written | by a person (or authored with Claude), e.g. the Grade-4 two-digit × single-digit pilot | `src/guided/scripts/*.json`, listed in `registry.ts` | bundled in the build |
+| Hand-written | by a person, e.g. the Grade-4 two-digit × single-digit pilot | `src/guided/scripts/*.json`, listed in `registry.ts` | bundled in the build |
 | Generated, by command | `npm run guided:first-chapter` / `npx tsx scripts/generate-guided.ts …` | `src/guided/generated/*.json` + auto-written `index.ts` | bundled in the build (restart/rebuild) |
 | **Generated at PDF upload** | automatic, see below | Firestore `guidedScripts` + `data/guided/runtime/*.json` | picked up by the running server within ~10 s, **no rebuild** |
 

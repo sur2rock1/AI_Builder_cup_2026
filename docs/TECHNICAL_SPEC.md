@@ -17,7 +17,7 @@ proxy) · `@google/genai` · Firebase (Auth, Firestore, Storage, Hosting, Functi
 | **Persistence** | `learnerStore` writes `data/learner-profiles.json` (lost on Cloud Run restart); `/api/learners` partially uses Firestore; `/api/session/*` uses the file store | Single repository, Firestore-first (T03) |
 | **Security** | `firestore.rules`: `learners` has `allow read: if true` — **children's data is publicly readable** | Fix first (T02) |
 | **Models** | IDs `gemini-3.8-live`, `gemini-3.6-flash`, `gemini-3.8-flash`, `gemini-3.1-flash-*` unverified (PROJECT_STATE); several paths fall back silently to local generators | Verify + fail loudly (T01) |
-| **Uncommitted work** | ~14 modified/untracked files in git | Commit/branch before starting Sonnet tasks (T00) |
+| **Uncommitted work** | ~14 modified/untracked files in git | Commit/branch before starting the build tasks (T00) |
 | **Tests** | Offline stub tests for the assessor and live paths (`tests/`) | Extend with plan/model/persona tests |
 
 ## 1a. As-built differences (audit 2026-10-09)

@@ -33,9 +33,13 @@ tests/live/.build/
 
 # runtime data and generated outputs — not source
 /data/
-/Claude outputs/
+/*[Oo]utputs/
 pt-uploads/
 
 # build bundles and local safety copies — not source
 *.zip
 /backups/
+
+# synthetic dry-run evaluation output
+evals/diagnosis/results/dry-*/
+evals/diagnosis/results/latest-dry/
