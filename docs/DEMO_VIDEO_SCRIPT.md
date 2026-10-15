@@ -1,110 +1,147 @@
-# 🎬 Ananta — 3-Minute Demo Video Script
+# 🎬 Ananta — Demo Video Script (Revised)
 
-> **Total Runtime:** 3:00 | **Format:** Screen recording with voiceover
-> **Tools:** OBS/Loom for screen capture, or just a phone recording your screen
+> **Total Runtime:** 3:30–3:45 | **Format:** Screen recording with voiceover
+> **Tools:** OBS/Loom for screen capture | Upload to YouTube (unlisted) or Google Drive
+> **Key rule from organizer:** "3 to 4 minutes" — use the full time
+
+> [!IMPORTANT]
+> **Audio clarity is the #1 reason strong prototypes lose points.** The organizer said: "Majority of the ideas had very low volume... we were not able to even understand how certain things worked." Record at FULL speaking volume, in a quiet room, with a good microphone. Test playback before finalizing.
 
 ---
 
-## 0:00 – 0:20 | THE HOOK (Problem Statement)
+## 0:00 – 0:15 | OPEN WITH THE LIVE PRODUCT
 
-**[Show: Full-screen text slide or title card]**
+> The Google DevRel speaker recommends: "Open with a product, ask a question, and before the response comes out, go back to the technical architecture, then come back and show the response."
+
+**[Action: App is already open at https://ananta-ivczdbgbja-as.a.run.app/ — click "Priya (Simulated)" → Mathematics → pick a topic → Start Voice Lesson]**
 
 > **Voiceover:**
-> "One billion students worldwide cannot access a personal tutor. The difference between a struggling student and a thriving one is often just one adult who adapts to HOW they think — not just WHAT they answer. Meet Ananta — an AI tutor built on Google Gemini that doesn't just teach. It diagnoses, adapts, and proves its work."
+> "This is Ananta — an adaptive AI tutor, live on Google Cloud Run. Let's ask it to teach simultaneous equations to a Grade 8 student who we already know has a misconception about parallel lines."
 
-**[Show: Ananta logo / landing page]**
+**[Let Ananta greet the student — pause for 3-5 seconds of Ananta speaking]**
 
 ---
 
-## 0:20 – 0:40 | STUDENT LOGIN + CURRICULUM SELECTION
+## 0:15 – 0:40 | THE PROBLEM + WHY THIS MATTERS
 
-**[Action: Open the app at the deployed URL]**
+**[Cut to: Title card / problem slide — or picture-in-picture over the running session]**
 
 > **Voiceover:**
-> "A student logs in, picks their educational board — we support IGCSE, Cambridge, and more — selects their grade and subject. The entire curriculum was ingested from the actual textbook PDF using Gemini's Files API and structured into a prerequisite graph with known misconceptions."
+> "One billion students worldwide cannot access a personal tutor. The difference between a struggling student and a thriving one is often just one person who adapts to HOW they think — not just what they answer. Most AI tutors check if the answer is right. Ananta diagnoses the reasoning BEHIND the answer — even when it's correct. A right answer reached by a wrong method is caught and flagged."
 
-**[Action: Click through login → select board → grade → subject → topic]**
+**[Show: Ananta logo / one-liner: "Adaptive AI Tutoring — Diagnoses, Adapts, Proves Its Work"]**
 
 ---
 
-## 0:40 – 1:30 | LIVE VOICE TUTORING SESSION (The Core Demo)
+## 0:40 – 0:55 | HOW IT'S BUILT (Architecture Flash)
 
-**[Action: Click "Start Voice Lesson" — let Ananta speak]**
+**[Show: Architecture diagram — full-screen for 10 seconds]**
 
-> **Voiceover (brief, then let Ananta talk):**
-> "Ananta teaches through real-time voice powered by Gemini 3.8 Live. Watch — as it explains each concept, the interactive chalkboard updates in real-time with diagrams, geometry, and step-by-step notes."
+> **Voiceover:**
+> "Under the hood, five tiers of Google Gemini power Ananta. Gemini 3.8 Live handles real-time bidirectional voice with thirteen function-calling tools. Gemini Flash runs a 6.5-second diagnostic assessment during conversation. The teaching plan is deliberately deterministic — no AI decides what to teach next. A rule-based compiler ensures every lesson is reproducible and auditable. Every piece of generated content passes an independent critic review. Failures are quarantined — never served."
 
-**[Show these moments — let them happen naturally:]**
-1. **Ananta explaining a concept** — board updates with diagram (reveal_part tool)
-2. **Ananta asking a check question** — quiz panel appears
+---
+
+## 0:55 – 2:00 | LIVE VOICE TUTORING SESSION (The Core Demo)
+
+**[Cut back to the running session — Ananta should be mid-teach by now]**
+
+> **Voiceover (brief — then let Ananta talk):**
+> "Back to our session. Watch the interactive board updating in real-time as Ananta teaches — diagrams, step-by-step reveals, chalkboard notes, all controlled by Gemini function calling."
+
+**[Show these moments — let them happen naturally, ~15-20 seconds each:]**
+
+1. **Ananta explaining a concept** — board updates with diagram via `reveal_part` tool
+2. **Ananta asks a check question** — quiz panel appears via `pose_quiz` tool
 3. **Student answers** (speak into mic) — show the diagnostic classification appearing
-4. **If student gets it wrong** — show Ananta switching strategy (e.g., from diagram to worked example)
+4. **Mastery updating** — understanding depth indicator changes, BKT mastery ring updates
 
-> **Voiceover (at ~1:15):**
-> "Behind every response, Gemini Flash runs a 6.5-second diagnostic — not just checking if the answer is right, but HOW the student reasoned. A correct answer from a wrong method is caught and flagged. Bayesian Knowledge Tracing updates the mastery score in real-time."
+> **Voiceover (at ~1:30):**
+> "Behind every student response, Gemini Flash assesses the reasoning within a 6.5-second budget. Not just right or wrong — it classifies: clear reasoning, partial understanding, or misconception behind a correct answer. Bayesian Knowledge Tracing updates the mastery probability. Mastery requires pKnown above 80 percent AND at least two demonstrated explanations — guessing won't pass."
 
-**[Show: The understanding depth indicator changing, mastery ring updating]**
-
----
-
-## 1:30 – 1:50 | CONFUSION SIGNALS + ADAPTIVE RESPONSE
-
-**[Action: Click one of the confusion buttons ("I don't understand" / "Too fast")]**
-
-> **Voiceover:**
-> "Students can signal confusion at any time. The tutor immediately pivots — switches teaching strategy, tries a different representation, uses an analogy. It never gives up, never pauses, never tells a child to ask their teacher instead."
-
-**[Show: Ananta responding to the confusion signal with a different approach]**
+**[Show: Understanding depth changing to "misconception_behind_correct" or "clear_reasoning"]**
 
 ---
 
-## 1:50 – 2:20 | PARENT & TEACHER PORTAL
+## 2:00 – 2:15 | CONFUSION + ADAPTIVE RESPONSE
 
-**[Action: Navigate to Parent Portal → select a student]**
+**[Action: Say "I don't understand this" or click a confusion button]**
 
 > **Voiceover:**
-> "Every session is accountable. The Parent Portal shows mastery scores, active misconceptions, and — critically — two-click evidence replay. Parents and teachers can see the EXACT question asked, the child's EXACT answer, and HOW Ananta diagnosed it. No black box."
+> "When a student signals confusion, Ananta never pauses, never gives up, never says 'ask your teacher.' It immediately switches strategy — from a diagram to a worked example, from abstract to a real-world analogy — based on what's worked for this student before."
 
-**[Show in sequence:]**
-1. **Overview** — mastery %, sessions, study time
-2. **Misconception ledger** — confirmed/suspected/resolved
-3. **Evidence replay** — click into a concept → see the actual question-answer exchange
-4. **AI Parent Letter** — the plain-language summary with home activity suggestions
+**[Show: Ananta responding with a different approach — strategy switch visible]**
 
 ---
 
-## 2:20 – 2:45 | ARCHITECTURE & TECHNICAL DEPTH
+## 2:15 – 2:50 | PARENT PORTAL — EVIDENCE ACCOUNTABILITY
 
-**[Show: Architecture diagram (full-screen)]**
+**[Action: Navigate to Parent Portal → select Priya]**
 
 > **Voiceover:**
-> "Under the hood, Ananta uses five tiers of Gemini models. Gemini 3.8 Live for real-time voice. Gemini Flash for sub-7-second diagnostic assessment. Gemini 3.8 Flash for curriculum ingestion, content generation, and quality review. Every piece of generated content passes through an independent critic review — failing content is quarantined, never served."
+> "Every session is accountable. The Parent Portal gives a plain-language report — what Ananta learned about the child, backed by evidence. Parents click 'See why' to see the EXACT question asked, the child's EXACT answer, and HOW Ananta diagnosed it. No black box."
+
+**[Show in sequence — 5-7 seconds each:]**
+1. **Overview** — mastery %, sessions completed, study time
+2. **Misconception ledger** — show a detected misconception with status (disputed → resolved)
+3. **Evidence replay** — click "See why" → actual question-answer exchange appears
+4. **Home activity** — the AI-generated suggestion for parents
+
+> **Voiceover:**
+> "The misconception ledger tracks every wrong belief detected across sessions — when it was first seen, when the tutor disputed it, and when the student demonstrated they'd overcome it. Every claim is backed by the child's own words."
+
+---
+
+## 2:50 – 3:10 | CONTENT PIPELINE + CURRICULUM INGESTION
+
+**[Show: Admin library screen or a quick flash of the PDF → curriculum flow]**
+
+> **Voiceover:**
+> "Ananta doesn't just tutor — it ingests entire textbooks. Upload a PDF via Google's Files API, and Gemini extracts chapters, concepts, prerequisites, and known misconceptions. It then pre-generates quality-reviewed lessons, board pictures, and real-world photos. An independent critic reviews every generated artefact — nothing reaches a student without passing the quality gate."
+
+**[Show: Quick flash of the content library with uploaded courses]**
+
+---
+
+## 3:10 – 3:30 | TECHNICAL ACHIEVEMENTS + IMPACT
+
+**[Show: Quick text overlays or a closing slide with key stats]**
+
+> **Voiceover:**
+> "What we solved: sub-seven-second reasoning assessment during live voice conversation. Deterministic lesson planning with zero AI hallucination risk. Evidence-gated mastery — a right answer from guessing doesn't count. Quality-gated content — every lesson, diagram, and photo critic-reviewed before serving."
 >
-> "The teaching plan is deliberately deterministic — no AI decides what to teach next. A rule-based compiler ensures reproducibility and auditability: spaced repetition, prerequisite checking, strategy ranking based on empirical gain. This is education engineering, not a chatbot wrapper."
-
-**[Show: Quick flash of key code / decision log / test output to establish credibility]**
+> "Ananta runs on Google Cloud Run, stores learning data in Firestore, and uses five Gemini model tiers. It's not a chatbot wrapper — it's education engineering built on Google Cloud AI."
 
 ---
 
-## 2:45 – 3:00 | IMPACT & CLOSING
+## 3:30 – 3:40 | CLOSING
 
-**[Show: Full-screen closing slide]**
+**[Show: Final slide with live URL, GitHub link, team name]**
 
 > **Voiceover:**
-> "Ananta isn't a demonstration — it's a working adaptive tutoring system deployed on Google Cloud Run, ingesting real textbooks, teaching real curricula, and proving every learning claim with evidence. One tutor that adapts to every child, built entirely on Google Gemini."
->
-> "Ananta. Adaptive AI tutoring that diagnoses, adapts, and proves its work."
+> "Ananta. One adaptive tutor for every child. Diagnoses, adapts, and proves its work. Try it live right now."
 
-**[Show: Live URL + GitHub link + team name]**
+**[Hold on live URL for 5 seconds: https://ananta-ivczdbgbja-as.a.run.app/]**
 
 ---
+
+## Pre-Flight Checklist
+
+Before recording:
+
+- [ ] **Dry run** — start a voice session with Priya, let Ananta teach for 60 seconds, confirm audio works both ways
+- [ ] **Pre-warm the app** — open the URL once so Cloud Run isn't cold during recording
+- [ ] **Test Parent Portal** — click through evidence replay to make sure data loads
+- [ ] **Prepare architecture diagram** — have it ready as an image or screenshot for the 0:40 cutaway
+- [ ] **Check microphone levels** — record 10 seconds, play back, adjust volume
+- [ ] **Close notifications** — no pop-ups during screen recording
 
 ## Recording Tips
 
-1. **Do a dry run first** — start a voice session, make sure audio works, let Ananta teach for 30 seconds
-2. **Use a quiet room** — Gemini Live VAD is sensitive to background noise
-3. **Pre-seed a demo student** with some history so the parent portal has data: `npm run seed:demo -- --reset`
-4. **Record in 1080p** — judges watch on laptops
-5. **Keep voiceover energy high** — you're presenting to judges, not reading docs
-6. **If the API is slow**, pre-record the voice session segment and narrate over it
-7. **Upload to YouTube (unlisted) or Google Drive (anyone with link)**
+1. **CLEAR, LOUD AUDIO** — the #1 thing judges complained about. Normal speaking voice, not whispering
+2. **Record in 1080p** — judges watch on laptops
+3. **Use a quiet room** — Gemini Live VAD is sensitive to background noise (700ms threshold)
+4. **Keep voiceover energy high** — you're presenting to judges, not reading docs
+5. **If Gemini is slow or errors**, pre-record the voice session segment and narrate over it. Have a backup tab with a successful session ready
+6. **Upload to YouTube (unlisted) or Google Drive (anyone with link)**
+7. **Watch the final cut at 50% volume** — if you can't understand it at half volume, it's too quiet
