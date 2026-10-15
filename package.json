@@ -49,7 +49,11 @@
     "review:pregen": "npx --yes tsx scripts/review-pregen.ts",
     "test:quality": "npx --yes tsx tests/smoke/quality.mjs && npx --yes tsx tests/smoke/lesson-gen.mjs && npx --yes tsx tests/smoke/photo-gen.mjs && npx --yes tsx tests/smoke/quiz-evidence.mjs && npx --yes tsx tests/smoke/ladder-pair.mjs && npx --yes tsx tests/smoke/serve.mjs && npx --yes tsx tests/smoke/content-spec.mjs",
     "test:gates": "npm run -s test:quality && npm run -s test:visuals && npm run -s test:curriculum",
-    "verify": "npm run -s lint && npm run -s test:gates && npm run -s review:pregen"
+    "verify": "npm run -s lint && npm run -s test:gates && npm run -s review:pregen",
+    "eval:diagnosis": "npx --yes tsx evals/diagnosis/run.ts",
+    "eval:diagnosis:dry": "npx --yes tsx evals/diagnosis/run.ts --dry",
+    "eval:diagnosis:report": "npx --yes tsx evals/diagnosis/report.ts evals/diagnosis/results/latest",
+    "test:eval": "npx --yes tsx tests/eval/metrics.mts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

@@ -1812,3 +1812,12 @@ Context: live test of Grade-4 topic 1 showed doubled openings, changing tone and
 **Trade-offs.** Edtech tutors are common, so Innovation must be proven with the misconception-diagnosis demo and measured evidence (EV-01..03 still unbuilt). Social-impact framing is kept for the deck's impact section only.
 **Evidence.** aibuildercup.com/themes.html and /rewards.html, fetched 2026-10-15. No verified source on entries per theme or whether shortlisting is per theme.
 
+## D-2026-10-15-2 — Build the diagnosis-accuracy evaluation (EV-01) as a small labelled set with baselines
+**Date.** 2026-10-15 (submission 18 Oct)
+**Context.** The 2026-10-09 audit found no measured result anywhere in the project. Technical Merit is 40% of the score and the core claim (catching a right answer reached by a broken method) had no evidence.
+**Options.** (1) Full EV-01/02/03 as specified (40+ items per concept, simulated learners, persona scoring); (2) a small labelled set for the assessor only, with baselines and honest intervals; (3) nothing, demo only.
+**Decision.** Option 2: 45 cases over 5 real library concepts (10 trap cases), compared against answer-checking only and a plain Gemini prompt, with Wilson 95% intervals, fallback exclusion, an answer-leak check and two prompt-injection cases.
+**Reason.** It is the cheapest thing that answers "how do you know it works?" before the 18 Oct deadline. EV-02 and EV-03 are not feasible in the time left.
+**Trade-offs.** Small and developer-authored, so intervals are wide and a skeptical judge can say the labels favour the system. Mitigations: labels fixed before the first run, a second reviewer asked for, limits stated in the report and the deck.
+**Evidence.** `npm run test:eval` passes; dry run and report rendering checked; no real-model run yet (see PROJECT_STATE 2026-10-15).
+

@@ -3,20 +3,20 @@
 _Status: v1.0 · 2026-09-24 · Deadline per PROJECT_STATE: 18 Oct 2026 (the official site shows no
 dates — re-verify on Hack2skill)_
 
-Each task is sized so one coding agent (Sonnet) can complete it in one sitting, with explicit
+Each task is sized so one developer can complete it in one sitting, with explicit
 files, steps and acceptance criteria. Specs referenced: **PER** = TUTOR_PERSONA.md,
 **LM** = LEARNER_MODEL.md, **TP** = TEACHING_PLAN.md, **TS** = TECHNICAL_SPEC.md,
 **FS** = FUNCTIONAL_SPEC.md.
 
-Legend: Size S ≤ 2 h · M ≈ half a day · L ≈ 1 day. **Agent**: `sonnet` = straightforward coding;
-`sonnet+review` = Sonnet builds, then a separate review pass (Opus or human) checks behaviour or
+Legend: Size S ≤ 2 h · M ≈ half a day · L ≈ 1 day. **Owner**: `build` = straightforward coding;
+`build+review` = built, then a separate review pass checks behaviour or
 prompt quality.
 
 ---
 
-## How to run a task with a Sonnet agent
+## How to run a task
 
-Give each agent this prompt (fill in the task ID):
+Give the implementer this prompt (fill in the task ID):
 
 ```
 You are implementing task <ID> from docs/BUILD_PLAN.md in the pythagoras-tutor repo.
@@ -35,13 +35,13 @@ update TRACEABILITY.md status after each merge.
 
 ## Phase 0 — Foundations and hygiene
 
-| ID | Task | Reqs | Depends | Size | Agent |
+| ID | Task | Reqs | Depends | Size | Owner |
 |---|---|---|---|---|---|
 | T00 | Commit/branch the current uncommitted work; tag `baseline-2026-09-24` | — | — | S | human |
-| T01 | Model gateway + model-ID verification | NFR-02 | T00 | M | sonnet |
-| T02 | Lock Firestore rules and server auth checks for learner data | NFR-03 | T00 | S | sonnet+review |
-| T03 | Learner repository (Firestore-first, file impl for tests); move `learnerStore` onto it (async) | FR-11 | T00 | L | sonnet |
-| T04 | Session-scoped live WebSocket: `/ws/live?sessionId=`; server resolves learner, subject, concept, plan | FR-01, FR-17 | T03 | M | sonnet |
+| T01 | Model gateway + model-ID verification | NFR-02 | T00 | M | build |
+| T02 | Lock Firestore rules and server auth checks for learner data | NFR-03 | T00 | S | build+review |
+| T03 | Learner repository (Firestore-first, file impl for tests); move `learnerStore` onto it (async) | FR-11 | T00 | L | build |
+| T04 | Session-scoped live WebSocket: `/ws/live?sessionId=`; server resolves learner, subject, concept, plan | FR-01, FR-17 | T03 | M | build |
 
 **T01 — Model gateway.** Files: new `src/ai/gateway.ts`; update `reasoningAssessor.ts`,
 `liveObserver.ts`, `assessmentEngine.ts`, `pdfIngest.ts`, `server.ts` (lesson/diagram/image
@@ -74,12 +74,12 @@ learner.
 
 ## Phase 1 — Base tutor persona
 
-| ID | Task | Reqs | Depends | Size | Agent |
+| ID | Task | Reqs | Depends | Size | Owner |
 |---|---|---|---|---|---|
-| T05 | Encode the persona spec as modules `src/persona/*` | FR-01…FR-08 | T00 | L | sonnet+review |
-| T06 | `composeSystemInstruction()` + snapshot tests | FR-01, FR-05, FR-06 | T05 | M | sonnet |
-| T07 | Replace the three legacy prompts with the composer (flag `PERSONA=v1`, legacy behind `PERSONA=legacy`) | FR-01 | T06, T04 | M | sonnet+review |
-| T08 | Text-channel tutor `POST /api/tutor/turn` (same composer, channel=text) | FR-25 | T06, T03 | M | sonnet |
+| T05 | Encode the persona spec as modules `src/persona/*` | FR-01…FR-08 | T00 | L | build+review |
+| T06 | `composeSystemInstruction()` + snapshot tests | FR-01, FR-05, FR-06 | T05 | M | build |
+| T07 | Replace the three legacy prompts with the composer (flag `PERSONA=v1`, legacy behind `PERSONA=legacy`) | FR-01 | T06, T04 | M | build+review |
+| T08 | Text-channel tutor `POST /api/tutor/turn` (same composer, channel=text) | FR-25 | T06, T03 | M | build |
 
 **T05.** Files: `src/persona/{core,moves,representations,diagnosisPolicy,ageBands,subjectModes,channels,safety,config}.ts`.
 Steps: transcribe PER §2–§17 into typed data + text blocks; **moves as data** (id, purpose,
@@ -144,15 +144,15 @@ predates the current persona composer) — two of the seven look like they could
 
 ## Phase 2 — Learner model
 
-| ID | Task | Reqs | Depends | Size | Agent |
+| ID | Task | Reqs | Depends | Size | Owner |
 |---|---|---|---|---|---|
-| T09 | Extend types (LM §3) + `conceptType` on curriculum concepts | FR-11, FR-13, FR-15 | T03 | S | sonnet |
-| T10 | Extend `recordEvidence`: eventId, ladder, mastery status, strategyProfile, affect, planVersion, moveUsed | FR-11…FR-15 | T09 | M | sonnet |
-| T11 | Unified Diagnostician (segmenter + closed-catalogue classification + errorClass), async, feeding `recordEvidence`; route quiz clicks through the same recorder | FR-10 | T10, T01, T04 | L | sonnet+review |
-| T12 | Confidence capture: UI buttons (text/board) + spoken-phrase detection in the segmenter | FR-14 | T11 | S | sonnet |
-| T13 | Onboarding flow (UI + API) | FR-09 | T03 | M | sonnet |
-| T14 | Profiler + claim validator (session end) | FR-16 | T10, T01 | M | sonnet+review |
-| T15 | Spaced review + decay | FR-16, FR-21 | T10 | S | sonnet |
+| T09 | Extend types (LM §3) + `conceptType` on curriculum concepts | FR-11, FR-13, FR-15 | T03 | S | build |
+| T10 | Extend `recordEvidence`: eventId, ladder, mastery status, strategyProfile, affect, planVersion, moveUsed | FR-11…FR-15 | T09 | M | build |
+| T11 | Unified Diagnostician (segmenter + closed-catalogue classification + errorClass), async, feeding `recordEvidence`; route quiz clicks through the same recorder | FR-10 | T10, T01, T04 | L | build+review |
+| T12 | Confidence capture: UI buttons (text/board) + spoken-phrase detection in the segmenter | FR-14 | T11 | S | build |
+| T13 | Onboarding flow (UI + API) | FR-09 | T03 | M | build |
+| T14 | Profiler + claim validator (session end) | FR-16 | T10, T01 | M | build+review |
+| T15 | Spaced review + decay | FR-16, FR-21 | T10 | S | build |
 
 _(T16 is reserved for scope that comes up during the build.)_
 
@@ -189,12 +189,12 @@ interval progression, lapse reset, status transitions.
 
 ## Phase 3 — Per-learner teaching plan
 
-| ID | Task | Reqs | Depends | Size | Agent |
+| ID | Task | Reqs | Depends | Size | Owner |
 |---|---|---|---|---|---|
-| T17 | `compileTeachingPlan()` + persistence + tests TP-01…TP-08 | FR-17 | T10, T15, T05 | M | sonnet |
-| T18 | `renderPlanForPrompt()`; wire into `/session/start` + composer + kickoff | FR-18, FR-21 | T17, T07 | S | sonnet |
-| T19 | **Spike:** guidance injection into Live (options A/B/C, TS §5.3); measure latency; pick one | FR-19 | T11, T18 | M | sonnet+review |
-| T20 | `compilePlanDelta()` + limits enforcement (probe budget, retry cap → teach directly; park & escalate removed 2026-09-30) | FR-19, FR-20 | T19 | M | sonnet |
+| T17 | `compileTeachingPlan()` + persistence + tests TP-01…TP-08 | FR-17 | T10, T15, T05 | M | build |
+| T18 | `renderPlanForPrompt()`; wire into `/session/start` + composer + kickoff | FR-18, FR-21 | T17, T07 | S | build |
+| T19 | **Spike:** guidance injection into Live (options A/B/C, TS §5.3); measure latency; pick one | FR-19 | T11, T18 | M | build+review |
+| T20 | `compilePlanDelta()` + limits enforcement (probe budget, retry cap → teach directly; park & escalate removed 2026-09-30) | FR-19, FR-20 | T19 | M | build |
 
 **T19 acceptance:** a written result appended to DECISIONS.md with measured added latency p50/p95
 and the interruption count across ≥ 10 exchanges per option; the chosen option implemented behind
@@ -202,28 +202,28 @@ and the interruption count across ≥ 10 exchanges per option; the chosen option
 
 ## Phase 4 — Views
 
-| ID | Task | Reqs | Depends | Size | Agent |
+| ID | Task | Reqs | Depends | Size | Owner |
 |---|---|---|---|---|---|
-| T21 | Learner card "What I've learned about you" + dispute | FR-22 | T14 | M | sonnet |
-| T22 | Parent portal: ladder, ledger, claims → evidence replay, summaries, escalations | FR-23 | T14, T03 | M | sonnet |
-| T23 | Tutor's-reasoning panel (move, rule, reason, evidence refs, last diagnosis) | FR-24, FR-04 | T20 | M | sonnet |
+| T21 | Learner card "What I've learned about you" + dispute | FR-22 | T14 | M | build |
+| T22 | Parent portal: ladder, ledger, claims → evidence replay, summaries, escalations | FR-23 | T14, T03 | M | build |
+| T23 | Tutor's-reasoning panel (move, rule, reason, evidence refs, last diagnosis) | FR-24, FR-04 | T20 | M | build |
 
 ## Phase 5 — Evaluation and demo
 
-| ID | Task | Reqs | Depends | Size | Agent |
+| ID | Task | Reqs | Depends | Size | Owner |
 |---|---|---|---|---|---|
-| T24 | Diagnosis eval set (≥ 40 items per demo concept, ≥ 10 right-answer-wrong-reasoning) + runner → detection/FP report | EV-01 | T11 | M | sonnet+review (labels reviewed by a human) |
-| T25 | Simulated-learner harness: Gemini-played students with scripted misconceptions + persona; base plan vs adapted plan via `/api/tutor/turn` → turns-to-resolution report | EV-02 | T08, T20 | L | sonnet+review |
-| T26 | Persona adherence checker: rule checks (P-01, P-03, P-04, P-06, P-08, P-09…) + LLM-judge rubric for quality items | EV-03 | T08 | M | sonnet |
-| T27 | Seeded demo learners (2–3 synthetic histories via the harness, labelled "simulated") + `npm run seed:demo` | FR-26 | T25 | S | sonnet |
-| T28 | Demo script + rehearsal checklist; update PROJECT_STATE, DECISIONS, proposal PDF inputs | — | T21–T27 | S | human + Opus |
+| T24 | **Built 2026-10-15 (first version, not yet run live):** 45 labelled items across 5 concepts, 10 right-answer-wrong-reasoning, runner + HTML report (`evals/diagnosis/`, `docs/EVALUATION.md`). Original scope: diagnosis eval set (≥ 40 items per demo concept, ≥ 10 right-answer-wrong-reasoning) + runner → detection/FP report | EV-01 | T11 | M | build+review (labels reviewed by a human) |
+| T25 | Simulated-learner harness: Gemini-played students with scripted misconceptions + persona; base plan vs adapted plan via `/api/tutor/turn` → turns-to-resolution report | EV-02 | T08, T20 | L | build+review |
+| T26 | Persona adherence checker: rule checks (P-01, P-03, P-04, P-06, P-08, P-09…) + LLM-judge rubric for quality items | EV-03 | T08 | M | build |
+| T27 | Seeded demo learners (2–3 synthetic histories via the harness, labelled "simulated") + `npm run seed:demo` | FR-26 | T25 | S | build |
+| T28 | Demo script + rehearsal checklist; update PROJECT_STATE, DECISIONS, proposal PDF inputs | — | T21–T27 | S | human + review |
 
 ## Phase 6 — Deploy
 
-| ID | Task | Reqs | Depends | Size | Agent |
+| ID | Task | Reqs | Depends | Size | Owner |
 |---|---|---|---|---|---|
-| T29 | Cloud Run deploy with Firestore, Secret Manager, `DEMO_MODE`; smoke test script | NFR-04 | T02, T03, T07 | S | sonnet |
-| T30 | Delete endpoint + data-minimisation review | NFR-03 | T03 | S | sonnet |
+| T29 | Cloud Run deploy with Firestore, Secret Manager, `DEMO_MODE`; smoke test script | NFR-04 | T02, T03, T07 | S | build |
+| T30 | Delete endpoint + data-minimisation review | NFR-03 | T03 | S | build |
 
 ---
 

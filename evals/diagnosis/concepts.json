@@ -1,0 +1,241 @@
+{
+ "_note": "Snapshot of five library concepts taken from data/curricula.json on 2026-10-15 so the evaluation is reproducible without the local data folder.",
+ "concepts": {
+  "A": {
+   "curriculum": "igcse--g8--mathematics",
+   "subjectLabel": "Mathematics",
+   "gradeLevel": 8,
+   "subjectMode": "well_structured",
+   "concept": {
+    "id": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--equations-of-horizontal-and-vertical-lines",
+    "label": "Equations of Horizontal and Vertical Lines",
+    "subjectId": "igcse--g8--mathematics",
+    "prerequisites": [],
+    "commonMisconceptions": [
+     "A horizontal line has the equation x = c because the line runs parallel to the x-axis.",
+     "The gradient of a vertical line is 0 instead of undefined."
+    ],
+    "misconceptionDetails": [
+     {
+      "id": "horizontal-line-named-x",
+      "belief": "A horizontal line has the equation x = c because the line runs parallel to the x-axis.",
+      "triggerPattern": "Writing x = 3 when asked for the equation of a horizontal line passing through (0, 3).",
+      "probeQuestion": "What is the y-coordinate of every point along this horizontal line? Does x stay constant or does y stay constant?",
+      "correctionHint": "Notice that every point on a horizontal line has the same y-value, so the equation that describes all those points is y = constant."
+     },
+     {
+      "id": "vertical-gradient-zero",
+      "belief": "The gradient of a vertical line is 0 instead of undefined.",
+      "triggerPattern": "Confusing zero gradient (horizontal) with dividing by zero (vertical).",
+      "probeQuestion": "If you calculate gradient as (change in y) / (change in x) between two points on a vertical line, what is the value in the denominator?",
+      "correctionHint": "On a vertical line, change in x is 0. Division by zero is undefined, so the gradient is undefined, not 0."
+     }
+    ],
+    "keyFacts": [
+     "The equation of a horizontal line is y = c, where c is a constant, and its gradient is 0.",
+     "The equation of a vertical line is x = a, where a is a constant, and its gradient is undefined.",
+     "A vertical line x = a is not the graph of a linear function because there are infinitely many values of y for one single value of x."
+    ],
+    "workedExamples": [
+     "Write down the equation and the gradient of the straight line passing through the points (3, -5) and (7, -5). → 1. Identify the coordinates: (x_1, y_1) = (3, -5) and (x_2, y_2) = (7, -5).\n2. Calculate gradient m = (y_2 - y_1) / (x_2 - x_1) = (-5 - (-5)) / (7 - 3) = 0 / 4 = 0.\n3. Since the gradient is 0 and every point has y-coordinate -5, the line is horizontal.\n4. Therefore, the equation of the line is y = -5. → Answer: Equation: y = -5, Gradient: 0",
+     "Find the equation and state the gradient of the straight line passing through (-4, 2) and (-4, 9). → 1. Identify the coordinates: (x_1, y_1) = (-4, 2) and (x_2, y_2) = (-4, 9).\n2. Calculate the change in x: x_2 - x_1 = -4 - (-4) = 0.\n3. The gradient is (9 - 2) / 0 = 7 / 0, which is undefined because division by zero is undefined.\n4. Every point on the line has an x-coordinate of -4, so the line is vertical.\n5. Therefore, the equation of the line is x = -4. → Answer: Equation: x = -4, Gradient is undefined"
+    ],
+    "difficultyLevel": 2,
+    "typicalTeachingOrder": 1
+   }
+  },
+  "B": {
+   "curriculum": "igcse--g8--mathematics",
+   "subjectLabel": "Mathematics",
+   "gradeLevel": 8,
+   "subjectMode": "well_structured",
+   "concept": {
+    "id": "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-elimination",
+    "label": "Solving Simultaneous Linear Equations by Elimination",
+    "subjectId": "igcse--g8--mathematics",
+    "prerequisites": [],
+    "commonMisconceptions": [
+     "Subtracting an equation with a negative term results in subtraction rather than addition: e.g., 7y - (-6y) = y.",
+     "Multiplying an equation by a constant only applies to the terms on the left-hand side."
+    ],
+    "misconceptionDetails": [
+     {
+      "id": "subtracting-negative-coefficients",
+      "belief": "Subtracting an equation with a negative term results in subtraction rather than addition: e.g., 7y - (-6y) = y.",
+      "triggerPattern": "Errors in signs when subtracting equations involving negative coefficients.",
+      "probeQuestion": "What is 7 minus negative 6?",
+      "correctionHint": "Remember that subtracting a negative quantity is equivalent to adding: 7y - (-6y) = 7y + 6y = 13y."
+     },
+     {
+      "id": "rhs-unmultiplied-scaling",
+      "belief": "Multiplying an equation by a constant only applies to the terms on the left-hand side.",
+      "triggerPattern": "Multiplying 13x - 6y = 20 by 2 and writing 26x - 12y = 20.",
+      "probeQuestion": "To keep an equation balanced, whatever operation you do to the left-hand side must also be done to what?",
+      "correctionHint": "Every single term on both the LHS and the RHS must be multiplied by the constant to preserve equality."
+     }
+    ],
+    "keyFacts": [
+     "The elimination method eliminates one variable by adding or subtracting the two equations when the coefficients of that variable have the same or opposite absolute values.",
+     "If the coefficients of a variable have the same sign and magnitude, subtract the equations; if they have opposite signs, add the equations.",
+     "If coefficients differ, multiply one or both equations by suitable constants to make the absolute values of the coefficients of one variable equal before adding or subtracting."
+    ],
+    "workedExamples": [
+     "Using the elimination method, solve the simultaneous equations:\n3x + 7y = 17\n3x - 6y = 4 → 1. Label equations:\n   3x + 7y = 17  --- (1)\n   3x - 6y = 4   --- (2)\n2. The coefficients of x are both 3 (same sign). Subtract equation (2) from (1):\n   (3x - 3x) + (7y - (-6y)) = 17 - 4\n   0 + 13y = 13\n   y = 1\n3. Substitute y = 1 into equation (1):\n   3x + 7(1) = 17\n   3x = 10\n   x = 10/3 (or 3 1/3)\n4. Check in (2): 3(10/3) - 6(1) = 10 - 6 = 4 (correct). → Answer: x = 10/3, y = 1",
+     "Using the elimination method, solve the simultaneous equations:\n13x - 6y = 20\n7x + 4y = 18 → 1. Label equations:\n   13x - 6y = 20  --- (1)\n   7x + 4y = 18   --- (2)\n2. Eliminate y. The LCM of 6 and 4 is 12.\n   Multiply (1) by 2: 26x - 12y = 40  --- (3)\n   Multiply (2) by 3: 21x + 12y = 54  --- (4)\n3. Coefficients of y have opposite signs (-12 and +12), so add (3) and (4):\n   (26x + 21x) + (-12y + 12y) = 40 + 54\n   47x = 94\n   x = 2\n4. Substitute x = 2 into (1):\n   13(2) - 6y = 20\n   26 - 6y = 20\n   6y = 6\n   y = 1\n5. Check in (2): 7(2) + 4(1) = 14 + 4 = 18 (correct). → Answer: x = 2, y = 1"
+    ],
+    "difficultyLevel": 3,
+    "typicalTeachingOrder": 4
+   }
+  },
+  "C": {
+   "curriculum": "igcse--g8--mathematics",
+   "subjectLabel": "Mathematics",
+   "gradeLevel": 8,
+   "subjectMode": "well_structured",
+   "concept": {
+    "id": "igcse--g8--mathematics--ch2-linear-inequalities--inequality-notation-and-properties-of-inequalities",
+    "label": "Inequality Notation and Properties of Inequalities",
+    "subjectId": "igcse--g8--mathematics",
+    "prerequisites": [],
+    "commonMisconceptions": [
+     "The inequality sign reverses whenever a negative number appears anywhere in the inequality.",
+     "'At least 5' means x <= 5 because 'least' suggests smaller.",
+     "Strict inequalities (<, >) include the boundary value just like inclusive inequalities (<=, >=)."
+    ],
+    "misconceptionDetails": [
+     {
+      "id": "negative-presence-reversal",
+      "belief": "The inequality sign reverses whenever a negative number appears anywhere in the inequality.",
+      "triggerPattern": "Reversing the sign when adding/subtracting a negative number or when dividing a negative numerator by a positive denominator (e.g. 2x < -8 becoming x > -4).",
+      "probeQuestion": "In the step from 2x < -8 to x < -4, are you dividing both sides by 2 or by -8?",
+      "correctionHint": "The inequality sign reverses ONLY when you multiply or divide BOTH sides by a negative number, not because a term is negative."
+     },
+     {
+      "id": "at-least-interpreted-as-less",
+      "belief": "'At least 5' means x <= 5 because 'least' suggests smaller.",
+      "triggerPattern": "Translating 'at least' into <= and 'at most' into >=.",
+      "probeQuestion": "If a film requires you to be at least 15 years old to watch it, can a 14-year-old enter? Can a 16-year-old enter?",
+      "correctionHint": "'At least' means the minimum allowed value is that number, so the quantity must be greater than or equal to it (>=)."
+     },
+     {
+      "id": "strict-vs-inclusive-confusion",
+      "belief": "Strict inequalities (<, >) include the boundary value just like inclusive inequalities (<=, >=).",
+      "triggerPattern": "Stating that x > 4 includes 4 as a valid solution.",
+      "probeQuestion": "Substitute x = 4 into x > 4. Is the statement 4 > 4 true or false?",
+      "correctionHint": "4 is not strictly greater than 4, so strict inequalities do not include the boundary number itself."
+     }
+    ],
+    "keyFacts": [
+     "The inequality symbols are: > (is greater than), < (is less than), >= (is greater than or equal to / at least), and <= (is less than or equal to / at most).",
+     "Adding or subtracting the same number on both sides of an inequality preserves the inequality sign.",
+     "Multiplying or dividing both sides of an inequality by a positive number preserves the inequality sign.",
+     "Multiplying or dividing both sides of an inequality by a negative number reverses the direction of the inequality sign (e.g. > becomes <)."
+    ],
+    "workedExamples": [
+     "Solve the inequality -3x < 15 and state how the inequality sign changes. → Divide both sides by -3.\nSince we are dividing by a negative number, reverse the inequality sign from < to >:\nx > 15 / (-3)\nx > -5",
+     "Given that x >= 4, find the range of values for 7 - 2x. → Start with: x >= 4\nMultiply both sides by -2 (reverse the sign): -2x <= -8\nAdd 7 to both sides (sign does not change): 7 - 2x <= 7 - 8\n7 - 2x <= -1"
+    ],
+    "difficultyLevel": 2,
+    "typicalTeachingOrder": 7
+   }
+  },
+  "D": {
+   "curriculum": "igcse--g8--biology",
+   "subjectLabel": "Biology",
+   "gradeLevel": 8,
+   "subjectMode": "well_structured",
+   "concept": {
+    "id": "igcse--g8--biology--ch1-introducing-living-things--movement-of-substances-diffusion-osmosis-and-active-transpor",
+    "label": "Movement of Substances: Diffusion, Osmosis, and Active Transport",
+    "subjectId": "igcse--g8--biology",
+    "prerequisites": [
+     "igcse--g8--biology--ch1-introducing-living-things--cell-structure-and-levels-of-organisation"
+    ],
+    "commonMisconceptions": [
+     "During osmosis, solute particles (such as sugar or salt) move across the membrane to equalize concentration.",
+     "Molecular movement ceases once molecules have diffused evenly throughout a space.",
+     "A 'high concentration sugar solution' has a 'high water concentration'."
+    ],
+    "misconceptionDetails": [
+     {
+      "id": "solute-moves-in-osmosis",
+      "belief": "During osmosis, solute particles (such as sugar or salt) move across the membrane to equalize concentration.",
+      "triggerPattern": "When predicting liquid movement in osmosis experiments involving sugar solutions.",
+      "probeQuestion": "Why do sucrose molecules fail to move through the pores of a partially permeable membrane?",
+      "correctionHint": "Only water molecules are small enough to pass through the partially permeable membrane; large solute molecules cannot pass."
+     },
+     {
+      "id": "particles-stop-at-equilibrium",
+      "belief": "Molecular movement ceases once molecules have diffused evenly throughout a space.",
+      "triggerPattern": "When describing the end point of diffusion in liquid or gas systems.",
+      "probeQuestion": "Do particles stop moving when ink becomes uniformly mixed in water?",
+      "correctionHint": "Particles never stop moving; at dynamic equilibrium, molecules move randomly in all directions at equal rates so there is no net movement."
+     },
+     {
+      "id": "water-concentration-vs-solution-concentration",
+      "belief": "A 'high concentration sugar solution' has a 'high water concentration'.",
+      "triggerPattern": "When predicting direction of osmosis between solutions of differing molarities.",
+      "probeQuestion": "If a solution has a very large amount of sugar dissolved in it, does it contain a high or low proportion of free water molecules?",
+      "correctionHint": "A concentrated sugar solution has a high solute concentration but a low water potential (low free water concentration)."
+     }
+    ],
+    "keyFacts": [
+     "Diffusion is the net movement of particles from a region of higher concentration to a region of lower concentration down a concentration gradient, as a result of their random movement.",
+     "Osmosis is the net movement of water molecules from a region of higher water potential (dilute solution) to a region of lower water potential (concentrated solution) through a partially permeable membrane.",
+     "In plant cells placed in pure water, water enters by osmosis, causing the cell to become turgid (cell wall prevents bursting). In concentrated solutions, plant cells lose water and become flaccid/plasmolysed.",
+     "In animal cells placed in pure water, water enters by osmosis and the cell lyses (bursts) because it lacks a cell wall. In concentrated solutions, animal cells lose water and crenate (shrink).",
+     "Active transport is the movement of particles through a cell membrane from a region of lower concentration to a region of higher concentration (against a concentration gradient) using energy released from respiration via carrier proteins."
+    ],
+    "workedExamples": [
+     "A cylinder of potato tuber has an initial mass of 2.50 g. After being submerged in a concentrated sucrose solution for 2 hours, its final mass is 2.15 g. Calculate the percentage change in mass and explain the direction of water movement. → 1. Calculate change in mass: Final mass - Initial mass = 2.15 g - 2.50 g = -0.35 g.\n2. Calculate percentage change: (Change / Initial mass) * 100 = (-0.35 / 2.50) * 100 = -14.0%.\n3. Explain the biology: The potato tissue had a higher water potential than the concentrated sucrose solution, so water moved out of the potato cells by osmosis down the water potential gradient. → Answer: Percentage change = -14.0%; water moved out of potato cells into the solution by osmosis."
+    ],
+    "difficultyLevel": 3,
+    "typicalTeachingOrder": 4
+   }
+  },
+  "E": {
+   "curriculum": "cambridge-lower-secondary--g4--mathematics",
+   "subjectLabel": "Mathematics",
+   "gradeLevel": 4,
+   "subjectMode": "well_structured",
+   "concept": {
+    "id": "cambridge-lower-secondary--g4--mathematics--number--reading-writing-and-partitioning-4-digit-numbers",
+    "label": "Reading, writing and partitioning 4-digit numbers",
+    "subjectId": "cambridge-lower-secondary--g4--mathematics",
+    "prerequisites": [],
+    "commonMisconceptions": [
+     "Learners may omit zero as a placeholder when writing numbers with zeros in words or figures.",
+     "Learners may confuse the face value of a digit with its place value."
+    ],
+    "misconceptionDetails": [
+     {
+      "id": "omitting-zero-placeholder",
+      "belief": "Learners may omit zero as a placeholder when writing numbers with zeros in words or figures.",
+      "triggerPattern": "Writing 'four thousand and forty' as 440 or 40040.",
+      "probeQuestion": "Write 'four thousand and forty' in figures. How many digits does your number have, and what is in the hundreds column?",
+      "correctionHint": "A four-digit number must have four columns: Th, H, T, and U. If there are no hundreds, put 0 in the hundreds column: 4040."
+     },
+     {
+      "id": "confusing-face-and-place-value",
+      "belief": "Learners may confuse the face value of a digit with its place value.",
+      "triggerPattern": "Stating that the 4 in 6423 has a value of 4 rather than 400.",
+      "probeQuestion": "In 6423, is the digit 4 worth 4, 40, or 400?",
+      "correctionHint": "The column tells you what each digit is worth. 4 in the hundreds column is worth 4 × 100 = 400."
+     }
+    ],
+    "keyFacts": [
+     "A digit is one of the symbols 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 used to make numbers.",
+     "In a 4-digit number, the places from left to right are thousands (Th), hundreds (H), tens (T), and ones/units (U).",
+     "Expanded form writes a number showing the value of each digit: 4567 = 4000 + 500 + 60 + 7.",
+     "Partitioning means breaking up a number into its place value parts.",
+     "Zero acts as a placeholder when there is no value in a column (e.g. 4040 has 0 hundreds and 0 ones)."
+    ],
+    "workedExamples": [
+     "Write 4567 in expanded form, and state the value of the digit 5. → 1. Identify the place value of each digit: 4 thousands (4000), 5 hundreds (500), 6 tens (60), and 7 ones (7).\n2. Write in expanded form: 4567 = 4000 + 500 + 60 + 7.\n3. The digit 5 is in the hundreds column, so its value is 500. → Answer: 4567 = 4000 + 500 + 60 + 7; value of 5 is 500"
+    ],
+    "difficultyLevel": 2,
+    "typicalTeachingOrder": 1
+   }
+  }
+ }
+}

@@ -1,7 +1,14 @@
 # PROJECT STATE
 
-_Last updated: 2026-10-14 (Parent View added; 2026-10-09 audit below — see docs/AUDIT_2026-10-09.md)_
+_Last updated: 2026-10-15 (diagnosis-accuracy evaluation harness added; theme settled; 2026-10-09 audit below — see docs/AUDIT_2026-10-09.md)_
 
+
+## UPDATE 2026-10-15 — Diagnosis-accuracy evaluation harness (EV-01) built, not yet run live
+- **New:** `evals/diagnosis/` (`cases.json` 45 labelled exchanges, `concepts.json`, `run.ts`, `metrics.ts`, `report.ts`), `docs/EVALUATION.md`, `tests/eval/metrics.mts`. Scripts: `eval:diagnosis`, `eval:diagnosis:dry`, `eval:diagnosis:report`, `test:eval`. Decision D-2026-10-15-2.
+- **Verified here:** scoring code unit tests pass (`npm run test:eval`); dry run produces the report; report renders at 1200 px and 390 px; a failed model call is detected as a fallback and excluded, not scored; `tsc --noEmit` clean.
+- **NOT verified:** no real Gemini run yet (this sandbox cannot reach Google). **No accuracy number exists until the owner runs `npm run eval:diagnosis` locally.** Then paste `results/latest/summary.md` into `docs/EVALUATION.md`.
+- **Limits to state in the deck:** 45 developer-written cases, 10 trap cases (wide confidence intervals), not real children; labels should get a second reviewer before the run.
+- **Theme:** settled as Media, Content & Digital Experiences (D-2026-10-15-1).
 
 ## UPDATE 2026-10-14 — Parent View (plain-language parent report) added
 - **New:** `src/parent/*` + `GET/POST /api/learners/:id/parent-report[/generate]`; the Parent portal now opens on a plain-language **Parent view** ("What Ananta has learned about <child>": letter with *See why* evidence links, topic journey in words, *How Ananta figured the child out* story, next-lesson plan, home tip). The previous portal is unchanged and reachable via the **Under the hood** switch. Spec: `docs/PARENT_VIEW.md`; decision D-2026-10-14-1.
@@ -138,7 +145,7 @@ and has been removed.
 | Misconception ledger | Strong | Strong | Moderate | Moderate | Confirmation threshold in code |
 | Progressive-reveal canvas | Moderate | Moderate | Moderate | Strong | Cognitive-load principles |
 | Live voice | Moderate | Strong | Weak | Strong | Commoditised — not a differentiator |
-| Measured impact | Not yet demonstrated | — | — | — | **GAP: eval set not built** |
+| Measured impact | Not yet demonstrated | — | — | — | **GAP: eval harness built 2026-10-15 (`evals/diagnosis/`); first real run pending, no number yet** |
 
 ## Open questions
 1. Which theme do we file under, and how is the framing written?
