@@ -35,3 +35,7 @@ tests/live/.build/
 /data/
 /Claude outputs/
 pt-uploads/
+
+# build bundles and local safety copies — not source
+*.zip
+/backups/
