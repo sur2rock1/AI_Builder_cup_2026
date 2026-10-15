@@ -3,6 +3,7 @@
 # UNTESTED against real GCP at time of writing.
 set -uo pipefail
 STAGE="${1:-setup}"; : "${PROJECT_ID:?run: source ~/ananta.env}" "${REGION:?}" "${BUCKET:?}"
+export CLOUDSDK_CORE_PROJECT="$PROJECT_ID"   # make every gcloud call below use this project
 SA="ananta-run@${PROJECT_ID}.iam.gserviceaccount.com"; FAIL=0
 chk(){ if eval "$2" >/dev/null 2>&1; then echo "  PASS  $1"; else echo "  FAIL  $1  ->  $3"; FAIL=1; fi; }
 echo "Ananta doctor: stage=$STAGE project=$PROJECT_ID region=$REGION"

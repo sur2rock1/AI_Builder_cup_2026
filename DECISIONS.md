@@ -1802,3 +1802,13 @@ Context: guided is the default tutor; only 5 lessons existed. Options: Gemini-ge
 
 ## D-2026-10-14-5 — Speak the script, not a paraphrase
 Context: live test of Grade-4 topic 1 showed doubled openings, changing tone and cramped labelled digits. Cause: beatInstruction asked for a spoken set-up sentence before the first line; lines were "in your own words" with no tone rule or temperature; labelled marks had no minimum width. Decision: open beats with next_line, speak scripted wording nearly verbatim, GUIDED_TEMPERATURE 0.3, widen labelled marks. Trade-off: less improvised, less varied speech. Evidence: tests/guided/voice.mts; not yet re-verified live.
+
+## D-2026-10-15-1 — File the entry under Media, Content & Digital Experiences
+**Date.** 2026-10-15
+**Context.** PROJECT_STATE said no education theme exists and that the entry had to go under Sustainability & Social Impact. Re-fetching https://aibuildercup.com/themes.html showed the Media, Content & Digital Experiences theme lists "education" in its scope. The page also has a separate "category specification" list (Healthcare, Education, Sustainability, Accessibility, Social Good) that does not match the six themes.
+**Options.** (1) Sustainability & Social Impact via an equity-of-tutoring framing. (2) Media, Content & Digital Experiences.
+**Decision.** Option 2. If the submission form offers the five-category list instead, choose Education.
+**Reason.** All themes share the same four judging criteria and the rewards page lists only overall prizes, so the theme mainly affects Problem Alignment & Impact (25%). Ananta maps directly onto the theme's verbs (created, personalized, understood, experienced). The Sustainability framing needs access/equity evidence the project does not have, and the demo (a Singapore Sec 2 student with a school textbook) does not show an underserved learner.
+**Trade-offs.** Edtech tutors are common, so Innovation must be proven with the misconception-diagnosis demo and measured evidence (EV-01..03 still unbuilt). Social-impact framing is kept for the deck's impact section only.
+**Evidence.** aibuildercup.com/themes.html and /rewards.html, fetched 2026-10-15. No verified source on entries per theme or whether shortlisting is per theme.
+

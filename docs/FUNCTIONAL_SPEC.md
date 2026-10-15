@@ -13,9 +13,9 @@ learner differently, and can explain why.
 
 > **Every child meets the same great teacher. Over time, that teacher learns them.**
 
-**Hackathon anchor (verified 2026-09-24, aibuildercup.com/themes.html):** there is no education
-theme. The entry is filed under **Sustainability & Social Impact** (equitable access to
-individual tutoring) — _open decision OQ-2 in PROJECT_STATE.md_. Mandatory requirements: Google
+**Hackathon anchor (re-verified 2026-10-15, aibuildercup.com/themes.html):** the entry is filed under
+**Media, Content & Digital Experiences**, whose scope names education (see DECISIONS.md D-2026-10-15-1;
+if the submission form offers the category list instead, choose Education). Mandatory requirements: Google
 AI models (Gemini/Gemma) or Google agent platforms; deployment on Google Cloud via Cloud Run or
 Firebase; a proposal PDF; a public 3-minute video. Judging: Technical Merit & GenAI 40% ·
 Problem Alignment & Impact 25% · Innovation & Creativity 25% · UX & Solution Design 10%.

@@ -25,13 +25,25 @@ _Last updated: 2026-10-14 (Parent View added; 2026-10-09 audit below — see doc
 - **Not built:** T12 confidence capture, T15 spaced review/decay, T19 latency spike, T24–T26 eval harnesses.
 
 ## Theme
-No education theme exists in the AI Builder Cup 2026 list (BFSI; Retail & Commerce;
-Manufacturing; Media, Content & Digital Experiences; Future of Work & Enterprise
-Productivity; Sustainability & Social Impact).
+**Filed under: Media, Content & Digital Experiences** (decided 2026-10-15, see DECISIONS.md D-2026-10-15-1).
 
-**OPEN DECISION — entry must be filed under Sustainability & Social Impact**, framed
-as equitable access to individualised tutoring rather than as edtech. This affects
-Problem Alignment & Impact (25%) and is not yet settled.
+Official wording (aibuildercup.com/themes.html, re-fetched 2026-10-15): "transforms how content is
+created, discovered, personalized, understood, or experienced" across "media, entertainment,
+publishing, **education**, communication, or other digital content ecosystems". Education is named
+in scope, so the earlier "no education theme" reading was wrong.
+
+How Ananta maps to the theme's verbs:
+- created: board visuals and explanations generated live from the textbook chapter
+- personalized: the representation changes when the current one is not working for this child
+- understood: reasoning is checked, misconceptions diagnosed and re-tested
+- experienced: voice-first live lesson instead of a static PDF
+
+Social-impact points (fear of asking, language switching, cost of tuition) go in the deck's impact
+section, not in the theme choice.
+
+**Still to verify:** the Hack2skill submission form may show the five "category" labels instead
+(Healthcare, Education, Sustainability, Accessibility, Social Good). If so, pick **Education**.
+Superseded earlier text: "file under Sustainability & Social Impact".
 
 ## Problem statement
 Children meet concepts they do not understand and often will not ask — embarrassment,
@@ -94,7 +106,7 @@ and has been removed.
 - Person-vs-process praise literature for the feedback rules
 
 ## Known risks
-- **Theme fit** — no education category; framing decision still open
+- **Theme fit** — resolved 2026-10-15: Media, Content & Digital Experiences (confirm label on the submission form)
 - **Model IDs unverified** — `gemini-3.8-live`, `gemini-3.6-flash`, `gemini-3.8-flash`,
   `gemini-3.1-flash-image` have NOT been confirmed to resolve. The lesson endpoint falls
   back silently to a local generator, so a broken model ID looks like a working demo
