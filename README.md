@@ -166,6 +166,54 @@ npm run verify                  # tsc + all gates + scorecard
 
 ---
 
+## For Evaluators / Judges
+
+### Quick Start (No Account Required)
+
+1. Open **[https://ananta-ivczdbgbja-as.a.run.app/](https://ananta-ivczdbgbja-as.a.run.app/)**
+2. Click **"Priya (Simulated)"** — she has a rich learning history with detected misconceptions
+3. Select **Mathematics** → pick any topic → **Start Lesson**
+4. Allow microphone access → speak naturally to the tutor
+
+> No sign-in or credentials needed. DEMO_MODE is enabled for evaluation access.
+
+### Sample Questions to Ask the Tutor
+
+- "Can you explain how to solve simultaneous equations graphically?"
+- "What happens if two lines are parallel — can they still have a solution?"
+- "I don't understand this" (triggers confusion detection and strategy switch)
+- "Can you show me a real-world example?" (triggers photo/visual generation)
+- "Quiz me on this" (triggers assessment pipeline with BKT mastery update)
+
+### Parent Portal
+
+From the login screen, click **"Parent Portal"** → select any student to see:
+- Plain-language learning report with *"See why"* evidence links
+- Misconception ledger with detection/resolution timeline
+- Home activity suggestions
+
+### Google Cloud Services Used
+
+| Service | Usage |
+|---|---|
+| **Gemini** | 5 model tiers — Live (voice), Flash (content gen), Flash fast (6.5s diagnosis), Flash Lite (fallback), Vision+Image (photo review/gen). Structured outputs, function calling (13 tools), thinking budget. |
+| **Cloud Run** | Full-stack deployment: REST API + Gemini Live WebSocket proxy + built SPA. Session affinity, 3600s timeout, scale-to-zero. |
+| **Firestore** | Learner profiles, evidence events, teaching plans, session data, curricula, pre-generated content cache. Security rules lock all learner data to server-only access. |
+| **Firebase Auth** | User authentication framework (bypassed in demo mode for evaluation access). |
+| **Cloud Storage** | Pre-generated photo storage with public URLs. |
+| **Google Files API** | PDF textbook upload for curriculum ingestion (60-page chunks, 40MB limit). |
+
+### Known Limitations
+
+- **Microphone required** for voice tutoring — use Chrome or Firefox with mic access
+- **First load may take 10-20 seconds** if the Cloud Run instance is cold (scale-to-zero)
+- **Free-tier Gemini API** has rate limits — if responses are slow, wait a few seconds between interactions
+- **Photo generation** may be limited by image quota — diagrams and chalkboard always work
+- **Voice Activity Detection** threshold is 700ms — pause briefly between sentences for best results
+- **Recommended browser:** Chrome (latest) or Firefox on desktop
+
+---
+
 ## License
 
 Built for the [Google Cloud AI Builder Cup 2026](https://aibuildercup.com/).
