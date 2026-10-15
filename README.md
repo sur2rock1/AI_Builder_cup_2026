@@ -1,95 +1,171 @@
-# Ananta — adaptive AI tutor (AI Builder Cup 2026)
+# Ananta — Adaptive AI Tutor
 
-A voice-first tutor that diagnoses *how* a child is reasoning (including right answers reached by a wrong method), keeps an evidence-based learner model, and re-teaches with a different representation. Built on Gemini Live + Gemini JSON diagnosis; target runtime is Cloud Run. Specs: `docs/` (start with `docs/AUDIT_2026-10-09.md` for current status). Repo folder is still named `pythagoras-tutor` for historical reasons.
+> **AI Builder Cup 2026 · Media, Content & Digital Experiences**
 
-# Run Locally
+**An AI tutor that diagnoses *how* a child reasons — not just *what* they answer — and adapts in real time.**
 
-**Prerequisites:**  Node.js
+Ananta uses Gemini Live for voice-first tutoring, Bayesian Knowledge Tracing for evidence-based mastery, and a deterministic teaching plan compiler to deliver personalised, quality-gated lessons for any curriculum. Parents see every claim backed by the child's own words.
 
+🔗 **[Live Demo](https://ananta-ivczdbgbja-as.a.run.app/)** · 📄 [Architecture](docs/ARCHITECTURE.md) · 📊 [Evaluation](docs/EVALUATION.md) · 🎓 [Teaching Plan Design](docs/TEACHING_PLAN.md)
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+---
 
-## Loading content (curriculum library)
+## Why Ananta is Different
 
-Learners pick their **board + grade** at signup and see every subject loaded for it. Content is
-added by the admin only — full design in [docs/CURRICULUM.md](docs/CURRICULUM.md):
-
-1. (Optional locally, required when deployed) set `ADMIN_TOKEN` in `.env`.
-2. `npm run dev`, then on the login screen click **Content library (admin)**.
-3. Pick board, grade and subject, add the textbook PDF(s) and, if you have it, the official
-   syllabus PDF, and choose **Chapters to load** (default 3 — only those chapters are read and
-   pre-generated, to save Gemini usage; tick "All chapters" for the whole book, or re-upload later
-   with a higher number to add more). Gemini reads, structures and **reviews** the content (re-works worked examples,
-   checks facts, writes ladder items) and publishes it automatically; the review report is shown.
-4. `npm run seed:demo -- --reset` recreates the three simulated demo learners on that course
-   (`--list` shows courses, `--course <id>` picks one).
-
-Tests for this: `npm run test:curriculum`.
-
-## Evaluation
-
-`npm run eval:diagnosis` measures how often the reasoning assessor catches a right answer reached by a broken method, and how often it wrongly flags a sound one, on 45 labelled cases. Results open as an HTML report at `evals/diagnosis/results/latest/report.html`. Method and limits: [docs/EVALUATION.md](docs/EVALUATION.md).
-
-## Parent view
-
-The Parent portal opens on a plain-language report — what Ananta has learned about the child, how it worked it out (with a *See why* link to the child's real answer behind every sentence), its plan for the next lesson and a home activity; **Under the hood** switches to the detailed engineering view. Design: [docs/PARENT_VIEW.md](docs/PARENT_VIEW.md).
-
-| Command | What it does |
+| Innovation | What it means |
 |---|---|
-| `npm run seed:story` | Creates the simulated demo child **Maya** (5 lessons over 12 days: mix-up noticed → confirmed → teaching approach changed → fixed). Uses real Gemini for lesson summaries and the parent letter when `GEMINI_API_KEY` is set; `-- --no-ai` runs offline. File store only: run locally, then `npm run migrate:cloud -- --only learners` |
-| `npm run test:parent` | Offline tests: sentence/evidence gate, jargon-leak check, story logic (no network) |
+| **Bayesian Knowledge Tracing (BKT)** | Mastery is a probability, not a score. pKnown ≥ 0.80 *and* ≥ 2 level-3 demonstrations required — a right answer from guessing doesn't count. |
+| **Deterministic plan compiler** | Teaching plans use zero GenAI — reproducible, auditable, never hallucinated. |
+| **Evidence-centered mastery gates** | Bare MCQ answers are capped at "recognised" level. The child must explain reasoning to advance. |
+| **Anti-hallucination claim validator** | Every profiler claim about a child must pass deterministic validation before it reaches a parent. |
+| **Quality-gated content pipeline** | Every generated lesson, diagram, and photo passes an independent critic review. Failures are quarantined — never served. |
+| **Tutor never gives up** | No "escalate to teacher" fallback. Ananta always pivots to a worked example or a different representation. |
+| **Two-click evidence replay** | Parents see the exact question asked, the child's exact answer, and the diagnostic reasoning — not just a grade. |
+| **Growth-mindset language** | The tutor never uses deficit labels or fixed-trait descriptions. Enforced by lint rules. |
+| **PDF → structured curriculum** | Upload a textbook PDF → Gemini extracts chapters, concepts, prerequisites, misconceptions, and generates quality-reviewed lessons automatically. |
 
-## Lesson material and board pictures
+---
 
-Lessons, board pictures and real-world photos are pre-generated once per concept and cached
-(never re-billed). Board pictures are composed by Gemini from a small drawing vocabulary and built
-step by step the way the tutor teaches — full design in [docs/BOARD_VISUALS.md](docs/BOARD_VISUALS.md).
+## Architecture
 
-| Command | What it does |
-|---|---|
-| `npm run guided:first-chapter` | Write **guided** lessons (the default tutor) for the first chapter of each subject (needs `GEMINI_API_KEY`). A PDF upload does this automatically for the whole course, after pregen. See `docs/GUIDED_TUTOR.md` |
-| `npm run pregen` | Generate everything missing (lesson text, board pictures, photo) for loaded concepts |
-| `npm run pregen:first` | Same, first concept only — a cheap test |
-| `npm run pregen -- --visuals-only` | Only add board pictures to concepts that already have a lesson (no text or photo calls). Add `--force` to redraw existing pictures |
-| `npm run preview:visuals -- --concept <id>` | Write `logs/visual-preview-<id>.html` showing every picture and step for that concept — review before a demo |
-| `npm run preview:visuals -- --samples` | The same preview for the built-in reference pictures (no API key needed) |
-| `npm run test:visuals` | Vocabulary, fact-checker, phrase matching, storage and render tests (no network) |
+```mermaid
+flowchart TD
+    PDF["📄 Textbook PDF"] -->|"pdfIngest (Gemini 3.8 Flash)"| CUR["📚 Curriculum Store"]
+    CUR --> PLAN["📋 Deterministic Plan Compiler"]
+    PLAN --> SYS["🧠 Persona Composer → System Prompt"]
 
-### Quality gates and the Chapter 1 runbook
+    STU["🎤 Student Voice"] -->|"WebSocket /ws/live"| LIVE["⚡ Gemini 3.8 Live<br/>13 function-calling tools"]
+    SYS --> LIVE
 
-Everything a model generates for a learner is linted and independently reviewed before it is served,
-and withheld (never replaced by a generic fallback) if it fails — see
-[docs/CH1_FIX_PLAN.md](docs/CH1_FIX_PLAN.md).
+    LIVE -->|"assess_child_reasoning"| DIAG["🔬 Gemini 3.6 Flash<br/>6.5s reasoning budget"]
+    LIVE -->|"set_figure / reveal_part"| BOARD["🖥️ Visual Blackboard<br/>2D · 3D · Photo · Chalk"]
 
-| Command | What it does |
-|---|---|
-| `npm run backfill:design` | Once per already-ingested curriculum: one call per course adds L3 hints and the photo/3D decision (`-- --dry-run` first). Needs `GEMINI_API_KEY` |
-| `npm run spec:ch1` | Prints the content spec (no calls): what will be generated per concept and why |
-| `npm run pregen:ch1:plan` | **Run this first.** Prints exactly which calls Chapter 1 needs (nothing is called): about 10 text calls (lesson, ≈8 boards incl. the alternative board, 1 review) + 1 image + 1 vision check only where the concept's photo decision says yes |
-| `npm run pregen:ch1` | Regenerate Chapter 1, single-shot: each artefact generated once, one review per concept, no retries (needs `GEMINI_API_KEY`). Resumes past finished concepts; hard-capped at 120 text calls / 15 images; prints call totals. `-- --repair 1` opts into one paid repair round |
-| `npm run pregen:ch1:redo` | Same without resume (keeps the stored artefact when the new one is withheld) |
-| `npm run review:pregen` | Scorecard over stored records (no model calls; exit 1 on served errors). `-- --details --write` for the full report |
-| `npm run upgrade:pregen` | Deterministic in-place upgrade of stored records (writes a backup first) |
-| `npm run test:quality` / `test:gates` / `verify` | Gate tests / + picture and ingest tests / + tsc and scorecard |
+    DIAG --> BKT["📈 BKT Update"]
+    BKT --> DELTA["Δ Plan Delta → Next Move"]
+    DELTA --> LIVE
+
+    LIVE -->|"Session end"| PROF["📝 Profiler (Gemini 3.8 Flash)"]
+    PROF --> PARENT["👨‍👩‍👧 Parent Report<br/>evidence-backed narrative"]
+```
+
+---
+
+## Google AI Features Used
+
+| Gemini Feature | How Ananta Uses It | Depth |
+|---|---|---|
+| **Gemini 3.8 Live** | Real-time bidirectional voice tutoring with 13 function-calling tools, Puck voice, VAD | Deep |
+| **Gemini 3.8 Flash** | PDF ingestion, lesson generation, profiler, parent reports, critic reviews, photo generation | Deep |
+| **Gemini 3.6 Flash** | Real-time reasoning assessment within a 6.5-second budget during live voice sessions | Deep |
+| **Gemini 3.1 Flash Lite** | Fallback model for diagnosis and lesson generation (resilience) | Redundancy |
+| **Gemini Vision** | Critic inspects AI-generated photos for pedagogical accuracy before serving | Novel |
+| **Gemini Image Generation** | Real-world photo generation for visual analogies tied to student interests | Novel |
+| **Google Files API** | PDF textbook upload (60-page chunks, 40 MB limit) for curriculum ingestion | Deep |
+| **Structured Outputs** | JSON schema enforcement across all AI calls — no unstructured responses | Deep |
+| **Thinking Budget** | Dynamic reasoning budget with auto-retry and model fallback | Novel |
+| **Function Calling** | 13 real-time tools: board control, quizzes, reasoning assessment, confusion signals | Deep |
+
+---
+
+## Quickstart
+
+```bash
+npm install
+echo "GEMINI_API_KEY=your-key" > .env.local
+npm run dev                    # opens http://localhost:5173
+```
+
+### Load curriculum content
+
+1. On the login screen, click **Content library (admin)**
+2. Pick board + grade + subject, upload the textbook PDF
+3. Gemini reads, structures, reviews, and publishes content automatically
+
+### Seed demo learners
+
+```bash
+npm run seed:demo -- --reset   # creates Aisha, Marcus, Priya with rich evidence data
+```
+
+---
 
 ## Production (Cloud Run + Firestore + Cloud Storage)
 
-Ananta runs on one Google Cloud project. **Cloud Run** runs the Node server: REST API, the Gemini Live voice
-WebSocket proxy, and the built web UI, all on one address. Data lives in **Firestore** (curricula, lessons,
-learners) and a **Cloud Storage** bucket (pregenerated photos), both in your project and in the same region as
-Cloud Run. Firebase Hosting is optional (`WITH_HOSTING=yes`) and not needed.
-
-Full from-scratch setup, data migration and verification: [docs/ANANTA_CLOUD_RUN_PLAN.md](docs/ANANTA_CLOUD_RUN_PLAN.md)
-(findings and rationale: [docs/ANANTA_MIGRATION_PLAN.md](docs/ANANTA_MIGRATION_PLAN.md)).
+One Google Cloud project. Cloud Run runs the Node server (REST API + Gemini Live WebSocket proxy + built SPA). Firestore stores curricula, lessons, and learner data. Cloud Storage holds pre-generated photos.
 
 ```bash
-export PROJECT_ID=<your-project-id> REGION=<firestore-region> BUCKET=<your-bucket>
-npm run deploy:live          # Cloud Run, then Firestore rules + indexes
-npm run migrate:cloud -- --dry-run && npm run verify:migration   # local data/ -> Firestore + Storage
+export PROJECT_ID=<your-project> REGION=<region> BUCKET=<your-bucket>
+npm run deploy:live                                          # Cloud Run + Firestore rules/indexes
+npm run migrate:cloud -- --dry-run && npm run verify:migration  # local → Firestore + Storage
 ```
 
-Local voice still works with `PORT=3001 npm run dev`.
+Full setup guide: [docs/ANANTA_CLOUD_RUN_PLAN.md](docs/ANANTA_CLOUD_RUN_PLAN.md)
+
+---
+
+## 13 Real-Time Voice Tools
+
+During a live tutoring session, Gemini Live calls these tools via function calling:
+
+| Tool | Purpose |
+|---|---|
+| `set_topic` | Navigate to a curriculum concept |
+| `set_figure` | Display a board picture (2D diagram, 3D model, or photo) |
+| `reveal_part` | Step-by-step reveal of diagram elements |
+| `update_diagram` | Modify the visual board in real time |
+| `switch_board_view` | Toggle between diagram, 3D, photo, and chalkboard views |
+| `update_chalkboard_notes` | Write structured notes on the chalk panel |
+| `write_live_note` | Add a quick annotation |
+| `highlight_concept` | Highlight a node in the concept map |
+| `generate_photo_visual` | Generate a real-world photo analogy |
+| `pose_quiz` | Present an assessment question |
+| `assess_child_reasoning` | Trigger the 6.5s reasoning assessment pipeline |
+| `show_student_thinking` | Make the student's reasoning visible on the board |
+| `record_confusion_signal` | Log when the student signals confusion |
+
+---
+
+## Parent Portal
+
+Parents see a plain-language report: what Ananta learned about their child, how it worked it out (with a *See why* link to the child's real answer behind every claim), the plan for the next lesson, and a home activity. An **Under the hood** toggle reveals the full engineering view with BKT curves, misconception ledgers, and strategy effectiveness data.
+
+```bash
+npm run seed:story              # creates Maya — a 5-lesson story arc showing misconception detection → correction
+npm run test:parent             # offline tests: sentence/evidence gates, jargon-leak check, story logic
+```
+
+---
+
+## Test Suite
+
+```bash
+npm test                        # core assessor + live + plan-delta tests
+npm run test:quality            # quality gates, lesson gen, photo gen, quiz evidence, ladder, content spec
+npm run test:gates              # quality + visuals + curriculum ingest
+npm run test:parent             # parent report tests
+npm run eval:diagnosis          # 45-case evaluation: catches right-answer-wrong-method errors
+npm run verify                  # tsc + all gates + scorecard
+```
+
+---
+
+## Key Documentation
+
+| Document | Content |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System map — what IS, not what was planned |
+| [CURRICULUM.md](docs/CURRICULUM.md) | Content pipeline: PDF → structured curriculum → pre-generated visuals |
+| [LEARNER_MODEL.md](docs/LEARNER_MODEL.md) | BKT parameters, evidence ladder, mastery gates |
+| [BOARD_VISUALS.md](docs/BOARD_VISUALS.md) | Visual generation: 2D diagrams, 3D models, photos, step-by-step reveals |
+| [GUIDED_TUTOR.md](docs/GUIDED_TUTOR.md) | Guided mode lesson scripting |
+| [PARENT_VIEW.md](docs/PARENT_VIEW.md) | Parent portal design and evidence-backed narratives |
+| [TEACHING_PLAN.md](docs/TEACHING_PLAN.md) | Deterministic plan compiler design |
+| [TUTOR_PERSONA.md](docs/TUTOR_PERSONA.md) | Persona composition and age-band adaptation |
+| [EVALUATION.md](docs/EVALUATION.md) | Diagnosis accuracy evaluation methodology |
+| [AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | Developer guide — landmine patterns to avoid |
+
+---
+
+## License
+
+Built for the [Google Cloud AI Builder Cup 2026](https://aibuildercup.com/).
