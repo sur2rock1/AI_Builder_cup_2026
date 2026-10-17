@@ -17,7 +17,7 @@ A single Node/Express process (`server.ts`) serves REST + a `/ws/live` WebSocket
 
 ## 3. Deploy topology
 
-- **Firebase Hosting** serves the built SPA (`dist/`) and rewrites `/api/**` and `/ws/**` to the **same** Cloud Run service (`dr-marcus-live`, `us-central1`) — confirmed in `firebase.json`.
+- **Firebase Hosting is optional** (D-2026-10-04-1: Cloud Run only unless `WITH_HOSTING=yes`). When enabled it serves the built SPA (`dist/`) and rewrites `/api/**` and `/ws/**` to the **same** Cloud Run service (`ananta`, `asia-southeast1`, project `ananta-ai-0410`) — see `firebase.json`.
 - **Cloud Run** runs the Docker image (`Dockerfile`: `node:22-bookworm-slim`, non-root `USER node`, `CMD ["node", "dist/server.cjs"]`).
 - **`process.env.K_SERVICE`** is the signal Cloud Run auto-sets on its containers. The repo layer uses this to auto-switch to Firestore in production (see §4) — this is intentional, not an accident.
 - **Firebase Auth**: email/password only, anonymous disabled (`firebase.json`).
@@ -124,7 +124,7 @@ in `ScenePanel.tsx`.
 Client → server messages: `audio`/`audio_in` (forwarded to Gemini Live), `text`, `tool_response` (logged only, no action taken), `close`.
 
 Gemini Live tool calls dispatched in `server.ts`'s switch:
-- `assess_child_reasoning` → `handleAssessChildReasoning()` → `recordReasoningEvidence()`, sends `learner_update_v2`/`plan_update` back to the browser. Fire-and-forget so the voice model isn't blocked past `ASSESS_BUDGET_MS` (2500ms).
+- `assess_child_reasoning` → `handleAssessChildReasoning()` → `recordReasoningEvidence()`, sends `learner_update_v2`/`plan_update` back to the browser. Fire-and-forget so the voice model isn't blocked past `ASSESS_BUDGET_MS` (6500 ms in `server.ts` and `server/routes/tutor.ts`; overridable by the env var of the same name).
 - `record_confusion_signal` → `handleRecordConfusionSignal()` → `recordConfusionSignal()` (added 2026-09-26 — see AGENT_GUIDE.md landmine #2).
 - `update_diagram` → `handleUpdateDiagramTool()` (2026-09-28): a store read bounded to 1.2 s finds the prepared picture for the focus and answers with its **step names** (`board.steps` + an instruction to build it with `reveal_part`); on a miss it answers at once with "a new picture is being drawn". It never generates — the browser's `/api/update-diagram` does, so nothing is billed twice. At session start the concept's pictures are also given to the tutor up front (`composeSystemInstruction({ boardContext })`, the THE BOARD PICTURES block from `src/visual/tutorBrief.ts`).
 - Every other tool name (`update_chalkboard_notes`, `set_figure`, `reveal_part`, `pose_quiz`, `generate_photo_visual`, etc.) is a pure board/UI relay to the browser and gets an immediate generic ack — **these never touch the learner model.** If you add a new tool that SHOULD persist something, you must add an explicit dispatch case, or it silently no-ops (see AGENT_GUIDE.md landmine #2 for exactly this mistake already made once).

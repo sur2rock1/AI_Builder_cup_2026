@@ -21,7 +21,7 @@ import { AudioManager } from './utils/audio';
 import { createDynamicLesson } from './utils/lessonGenerator';
 import { liveWebSocketUrl } from './utils/liveWs';
 import { authFetch } from './firebase/auth';
-import { Sparkles, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { LearnerProfilePanel } from './components/LearnerProfilePanel';
 import { TutorReasoningPanel } from './components/TutorReasoningPanel';
 import { AdminLibrary } from './components/AdminLibrary';
@@ -1367,9 +1367,7 @@ const AppInner: React.FC<{ tutorName: string; setTutorName: (n: string) => void 
       >
         {/* Brand & Identity */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-amber-400 p-0.5 flex items-center justify-center shadow-md">
-            <Sparkles className="w-4 h-4 text-black" />
-          </div>
+          <img src="/brand/ananta-emblem-192.png" alt="Ananta" className="w-8 h-8 rounded-lg shadow-md ring-1 ring-amber-300/30" />
           <div>
             <span className="text-sm font-bold tracking-wider text-white uppercase font-mono flex items-center gap-1.5">
               <span>AI Interactive Tutor</span>

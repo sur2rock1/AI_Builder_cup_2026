@@ -20,7 +20,7 @@
 
 In educational assessment, there is a recognized phenomenon known as the **Correct Answer Trap** (arXiv:2606.23205 / arXiv:2605.23925):
 - Frontier LLMs recognize wrong answers with >98% accuracy.
-- However, when a student arrives at a **correct answer via a flawed rule or lucky guess**, LLMs miss the underlying misconception **43% of the time**.
+- However, when a student arrives at a **correct answer via a flawed rule or lucky guess**, an answer-checking quiz cannot see the underlying misconception at all.
 - **Example in Grade 4 Math:** A student solving $-5$ vs $-1$ might answer that $-1$ is larger, but when probed, reveals they thought "1 is closer to zero, so smaller numbers are always better." In standard quiz apps, they get 100% and move on. In Ananta, their reasoning is evaluated by Gemini 3.6 Flash within 6.5 seconds, identifying the misconception `scale-confusion-plotting` and updating the student's mastery profile downwards.
 
 ---
@@ -95,7 +95,7 @@ Ananta is designed around three mutually reinforcing pillars:
 | LLM decides the lesson flow (prone to drift & hallucination) | **Deterministic Teaching Plan Compiler** with named rule provenance |
 | "Visual learner" static stereotyping | **Dynamic Beta(α, β) Bayesian strategy tracking** per concept type |
 | Black-box percentage score | **Two-click verifiable evidence replay** backed by raw transcripts |
-| Zero empirical validation | **EV-01 benchmark**: 100% catch rate on hidden misconceptions vs 0% for quiz apps |
+| Zero empirical validation | **EV-01 benchmark**: 10/10 hidden misconceptions caught on 45 team-written cases vs 0/10 for answer-checking only (small set; see docs/EVALUATION.md) |
 
 ---
 

@@ -25,7 +25,7 @@ All deliverables have been remapped against the official **Hack2skill / Google C
 | **Working Deployed URL** | ✅ **LIVE & HEALTHY** | `https://ananta-ivczdbgbja-as.a.run.app/` (Cloud Run, 102ms response, healthy API key) |
 | **Solution Pitch Deck (PDF)** | ✅ **COMPLETED** | Saved in [`docs/Ananta_Submission_Deck.pdf`](file:///c:/Users/user/Downloads/pythagoras-tutor/docs/Ananta_Submission_Deck.pdf) and editable `.pptx` |
 | **Public GitHub Repository** | ✅ **READY & CLEAN** | `https://github.com/sur2rock1/AI_Builder_cup_2026` (Clean git status, no secrets, judge-optimised README) |
-| **Empirical Evaluation Evidence** | ✅ **BENCHMARKED** | EV-01 Diagnosis Accuracy: 100% catch rate on hidden misconceptions; `npm run test:adaptation` passing |
+| **Empirical Evaluation Evidence** | ✅ **BENCHMARKED** | EV-01 Diagnosis Accuracy: 10/10 hidden misconceptions caught, 0/10 false alarms on a 45-case team-written set (run 2026-10-17, `gemini-3.6-flash`; 95% CI 72–100% on the catch rate); `npm run test:adaptation` passing |
 | **Google Cloud Stack Mandate** | ✅ **100% GCP** | Gemini (5 tiers), Cloud Run, Firestore, Firebase Auth, Cloud Storage, Google Files API |
 | **Team Registration (2-4 Pros)** | ⚠️ **ACTION REQUIRED** | Team formation finalized on Hack2skill dashboard (closed Oct 16) |
 | **3 to 4 Minute Demo Video** | ⏳ **SCRIPT READY** | Timed 3:35 script ready at [`docs/DEMO_VIDEO_SCRIPT.md`](file:///c:/Users/user/Downloads/pythagoras-tutor/docs/DEMO_VIDEO_SCRIPT.md) |
@@ -40,7 +40,7 @@ Judges evaluate the depth, sophistication, and architectural soundness of Google
 
 | Google AI & Cloud Technology | Specific Implementation in Ananta | Pedagogical & Technical Depth |
 |---|---|---|
-| **Gemini 3.8 Live** | Bidirectional voice tutoring via WebSocket (`/ws/live`), 16kHz PCM audio, Puck voice, VAD (700ms), 8 function-calling tools in default guided tutor (13 in standard) | **Frontier Voice**: Real-time board control, conversational turn-taking, line-by-line chalk writing |
+| **Gemini 3.8 Live** | Bidirectional voice tutoring via WebSocket (`/ws/live`), 16kHz PCM audio, Puck voice, VAD (700ms), 10 function-calling tools in default guided tutor (13 in standard) | **Frontier Voice**: Real-time board control, conversational turn-taking, line-by-line chalk writing |
 | **Gemini 3.6 Flash** | Real-time diagnostic reasoning assessor with strict 6.5s budget triggered after every student answer | **Deep Diagnostic Loop**: Distinguishes sound reasoning vs. guessing vs. misconception behind correct answer |
 | **Gemini 3.8 Flash** | Heavy synthesis: textbook PDF ingest, prerequisite graph extraction, lesson generation, profiler, parent narrative letters | **End-to-End Curriculum Engine**: Automated ingestion via Google Files API (60-page chunks) |
 | **Gemini 3.1 Flash Lite** | High-speed, cost-resilient fallback model for diagnostic evaluation and lesson generation | **Graceful Degradation**: Zero downtime during high load or API timeouts |
@@ -58,7 +58,7 @@ Judges evaluate the depth, sophistication, and architectural soundness of Google
 Judges evaluate whether the solution solves a real, significant problem with measurable impact.
 
 - **The Problem:** 1.5 billion students worldwide lack access to high-quality 1-on-1 tutoring (Bloom’s 2-Sigma Problem).
-- **The "Correct Answer Trap":** Standard LLMs and quiz apps only verify whether an answer is right or wrong. Published research shows LLMs miss **43% of misconceptions** hidden behind correct answers.
+- **The "Correct Answer Trap":** Quiz apps only verify whether an answer is right or wrong, so they cannot question a correct answer (0% by construction in EV-01). No verified source was found for a published miss rate for plain LLMs on this task, and in EV-01 a plain Gemini prompt also caught all 10 hidden cases on the 2026-10-17 run, so Ananta's advantage there is precision (100% against 91%) and the named catalogue misconception, not recall alone.
 - **Ananta's Alignment:** Ananta brings human-expert tutoring to any child with a browser. It diagnoses *how* the child reached the answer and prevents students from advancing with flawed foundations.
 - **Scalability:** Supports Cambridge, IGCSE, CBSE, and US Common Core. Ingesting any textbook takes minutes.
 
@@ -90,9 +90,9 @@ Judges look for intuitive, friction-free design tailored to real users.
 
 | Metric / Test | Result | Baseline Comparison |
 |---|:---:|---|
-| **Catching Right Answer / Broken Method** | **100% (10/10)** | Standard Quiz Apps: **0%** · Plain Gemini Prompt: **90%** |
+| **Catching Right Answer / Broken Method** | **100% (10/10)** | Standard Quiz Apps: **0%** · Plain Gemini Prompt: **100% (10/10)** |
 | **False Alarm Rate on Sound Reasoning** | **0% (0/10)** | System never penalizes sound student logic |
-| **Precision of Misconception Flags** | **91% (10/11)** | Plain Prompt: **82%** |
+| **Precision of Misconception Flags** | **100% (10/10)** | Plain Prompt: **91% (10/11)** |
 | **Automated Adaptation Proof (`test:adaptation`)** | **10/10 PASS** | Proves distinct plans generated for visual vs. worked-example students |
 | **Parent View Verification (`test:parent`)** | **25/25 PASS** | Validates sentence-to-evidence gates and zero jargon leakage |
 
@@ -102,7 +102,7 @@ Judges look for intuitive, friction-free design tailored to real users.
 
 | Rule / Requirement | Competition Guideline | Ananta Compliance Proof |
 |---|---|---|
-| **Deploy Target** | Cloud Run or Firebase mandatory | **Cloud Run Service**: `ananta-ivczdbgbja-as.a.run.app` in `us-central1` |
+| **Deploy Target** | Cloud Run or Firebase mandatory | **Cloud Run Service**: `ananta-ivczdbgbja-as.a.run.app` in `asia-southeast1` (project `ananta-ai-0410`) |
 | **Secrets Hygiene** | Strict disqualification for exposed keys | `.env*` gitignored; zero service accounts or private keys committed in history |
 | **Video Duration** | 3 to 4 minutes required | **3 minutes 35 seconds** script and teleprompter guide provided |
 | **Evaluator Usability** | Judges must be able to test independently | Quick-start guide, sample questions, and pre-seeded Grade 4 profiles documented in README |

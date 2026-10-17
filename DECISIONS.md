@@ -161,7 +161,7 @@ sequence on every answer — including IDs that had already failed. The micropho
 streaming during the wait, so each repeat queued its own reply.
 
 **Fix.**
-- Hard latency budget (`ASSESS_BUDGET_MS`, default 2500 ms). If the diagnosis is not back
+- Hard latency budget (`ASSESS_BUDGET_MS`, default 2500 ms when decided; the code default is now 6500 ms, see D-2026-10-17-6). If the diagnosis is not back
   in time, the voice model is answered with a *transfer move* — "try your method on a
   different example" — which is sound teaching with no diagnosis at all. The full
   diagnosis continues and is recorded, shown, and folded into the next turn. The
@@ -1740,7 +1740,7 @@ environment; the user must run `npm run pregen -- --visuals-only` and review wit
 ## D-2026-10-04-1 — Deploy Cloud Run only; plain Cloud Storage bucket; region chosen explicitly
 **Context.** After D-2026-10-03-1 the user asked which of Cloud Run or Firebase to use. Verified: Firebase Hosting rewrites have a 60-second request timeout; Cloud Run supports WebSockets (up to 60 min); `server.ts` already serves `dist/` and `liveWs.ts` already uses same-origin WebSockets off a `.web.app` host. The hackathon rule is "Cloud Run or Firebase".
 **Options.** (a) Cloud Run + Hosting; (b) Cloud Run only. **Decision:** (b). `scripts/deploy-cloudrun.sh` no longer builds or deploys Hosting unless `WITH_HOSTING=yes`; it still deploys Firestore rules and indexes. Photos go to a plain GCS bucket (`BUCKET`) instead of the Firebase default Storage bucket, which removes the bucket-name ambiguity; `REGION` is now a required variable so Cloud Run, Firestore and the bucket cannot silently differ.
-**Trade-offs.** No CDN for static files. `asia-southeast1` is Tier 2 on Cloud Run (unit price not retrieved) and its voice-latency benefit is unmeasured; `us-central1` is the verified, cheaper default. Firestore location cannot be changed after creation.
+**Trade-offs.** No CDN for static files. `asia-southeast1` is Tier 2 on Cloud Run (unit price not retrieved) and its voice-latency benefit is unmeasured; `us-central1` was the verified, cheaper default. Superseded by D-2026-10-17-6: the owner fixed `asia-southeast1`. Firestore location cannot be changed after creation.
 **Evidence.** Deploy script passes `bash -n`; nothing deployed or run against a real project yet. Runbook: docs/ANANTA_CLOUD_RUN_PLAN.md. Previous script in `backups/pre-cloudrun-only-2026-10-04/`.
 
 
@@ -1947,3 +1947,11 @@ Parent View and "Recent lessons" to Under the hood; sort topics newest first; re
 Live notes stay labelled as impressions and are kept out of mastery and claims (unchanged rule: only checked answers count).
 
 **Evidence.** `tests/parent/latest-lesson.mjs` 6/6; `test:parent` 25/25; `test:adaptation` 10/10; `tsc` 0 errors.
+
+## D-2026-10-17-6 · Deployment fixed to project `ananta-ai-0410` / `asia-southeast1`; EV-01 results and tool counts reconciled across docs
+
+**Context.** Three disagreements in the docs. (1) Region: `us-central1` in ARCHITECTURE, HACKATHON_AUDIT, `.env.example` and `firebase.json` rewrites, while D-2026-10-04-1 called it the default and the live URL (`ananta-ivczdbgbja-as.a.run.app`) is an `asia-southeast1` address. (2) EV-01: README, HACKATHON_AUDIT, the two video scripts and USE_CASE_TALK reported a result while EVALUATION.md, TRACEABILITY, TECHNICAL_SPEC, BUILD_PLAN and PROJECT_STATE said it had not been run. Run folders exist from 2026-10-15 (`gemini-3.1-flash-lite`) and 2026-10-17 (`gemini-3.6-flash`). (3) Tool count and diagnosis budget: "8" guided tools in README, scripts and HACKATHON_AUDIT, but `src/guided/tools.ts` declares 8 guided-only tools and keeps 2 standard ones, so the guided tutor has **10**; the standard tutor has 13. ARCHITECTURE gave `ASSESS_BUDGET_MS` as 2500 ms; the code (`server.ts`, `server/routes/tutor.ts`) uses 6500 ms.
+**Decision.** Owner confirmed project `ananta-ai-0410`, region `asia-southeast1` for Cloud Run, Firestore and the bucket (they must match). EV-01 results in the docs now come only from `evals/diagnosis/results/`; the "43% of misconceptions" claim is removed because no source was found and the project's own plain-prompt baseline caught 10/10 on the latest run. Guided tools are stated as 10 (13 standard). The diagnosis budget is stated as 6.5 s.
+**Evidence.** `results/2026-10-17T04-24-16/summary.md`: 10/10 hidden misconceptions, 0/10 false alarms, 43/45 exact, p95 4.8 s; plain Gemini prompt 10/10 recall, 10/11 precision. Tool counts read from `src/guided/tools.ts` and `src/live/liveConfig.ts`.
+**Trade-offs and still open.** `asia-southeast1` price and voice latency unmeasured (as D-2026-10-04-1). `firebase-config.json` still names `sceneflow-f9529` and needs the web-app config for `ananta-ai-0410` (run `scripts/ananta-setup.sh`). `functions/src/index.ts` still says `us-central1` (the `functions/` folder is stale and not deployed). The submission deck and filled template (PDF/PPTX) were not edited and may still show the old numbers. EV-01 labels have not had a second reviewer.
+

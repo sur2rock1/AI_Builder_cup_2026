@@ -175,6 +175,7 @@ export const ParentReport: React.FC<Props> = ({ onBack, initialStudentId, onUnde
       <header className="sticky top-0 z-10 bg-[#FBF8F3]/95 backdrop-blur border-b border-[#E8E2D6]">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <button onClick={onBack} aria-label="Back" className={`${MUTED} hover:text-[#1E2430] p-1 -ml-1`}><ArrowLeft className="w-5 h-5" /></button>
+          <img src="/brand/ananta-emblem-192.png" alt="" aria-hidden="true" className="w-9 h-9 rounded-lg shrink-0" />
           <div className="flex-1 min-w-0">
             <p className={`${INK} font-semibold leading-tight whitespace-nowrap`}>Ananta · Parent view</p>
             <p className={`text-xs ${MUTED} hidden sm:block`}>Where every question opens infinity</p>

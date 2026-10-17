@@ -40,14 +40,14 @@
         "source": "/ws/**",
         "run": {
           "serviceId": "ananta",
-          "region": "us-central1"
+          "region": "asia-southeast1"
         }
       },
       {
         "source": "/api/**",
         "run": {
           "serviceId": "ananta",
-          "region": "us-central1"
+          "region": "asia-southeast1"
         }
       },
       {

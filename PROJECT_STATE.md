@@ -3,6 +3,12 @@
 _Last updated: 2026-10-17 (see the 2026-10-17 update first)_
 
 
+## UPDATE 2026-10-17 — Docs reconciled: region, EV-01, tool counts
+- **Region and project:** `ananta-ai-0410`, `asia-southeast1` (D-2026-10-17-6). Updated `.env.example`, `.firebaserc`, `firebase.json` rewrites, ARCHITECTURE, TECHNICAL_SPEC, HACKATHON_AUDIT. **Still to do:** `firebase-config.json` names `sceneflow-f9529`; `functions/src/index.ts` says `us-central1` (stale folder).
+- **EV-01 has been run** (2026-10-15 on `gemini-3.1-flash-lite`, 2026-10-17 on `gemini-3.6-flash`): 10/10 hidden misconceptions, 0/10 false alarms, 43/45 exact; a plain Gemini prompt also found 10/10 (precision 10/11 against 10/10). Results are in `docs/EVALUATION.md`. Older lines below that say "not yet run" or "NOT built" are superseded. EV-02 and EV-03 are still not built. Labels still need a second reviewer.
+- **Guided tutor has 10 tools** (13 in standard mode); diagnosis budget is 6500 ms.
+- **Deployment** is no longer "NOT DONE": the Cloud Run URL is `https://ananta-ivczdbgbja-as.a.run.app/` (owner-reported 2026-10-10).
+
 ## UPDATE 2026-10-17 — current state (read first; supersedes conflicting lines below)
 - **"Quiz me" (D-2026-10-17-4):** the learner can skip to practice (`skip_to_practice`); a missed practice question sends the tutor back to teach the skipped part (`teach_skipped`) and then re-asks the question. `npm run test:skip` 15/15. Not yet tried live.
 - **Parent View latest lesson (D-2026-10-17-5):** latest-lesson card; lessons and minutes now counted; live observer notes stored per lesson and shown (Parent View + Under the hood "Recent lessons"); Under the hood lists topics newest first. `npm run test:latest-lesson` 6/6.
@@ -15,7 +21,7 @@ _Last updated: 2026-10-17 (see the 2026-10-17 update first)_
 - **NOT verified:** a live voice session with the conversational guided tutor; whether Gemini Live fills in `representationUsed`; the Parent View after a server restart.
 - **Cloud (the judges' URL) is NOT updated yet:** redeploy (`npm run deploy:live`); add Maya and Leo (`npx tsx scripts/migrate-local-to-cloud.ts --only learners`); delete `demo_aisha`, `demo_marcus`, `demo_priya` from Firestore `learners`.
 
-## UPDATE 2026-10-15 — Diagnosis-accuracy evaluation harness (EV-01) built, not yet run live
+## UPDATE 2026-10-15 — Diagnosis-accuracy evaluation harness (EV-01) built (first live runs: see the 2026-10-17 doc-reconciliation update above)
 - **New:** `evals/diagnosis/` (`cases.json` 45 labelled exchanges, `concepts.json`, `run.ts`, `metrics.ts`, `report.ts`), `docs/EVALUATION.md`, `tests/eval/metrics.mts`. Scripts: `eval:diagnosis`, `eval:diagnosis:dry`, `eval:diagnosis:report`, `test:eval`. Decision D-2026-10-15-2.
 - **Verified here:** scoring code unit tests pass (`npm run test:eval`); dry run produces the report; report renders at 1200 px and 390 px; a failed model call is detected as a fallback and excluded, not scored; `tsc --noEmit` clean.
 - **NOT verified:** no real Gemini run yet (this sandbox cannot reach Google). **No accuracy number exists until the owner runs `npm run eval:diagnosis` locally.** Then paste `results/latest/summary.md` into `docs/EVALUATION.md`.
@@ -36,7 +42,7 @@ _Last updated: 2026-10-17 (see the 2026-10-17 update first)_
 - **Models:** FAST/STRONG roles resolved on the owner's machine (2026-09-26). 2026-10-09 logs show the primary flash models hitting the 20 s deadline in the Profiler and falling back to `gemini-3.1-flash-lite`. IMAGE role was quota-blocked on 2026-09-26; photo status since then not re-verified.
 - **Deployment: NOT DONE.** No Cloud Run URL exists in the repo or docs. `firebase-config.json` still points at `sceneflow-f9529` (not the owner's project) and `.firebaserc` is a placeholder; `deploy-cloudrun.sh` refuses to run until fixed. This is a mandatory competition requirement.
 - **Submission artefacts:** proposal PDF — not started; 3-minute video — not started.
-- **Evidence of effectiveness:** EV-01/02/03 (diagnosis accuracy, adapted-vs-base, persona adherence) NOT built. No measured result exists.
+- **Evidence of effectiveness:** EV-01 (diagnosis accuracy) built and run 2026-10-15 and 2026-10-17, see `docs/EVALUATION.md`; EV-02 (adapted-vs-base) and EV-03 (persona adherence) NOT built.
 - **Privacy/auth:** deployed builds default `DEMO_MODE=true` (no token checks; `GET /api/learners` lists all profiles). Not acceptable for real children's data.
 - **Tests:** `tsc` clean; `tests/live/run.mjs` fails 7 assertions (since 28 Sep); `tests/guided/run.mjs` crashes (stale test); `npm test` is red.
 - **In progress / uncommitted:** see the 2026-10-17 update at the top (the 16 Oct "guided is the only tutor" change was rolled back).

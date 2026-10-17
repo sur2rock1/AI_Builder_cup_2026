@@ -48,7 +48,7 @@
     2. Gemini 3.6 Flash (6.5s diagnostic reasoning loop)
     3. Deterministic Teaching Plan Compiler & BKT module.
 - **Voiceover Track:**
-  > "Under the hood, Ananta is powered by five tiers of Google Gemini models. Real-time bidirectional voice runs on Gemini 3.8 Live with eight specialized function-calling tools. Every student answer is diagnosed by Gemini 3.6 Flash within a strict six-point-five-second budget. Bayesian Knowledge Tracing computes true probabilistic mastery, and an entirely deterministic compiler builds reproducible lesson plans without AI hallucinations. All deployed on Google Cloud Run, backed by Firestore and Cloud Storage."
+  > "Under the hood, Ananta is powered by five tiers of Google Gemini models. Real-time bidirectional voice runs on Gemini 3.8 Live with ten specialized function-calling tools. Every student answer is diagnosed by Gemini 3.6 Flash within a strict six-point-five-second budget. Bayesian Knowledge Tracing computes true probabilistic mastery, and an entirely deterministic compiler builds reproducible lesson plans without AI hallucinations. All deployed on Google Cloud Run, backed by Firestore and Cloud Storage."
 
 ---
 
@@ -110,7 +110,7 @@
     - Automated adaptation tests: **10/10 passing**.
   - Quick flash of the PDF upload interface: textbook PDF → curriculum graph.
 - **Voiceover Track:**
-  > "We backed our claims with hard empirical validation. In our EV-01 evaluation across forty-five labeled cases, Ananta caught one hundred percent of misconceptions hidden behind correct answers — where standard quiz apps scored zero percent. In the admin library, any official textbook PDF can be uploaded through Google's Files API, automatically extracting prerequisites, misconceptions, and pre-generating quality-reviewed lessons."
+  > "We backed our claims with hard empirical validation. In our EV-01 evaluation across forty-five labeled cases, Ananta caught ten of ten misconceptions hidden behind correct answers, with no false alarms on sound reasoning — where a quiz that only checks answers catches none. In the admin library, any official textbook PDF can be uploaded through Google's Files API, automatically extracting prerequisites, misconceptions, and pre-generating quality-reviewed lessons."
 
 ---
 

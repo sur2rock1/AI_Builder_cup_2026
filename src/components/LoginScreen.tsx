@@ -168,15 +168,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
 
       {/* Logo & Title */}
       <div className="relative z-10 text-center mb-10 mt-4">
-        <div className="flex items-center justify-center gap-3 mb-3">
-          <div className="w-14 h-14 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-900/50">
-            <BookOpen className="w-8 h-8 text-white" />
-          </div>
-          <div className="text-left">
-            <h1 className="text-3xl font-bold text-white tracking-tight">Ananta</h1>
-            <p className="text-indigo-300 text-sm font-medium">Where Every Question Opens Infinity</p>
-          </div>
-        </div>
+        <img
+          src="/brand/ananta-logo.jpg"
+          alt="Ananta"
+          width={1079}
+          height={1079}
+          className="w-52 h-52 sm:w-64 sm:h-64 mx-auto rounded-3xl object-cover shadow-2xl shadow-black/60 ring-1 ring-amber-300/20 mb-4"
+        />
+        <h1 className="sr-only">Ananta</h1>
+        <p className="text-indigo-300 text-sm font-medium mb-3">Where Every Question Opens Infinity</p>
         <p className="text-slate-400 text-sm max-w-xs mx-auto">
           A judgment-free space to ask any question, at any pace, as many times as you need.
         </p>
