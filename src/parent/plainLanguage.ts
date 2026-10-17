@@ -21,7 +21,7 @@ export function stageLabel(stage: number): string {
 
 /** How Ananta explains a thing, in the words a parent would use. */
 export const TEACHING_STYLE_WORDS: Record<TeachingStrategy, { noun: string; verbing: string }> = {
-  direct_explanation:     { noun: 'a clear explanation', verbing: 'explaining it step by step' },
+  direct_explanation:     { noun: 'a clear explanation', verbing: 'explaining it in words' },
   worked_example:         { noun: 'a worked example', verbing: 'working through an example together' },
   visual_diagram:         { noun: 'a picture or diagram', verbing: 'drawing it out' },
   real_world_analogy:     { noun: 'an everyday comparison', verbing: 'comparing it to something from everyday life' },

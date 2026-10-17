@@ -239,6 +239,62 @@ export const ParentReport: React.FC<Props> = ({ onBack, initialStudentId, onUnde
           )}
 
           {report.stats.answersChecked > 0 && (<>
+          {/* 0. Ananta's plan for the next lesson - first, because it is what makes Ananta different: the plan is built from this child's own answers */}
+          {report.nextLesson && (
+            <section className="rounded-2xl border-2 border-[#4F46E5] bg-[#F5F6FF] p-5 shadow-sm" data-testid="next-lesson">
+              <h2 className="text-[#3730A3] text-lg font-semibold flex items-center gap-2" style={{ fontFamily: 'Georgia, serif' }}>
+                <CalendarClock className="w-5 h-5" />Ananta's plan for {child}'s next lesson
+              </h2>
+              <p className={`text-sm ${MUTED} mb-3`}>Built from {child}'s own answers so far, not a fixed course.</p>
+              <p className={`${INK} text-[18px] font-semibold mb-3`} style={{ fontFamily: 'Georgia, serif' }}>{report.nextLesson.focus}</p>
+              <ul className="space-y-2">
+                {report.nextLesson.willDo.map((w, i) => (
+                  <li key={i} className={`${INK} text-[15px] leading-relaxed flex gap-2`}><span className="mt-2 w-1.5 h-1.5 rounded-full bg-[#4F46E5] shrink-0" />{w}</li>
+                ))}
+              </ul>
+              {report.nextLesson.keepAnEyeOn.length > 0 && (
+                <div className="mt-4 rounded-xl bg-[#FEF8E7] border border-[#F3E3B0] p-3">
+                  <p className="text-xs font-semibold text-[#854D0E] mb-1 flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" />Ananta will watch for</p>
+                  {report.nextLesson.keepAnEyeOn.map((t, i) => <p key={i} className={`text-[13.5px] ${INK} leading-snug`}>{t}</p>)}
+                </div>
+              )}
+              <p className={`text-xs ${MUTED} mt-3`}>This is the plan Ananta really builds before each lesson, from everything below. The next lesson follows it.</p>
+            </section>
+          )}
+
+          {/* 0b. The lesson that just happened - a parent opening the page after a lesson looks for it first */}
+          {report.latestLesson && (
+            <section className={`${CARD} p-5`} data-testid="latest-lesson">
+              <h2 className={`${INK} text-lg font-semibold flex items-center gap-2`} style={{ fontFamily: 'Georgia, serif' }}>
+                <BookOpen className="w-5 h-5 text-[#4F46E5]" />{child}'s latest lesson
+              </h2>
+              <p className={`text-sm ${MUTED} mb-3`}>
+                {when(report.latestLesson.at)}
+                {report.latestLesson.minutes ? ` · ${report.latestLesson.minutes} min` : ''}
+                {` · ${report.latestLesson.answersChecked} answer${report.latestLesson.answersChecked === 1 ? '' : 's'} checked`}
+                {report.latestLesson.answersChecked > 0 ? `, ${report.latestLesson.explained} explained in ${child}'s own words` : ''}
+              </p>
+              <p className={`${INK} text-[17px] font-semibold mb-2`} style={{ fontFamily: 'Georgia, serif' }}>{report.latestLesson.topics.join(' · ')}</p>
+              {report.latestLesson.notes.length > 0 && (
+                <div className="mt-3 rounded-xl bg-[#F6F3EC] border border-[#E8E2D6] p-3">
+                  <p className={`text-xs font-semibold ${MUTED} mb-2 flex items-center gap-1.5`}><Eye className="w-3.5 h-3.5" />What Ananta noticed during the lesson</p>
+                  <ul className="space-y-2">
+                    {report.latestLesson.notes.map((n, i) => (
+                      <li key={i} className={`text-[14px] ${INK} leading-snug`}>
+                        {n.text}
+                        {n.childSaid && <span className={`block text-[12.5px] ${MUTED} italic mt-0.5`}>{child} said: “{n.childSaid}”</span>}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className={`text-[11.5px] ${MUTED} mt-2`}>Live notes Ananta made while listening. They guide the lesson; only checked answers change what Ananta records about {child}.</p>
+                </div>
+              )}
+              {report.latestLesson.evidenceIds.length > 0 && (
+                <div className="mt-2"><SeeWhy ids={report.latestLesson.evidenceIds} evidence={report.evidence} child={child} label={`See ${child}'s answers from this lesson`} /></div>
+              )}
+            </section>
+          )}
+
           {/* 1. The letter */}
           <section className={`${CARD} p-5`} data-testid="letter">
             <div className="flex items-center justify-between mb-3">
@@ -292,26 +348,6 @@ export const ParentReport: React.FC<Props> = ({ onBack, initialStudentId, onUnde
                 <p className={`text-sm ${MUTED}`}>A right-sounding answer can hide a wrong idea. This is how Ananta finds out, and what it does about it.</p>
               </div>
               {report.story.map((t) => <Story key={t.key} thread={t} evidence={report.evidence} child={child} />)}
-            </section>
-          )}
-
-          {/* 6. Next lesson */}
-          {report.nextLesson && (
-            <section className={`${CARD} p-5`} data-testid="next-lesson">
-              <h2 className={`text-xs uppercase tracking-wide font-semibold ${MUTED} mb-1 flex items-center gap-1.5`}><CalendarClock className="w-3.5 h-3.5" />Ananta's plan for the next lesson</h2>
-              <p className={`${INK} text-[17px] font-semibold mb-3`} style={{ fontFamily: 'Georgia, serif' }}>{report.nextLesson.focus}</p>
-              <ul className="space-y-2">
-                {report.nextLesson.willDo.map((w, i) => (
-                  <li key={i} className={`${INK} text-[14.5px] leading-relaxed flex gap-2`}><span className="text-[#4F46E5] mt-1.5 w-1.5 h-1.5 rounded-full bg-[#4F46E5] shrink-0" />{w}</li>
-                ))}
-              </ul>
-              {report.nextLesson.keepAnEyeOn.length > 0 && (
-                <div className="mt-4 rounded-xl bg-[#FEF8E7] border border-[#F3E3B0] p-3">
-                  <p className="text-xs font-semibold text-[#854D0E] mb-1 flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" />Ananta will watch for</p>
-                  {report.nextLesson.keepAnEyeOn.map((t, i) => <p key={i} className={`text-[13.5px] ${INK} leading-snug`}>{t}</p>)}
-                </div>
-              )}
-              <p className={`text-xs ${MUTED} mt-3`}>This is the plan Ananta really builds before each lesson from everything above. The next lesson follows it.</p>
             </section>
           )}
 

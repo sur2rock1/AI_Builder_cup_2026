@@ -168,14 +168,14 @@ export function compileTeachingPlan(
   const representationOrder: TeachingPlan['representationOrder'] = ranked.map((r) => ({
     strategy: r.strategy, expected: r.expected,
     reason: r.uses > 0
-      ? reason('R-REP', `${r.uses} use(s) on "${conceptType}" concepts; ${(r.expected * 100).toFixed(0)}% led to a gain.`)
+      ? reason('R-REP', `${Math.round(r.uses)} use(s) on "${conceptType}" concepts; ${(r.expected * 100).toFixed(0)}% led to a gain.`)
       : reason('R-REP', hasData ? 'No track record yet for this representation on this concept type.' : `Default order for a ${subjectMode.replace('_', '-')} subject — no evidence yet.`),
   }));
   const avoidRepresentations: TeachingPlan['avoidRepresentations'] = ranked
     .filter((r) => r.uses >= MIN_USES_BEFORE_AVOID && r.expected < AVOID_THRESHOLD)
     .map((r) => ({
       strategy: r.strategy,
-      reason: reason('R-AVOID', `${r.uses} uses, only ${(r.expected * 100).toFixed(0)}% led to a gain.`),
+      reason: reason('R-AVOID', `${Math.round(r.uses)} uses, only ${(r.expected * 100).toFixed(0)}% led to a gain.`),
     }));
 
   // R-SCAFFOLD

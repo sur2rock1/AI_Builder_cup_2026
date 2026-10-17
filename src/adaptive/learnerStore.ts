@@ -463,7 +463,9 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
   so.timesUsed += 1;
   const ladderLevel = ladderLevelForDepth(input.understandingDepth);
   const prevLadderLevel = cs.ladder?.highestLevel ?? 0;
-  const gained = bkt.delta > 0 || ladderLevel > prevLadderLevel;
+  // A "gain" credits the teaching strategy that was in use, so it must come from the child's answer, not from BKT's
+  // learning-transition term (which lifts the score even after a wrong answer): a sound observation, or a higher rung.
+  const gained = bkt.supportsMastery || ladderLevel > prevLadderLevel;
   if (gained) so.timesFollowedByGain += 1;
 
   if (!cs.strategiesUsed.includes(input.strategyInUse)) cs.strategiesUsed.push(input.strategyInUse);

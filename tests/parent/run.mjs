@@ -50,7 +50,7 @@ await t('story: fixed mix-up has noticed → confirmed → changed → fixed, ea
   const s = base.story.find((x) => x.state === 'fixed');
   assert.deepEqual(s.steps.map((x) => x.kind), ['noticed', 'confirmed', 'changed', 'fixed']);
   for (const st of s.steps) assert.ok(st.evidenceIds.length && st.evidenceIds.every((i) => base.evidence[i]), st.kind);
-  assert.match(s.steps[2].caption, /stopped explaining it step by step and switched to drawing it out/);
+  assert.match(s.steps[2].caption, /stopped explaining it in words and switched to drawing it out/);
 });
 await t('story: a mix-up seen once is "watching", never confirmed', () => {
   const s = base.story.find((x) => x.state === 'watching');

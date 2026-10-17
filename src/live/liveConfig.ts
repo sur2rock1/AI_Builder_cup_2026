@@ -162,6 +162,13 @@ export const ALL_TOOLS: any[] = [
           enum: ['teach', 'check', 'probe', 'transfer'],
           description: "'check' = first comprehension question. 'probe' = follow-up testing their method. 'transfer' = a NEW situation testing if it generalises.",
         },
+        representationUsed: {
+          type: Type.STRING,
+          enum: ['direct_explanation', 'worked_example', 'visual_diagram', 'real_world_analogy', 'socratic_questioning', 'step_by_step', 'story_context', 'interactive_simulation', 'peer_comparison', 'prerequisite_review'],
+          description: 'How you explained this idea just before asking: a picture or diagram = visual_diagram, an example worked aloud = worked_example, '
+            + 'small numbered steps = step_by_step, something from daily life = real_world_analogy, plain words = direct_explanation. '
+            + 'This is how Ananta learns which way of teaching works for this child, so always fill it in.',
+        },
       },
       required: ['questionAsked', 'childAnswer', 'promptType'],
     },

@@ -16,7 +16,7 @@
 import { generateJSON } from '../ai/gateway';
 import { getRepo } from './repo';
 import {
-  ClaimKind, EvidenceEvent, LadderLevel, LearnerClaim, SessionSummary,
+  ClaimKind, EvidenceEvent, LadderLevel, LearnerClaim, SessionSummary, SessionLiveNote,
 } from './learnerModel';
 import { ProposedClaim, validateClaims, mergeClaims } from './claimValidator';
 
@@ -28,6 +28,8 @@ export interface RunProfilerInput {
   sessionId: string;
   sessionStartedAt: number;
   apiKey: string;
+  /** The live observer's notes from this lesson (stored on the summary; not evidence). */
+  liveNotes?: SessionLiveNote[];
 }
 
 export interface RunProfilerResult {
@@ -234,6 +236,8 @@ export async function runProfiler(input: RunProfilerInput): Promise<RunProfilerR
     representationsUsed: facts.representationsUsed,
     narrative,
     planVersion: events[events.length - 1]?.planVersion || 'unknown',
+    minutes: Math.max(1, Math.round((Date.now() - input.sessionStartedAt) / 60000)),
+    ...(input.liveNotes?.length ? { liveNotes: input.liveNotes.slice(-25) } : {}),
   };
 
   // Re-read + merge under the profile's latest state (best-effort; this repo

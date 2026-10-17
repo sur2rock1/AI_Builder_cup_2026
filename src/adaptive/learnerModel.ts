@@ -474,4 +474,13 @@ export interface SessionSummary {
   representationsUsed: Record<string, number>;
   narrative: string;
   planVersion: string;
+  /** Lesson length in minutes (wall clock, connect to disconnect). */
+  minutes?: number;
+  /**
+   * What the live observer noted during the lesson ("What I noticed" in the learner panel), each with the child's own words.
+   * Model impressions, kept for the parent and the Under the hood view; they are NOT evidence and never change mastery.
+   */
+  liveNotes?: SessionLiveNote[];
 }
+
+export interface SessionLiveNote { at: number; concept: string; understanding: number; level: string; noticed: string; evidence: string }

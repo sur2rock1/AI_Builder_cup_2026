@@ -67,8 +67,16 @@ type Block =
 
 export const GuidedBoard: React.FC<Props> = ({ payload, board, conceptLabel }) => {
   const tutorName = useTutorName();
-  const pic = currentPicture(board);
+  // A picture or photo belongs to the beat it was put up for. When the next beat starts it is taken down, so what is drawn
+  // beside the chalk is always what the tutor is talking about (a 4040 chart must not sit next to a lesson on 6481).
+  const beatNow = payload.script.beats[board.beatIndex]?.id ?? null;
+  const pic = currentPicture({ ...board, items: board.items.filter((p) => p.beatId === beatNow) });
   const visual = pic ? ((payload.visuals[pic.ref] as BoardVisual | undefined) ?? null) : null;
+  // The stored photo goes up with its beat and comes down when that beat ends.
+  const photo = payload.photo && payload.photo.beatId === beatNow && board.items.some((p) => p.beatId === payload.photo!.beatId) ? payload.photo : null;
+  const [photoFailed, setPhotoFailed] = React.useState(false);
+  const showPhoto = !!photo && !photoFailed;
+  const hasPanel = !!visual || showPhoto;
   const step: StepState = useMemo(() => {
     if (!visual) return 0;
     if (!pic || !pic.step || pic.step === 'all') return 'all';
@@ -187,7 +195,7 @@ export const GuidedBoard: React.FC<Props> = ({ payload, board, conceptLabel }) =
       <div className="absolute inset-x-0 bottom-0 h-3 bg-gradient-to-b from-[#5B4632] to-[#3E2F21]" />
 
       <div className="relative h-full flex flex-col sm:flex-row font-chalk" style={{ color: CHALK }}>
-        <div ref={scroller} className={`${visual ? 'h-[46%] sm:h-full sm:w-[44%]' : 'h-full'} w-full min-h-0 overflow-y-auto px-4 sm:px-8 pt-4 sm:pt-7 pb-5 sm:pb-8 space-y-2 sm:space-y-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
+        <div ref={scroller} className={`${hasPanel ? 'h-[46%] sm:h-full sm:w-[44%]' : 'h-full'} w-full min-h-0 overflow-y-auto px-4 sm:px-8 pt-4 sm:pt-7 pb-5 sm:pb-8 space-y-2 sm:space-y-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
              style={{ maskImage: 'linear-gradient(to bottom, transparent 0, #000 14px, #000 100%)' }}>
           {blocks.length === 0 && (
             <p className="text-white/35 text-[24px]">{conceptLabel ? `${conceptLabel} - ` : ''}{tutorName} will write here as you learn.</p>
@@ -213,11 +221,19 @@ export const GuidedBoard: React.FC<Props> = ({ payload, board, conceptLabel }) =
           })}
         </div>
 
-        {visual && (
-          <div className="w-full h-[54%] sm:h-full sm:w-[56%] min-h-0 p-2 sm:p-3 pb-4 sm:pb-6 flex items-center">
-            <div className="w-full rounded-2xl overflow-hidden border border-white/10 bg-[#0F1420] shadow-lg">
-              <BoardVisualView key={pic!.ref} visual={visual} step={step} showControls={false} idPrefix={`guided-${pic!.ref}`} />
-            </div>
+        {hasPanel && (
+          <div className="w-full h-[54%] sm:h-full sm:w-[56%] min-h-0 p-2 sm:p-3 pb-4 sm:pb-6 flex flex-col gap-2 justify-center">
+            {showPhoto && photo && (
+              <figure className={`${visual ? 'flex-none max-h-[48%]' : 'flex-1'} min-h-0 flex flex-col rounded-2xl overflow-hidden border border-white/10 bg-[#0F1420] shadow-lg`}>
+                <img src={photo.url} alt={photo.caption || conceptLabel || 'Picture for this lesson'} className="w-full min-h-0 flex-1 object-contain bg-black/30" onError={() => setPhotoFailed(true)} />
+                {photo.caption && <figcaption className="px-3 py-1 text-[13px] leading-snug text-white/70 font-sans">{photo.caption}</figcaption>}
+              </figure>
+            )}
+            {visual && (
+              <div className="w-full rounded-2xl overflow-hidden border border-white/10 bg-[#0F1420] shadow-lg">
+                <BoardVisualView key={pic!.ref} visual={visual} step={step} showControls={false} idPrefix={`guided-${pic!.ref}`} />
+              </div>
+            )}
           </div>
         )}
       </div>

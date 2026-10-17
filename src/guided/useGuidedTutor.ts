@@ -20,7 +20,7 @@ import { EMPTY_GUIDED_BOARD, type GuidedBoardState, type GuidedPayload } from '.
 const STORAGE_KEY = 'ananta.tutorMode';
 const PACE_KEY = 'ananta.tutorPace';
 /** Tool names that belong to guided mode (kept in sync with src/guided/tools.ts). */
-const GUIDED_CALL_NAMES = ['advance_beat', 'fill_slot', 'next_line', 'write_aside', 'resume_lesson'];
+const GUIDED_CALL_NAMES = ['advance_beat', 'fill_slot', 'next_line', 'write_aside', 'resume_lesson', 'show_picture', 'skip_to_practice', 'teach_skipped'];
 
 function readStored(): TutorMode | null {
   try {

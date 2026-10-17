@@ -6,7 +6,7 @@
     {
       "id": "b1",
       "kind": "orient",
-      "say": "Open like a friendly teacher. We are going to read and write big four-digit numbers, and the secret is that every digit has a job depending on where it sits. Mention the colour code: blue thousands, green hundreds, pink tens, yellow ones. No questions: this is the explaining part.",
+      "say": "Open like a friendly teacher, pointing at the car dashboard photo beside the board: its screen shows 3472. We are going to read and write big four-digit numbers like this one, and the secret is that every digit has a job depending on where it sits. Mention the colour code: blue thousands, green hundreds, pink tens, yellow ones. No questions: this is the explaining part.",
       "board": [
         {
           "type": "heading",
@@ -16,8 +16,8 @@
       "lines": [
         {
           "id": "l1",
-          "text": "3246",
-          "say": "Today we're going to meet big numbers, with four digits. Look at this one on the board. It looks like a jumble of digits, but it isn't. Every single digit has a job, and the job depends on where it is sitting.",
+          "text": "3472",
+          "say": "Today we're going to meet big numbers, with four digits. Look at the car's dashboard in the picture. The little screen says 3472, the number of kilometres the car has travelled, and it's on the board too. It looks like a jumble of digits, but it isn't. Every single digit has a job, and the job depends on where it is sitting.",
           "style": "point"
         },
         {
@@ -31,7 +31,7 @@
     {
       "id": "b2",
       "kind": "define",
-      "say": "Teach the four places right to left, then mark the digits IN PLACE. Ones first, then tens, hundreds, thousands. Explain what each place means with a real example (ones are single things, tens are bundles of ten). The tutor does all the talking.",
+      "say": "Teach the four places right to left, using the number in the chart: 4507. Ones first, then tens, hundreds, thousands, marking the digits IN PLACE. Explain what each place means (ones are single things, tens are bundles of ten). Point out the 0 in the tens place as a teaser: we come back to it. The tutor does all the talking.",
       "board": [
         {
           "type": "heading",
@@ -41,14 +41,14 @@
       "lines": [
         {
           "id": "l3",
-          "text": "3246",
-          "say": "Let's go through the digits. We always start from the right-hand end, with the ones.",
+          "text": "4507",
+          "say": "Now let's put a number in the place value chart. This one is 4507. We always start from the right-hand end, with the ones.",
           "style": "point"
         },
         {
           "id": "l4",
-          "text": "{{3|ul.b|thousands}}{{2|ul.g|hundreds}}{{4|ul.p|tens}}{{6|ul|ones}}",
-          "say": "Watch my chalk. The 6 on the end is in the ones place, so yellow. Next to it the 4 is in the tens place, pink. Then the 2 is in the hundreds place, green. And the digit right at the front, the 3, is in the thousands place, blue.",
+          "text": "{{4|ul.b|thousands}}{{5|ul.g|hundreds}}{{0|ul.p|tens}}{{7|ul|ones}}",
+          "say": "Watch my chalk, and look at the chart. The 7 on the end is in the ones place, so yellow. Next to it the 0 is in the tens place, pink. We'll come back to that zero in a minute. Then the 5 is in the hundreds place, green. And the digit right at the front, the 4, is in the thousands place, blue.",
           "style": "point",
           "annotates": "l3"
         },
@@ -61,19 +61,19 @@
         {
           "id": "l6",
           "text": "tens = bundles of 10",
-          "say": "Tens are bundles of ten. Four tens is four bundles of ten, so forty.",
+          "say": "Tens are bundles of ten. In 4507 there are no bundles of ten at all, so the tens place holds a zero.",
           "style": "point"
         },
         {
           "id": "l7",
           "text": "hundreds = bundles of 100",
-          "say": "Hundreds are bundles of a hundred, so two hundreds is two hundred.",
+          "say": "Hundreds are bundles of a hundred, so five hundreds is five hundred.",
           "style": "point"
         },
         {
           "id": "l8",
           "text": "thousands = bundles of 1000",
-          "say": "And thousands are bundles of a thousand, so three thousands is three thousand.",
+          "say": "And thousands are bundles of a thousand, so four thousands is four thousand.",
           "style": "point"
         }
       ]
@@ -81,7 +81,7 @@
     {
       "id": "b3",
       "kind": "show",
-      "say": "Expanded form: put the digits' values together. Write 3246 = 3000 + 200 + 40 + 6 with the colours, then read the number aloud in words. Explain partitioning = breaking a number into its place-value parts. No questions.",
+      "say": "Expanded form: put the digits' values together, exactly as the picture does for 4567. Write 4567 = 4000 + 500 + 60 + 7 with the colours, then read the number aloud in words. Explain partitioning = breaking a number into its place-value parts. No questions.",
       "board": [
         {
           "type": "heading",
@@ -91,8 +91,8 @@
       "lines": [
         {
           "id": "l9",
-          "text": "3246 = {{3000|ul.b}} + {{200|ul.g}} + {{40|ul.p}} + {{6|ul}}",
-          "say": "Now we put the values together. Three thousand, plus two hundred, plus forty, plus six. If you add them up you get back to our number. Writing it like this is called expanded form.",
+          "text": "4567 = {{4000|ul.b}} + {{500|ul.g}} + {{60|ul.p}} + {{7|ul}}",
+          "say": "Now let's take a new number, 4567, and find what each digit is really worth, just like the picture. Four thousand, plus five hundred, plus sixty, plus seven. If you add them up you get back to 4567. Writing it like this is called expanded form.",
           "style": "work"
         },
         {
@@ -103,8 +103,8 @@
         },
         {
           "id": "l11",
-          "text": "3246 → three thousand, two hundred and forty-six",
-          "say": "To say the number out loud, we just read the parts in order: three thousand, two hundred and forty-six. Easy once you can see the parts.",
+          "text": "4567 → four thousand, five hundred and sixty-seven",
+          "say": "To say the number out loud, we just read the parts in order: four thousand, five hundred and sixty-seven. Easy once you can see the parts.",
           "style": "point"
         }
       ]
@@ -112,7 +112,7 @@
     {
       "id": "b4",
       "kind": "contrast",
-      "say": "The zero placeholder. Compare 5308 with 538. Show that the zero holds the tens place open. Light, curious tone. No questions: the tutor shows it.",
+      "say": "The zero placeholder. Compare 4040 with 440, as in the picture. Show that the zeros hold the hundreds and ones places open. Light, curious tone. No questions: the tutor shows it.",
       "board": [
         {
           "type": "heading",
@@ -122,20 +122,20 @@
       "lines": [
         {
           "id": "l12",
-          "text": "5308",
-          "say": "Now here's a number with something sneaky in it: five thousand, three hundred and eight. Look at the tens place.",
+          "text": "4040",
+          "say": "Now here's a number with something sneaky in it: four thousand and forty, written 4040. Look at the picture. There's a 4 in the thousands and a 4 in the tens. What about the hundreds and the ones?",
           "style": "point"
         },
         {
           "id": "l13",
-          "text": "5308 = {{5000|ul.b}} + {{300|ul.g}} + 0 tens + {{8|ul}}",
-          "say": "There are no tens at all. Not one bundle of ten. So there's a zero in the tens place, and that zero is saying: nothing here, but keep this place open.",
+          "text": "4040 = {{4000|ul.b}} + 0 hundreds + {{40|ul.p}} + 0 ones",
+          "say": "There are no hundreds at all, and no ones. Not one bundle of a hundred, not a single one. So there's a zero in the hundreds place and a zero in the ones place, and each zero is saying: nothing here, but keep this place open.",
           "style": "point"
         },
         {
           "id": "l14",
-          "text": "538 is NOT the same as 5308",
-          "say": "What if we forgot the zero and wrote five, three, eight? That's five hundred and thirty-eight, a completely different and much smaller number. The zero is a placeholder, and it keeps every other digit in the right seat.",
+          "text": "440 is NOT the same as 4040",
+          "say": "What if we forgot the zeros and wrote 4, 4, 0? That's four hundred and forty, a completely different and much smaller number. See in the picture how the first 4 slides along into the hundreds column? The zeros are placeholders, and they keep every other digit in the right seat.",
           "style": "rule"
         }
       ]
@@ -143,7 +143,7 @@
     {
       "id": "b5",
       "kind": "method",
-      "say": "From words to digits. 'four thousand and seven' -> 4007. Teach it by filling the four places and putting a zero in any place the words skip. No questions.",
+      "say": "From words to digits. 'four thousand and forty' -> 4040, with the counters in the picture: four in thousands, four in tens, none in hundreds or ones. Teach it by filling the four places and putting a zero in any place the words skip. No questions.",
       "board": [
         {
           "type": "heading",
@@ -153,14 +153,14 @@
       "lines": [
         {
           "id": "l15",
-          "text": "Write: four thousand and seven",
-          "say": "How do we go the other way, from words to digits? Say the words are four thousand and seven. Here's my method: draw four boxes, for thousands, hundreds, tens and ones.",
+          "text": "Write: four thousand and forty",
+          "say": "How do we go the other way, from words to digits? Take the words four thousand and forty. Here's my method: draw four boxes, for thousands, hundreds, tens and ones, and put counters in them like the picture.",
           "style": "point"
         },
         {
           "id": "l16",
-          "text": "4 | 0 | 0 | 7",
-          "say": "Four thousand, so a 4 in the first box. The words never mention any hundreds, and never mention any tens, so those boxes get zeros. And seven ones. Together that's four thousand and seven, written 4007.",
+          "text": "4 | 0 | 4 | 0",
+          "say": "Four thousand, so a 4 in the first box. The words never mention any hundreds, so that box gets a zero. Forty is four tens, so a 4 in the tens box. And the words never mention any ones, so the last box gets a zero. Together that's four thousand and forty, written 4040.",
           "style": "work"
         },
         {
@@ -316,5 +316,6 @@
   "meta": {
     "source": "authored",
     "generatedAt": "2026-10-14T00:00:00.000Z"
-  }
+  },
+  "photoBeat": "b1"
 }

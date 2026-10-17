@@ -82,6 +82,21 @@ export interface ReportNarrative {
   rejectedLines?: number;
 }
 
+/** The last lesson, so a parent opening the page after a lesson sees that lesson first. */
+export interface LatestLesson {
+  sessionId: string;
+  at: number;
+  minutes: number | null;
+  topics: string[];
+  answersChecked: number;
+  /** Answers where the child also explained why (Ananta's check said so). */
+  explained: number;
+  /** The answers from this lesson, newest last (ids into `evidence`). */
+  evidenceIds: string[];
+  /** Ananta's live notes during the lesson, each with the child's own words. Impressions, not checked like the answers. */
+  notes: Array<{ at: number; text: string; childSaid?: string }>;
+}
+
 export interface ParentReport {
   studentId: string;
   childName: string;
@@ -105,6 +120,8 @@ export interface ParentReport {
   journey: TopicProgress[];
   story: StoryThread[];
   nextLesson: NextLessonPlan | null;
+  /** The most recent lesson in this subject: what it covered and the answers from it. */
+  latestLesson: LatestLesson | null;
   evidence: Record<string, EvidenceCard>;
   availableSubjects: Array<{ subjectId: string; label: string }>;
 }

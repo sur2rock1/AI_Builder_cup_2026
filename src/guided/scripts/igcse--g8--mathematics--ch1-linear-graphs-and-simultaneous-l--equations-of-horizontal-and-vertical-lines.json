@@ -16,8 +16,8 @@
       "lines": [
         {
           "id": "l1",
-          "text": "x = 2     y = −3",
-          "say": "Today we meet two lines with really short equations. One says x equals two, and the other says y equals minus three. They look too simple to be lines at all. But they are, and understanding them clears up a lot of confusion about gradients later.",
+          "text": "x = 2     y = 3",
+          "say": "Today we meet two lines with really short equations. One says x equals two, and the other says y equals three. They look too simple to be lines at all. But they are, and understanding them clears up a lot of confusion about gradients later.",
           "style": "point"
         }
       ]
@@ -25,7 +25,7 @@
     {
       "id": "b2",
       "kind": "define",
-      "say": "Plot-and-spot: the points (2,-1), (2,0), (2,3) share the same x. Mark the 2s IN PLACE, then name the line x = 2. The picture shows the points. No questions.",
+      "say": "Plot-and-spot: the points (2,-1), (2,1), (2,3) share the same x. Mark the 2s IN PLACE, then name the line x = 2. The picture shows the points. No questions.",
       "board": [
         {
           "type": "heading",
@@ -33,24 +33,24 @@
         },
         {
           "type": "picture",
-          "ref": "main",
+          "ref": "focus:why-vertical-lines-are-not-functions",
           "step": "s1"
         }
       ],
       "lines": [
         {
           "id": "l2",
-          "text": "(2, −1)   (2, 0)   (2, 3)",
+          "text": "(2, −1)   (2, 1)   (2, 3)",
           "say": "Look at these three points. Before I say anything, look at their coordinates, and see what they have in common.",
           "picture": {
-            "ref": "main",
+            "ref": "focus:why-vertical-lines-are-not-functions",
             "step": "s1"
           },
           "style": "point"
         },
         {
           "id": "l3",
-          "text": "({{2|circle.y}}, −1)   ({{2|circle.y}}, 0)   ({{2|circle.y}}, 3)",
+          "text": "({{2|circle.y}}, −1)   ({{2|circle.y}}, 1)   ({{2|circle.y}}, 3)",
           "say": "The x-coordinate is the same every time. It's a two. The y-coordinates are all different, but x never changes.",
           "style": "point",
           "annotates": "l2"
@@ -60,7 +60,7 @@
           "text": "Every point has x = 2",
           "say": "So if you stand on any point of this line, your x-coordinate is two. Every single point.",
           "picture": {
-            "ref": "main",
+            "ref": "focus:why-vertical-lines-are-not-functions",
             "step": "s2"
           },
           "style": "point"
@@ -82,37 +82,50 @@
     {
       "id": "b3",
       "kind": "show",
-      "say": "Now the flat one. Points (-2,-3), (0,-3), (4,-3). Mark the -3s in place, name y = -3. Mirror the vertical beat. No questions.",
+      "say": "Now the flat one. Points (-2,3), (0,3), (3,3). Mark the 3s in place, name y = 3. Mirror the vertical beat. The picture shows the points. No questions.",
       "board": [
         {
           "type": "heading",
           "text": "A horizontal line"
+        },
+        {
+          "type": "picture",
+          "ref": "main",
+          "step": "s1"
         }
       ],
       "lines": [
         {
           "id": "l7",
-          "text": "(−2, −3)   (0, −3)   (4, −3)",
-          "say": "Now a different set of points. Negative two, minus three. Zero, minus three. Four, minus three. What stays the same this time?",
-          "style": "point"
+          "text": "(−2, 3)   (0, 3)   (3, 3)",
+          "say": "Now a different set of points, shown in the picture. Negative two, three. Zero, three. Three, three. What stays the same this time?",
+          "style": "point",
+          "picture": {
+            "ref": "main",
+            "step": "s1"
+          }
         },
         {
           "id": "l8",
-          "text": "(−2, {{−3|circle.p}})   (0, {{−3|circle.p}})   (4, {{−3|circle.p}})",
-          "say": "This time it's the y-coordinate that never changes: always minus three. The x-coordinates wander about, minus two, zero, four.",
+          "text": "(−2, {{3|circle.p}})   (0, {{3|circle.p}})   (3, {{3|circle.p}})",
+          "say": "This time it's the y-coordinate that never changes: always three. The x-coordinates wander about, minus two, zero, three.",
           "style": "point",
           "annotates": "l7"
         },
         {
           "id": "l9",
-          "text": "Every point has y = −3",
-          "say": "So every point on this line has y equal to minus three.",
-          "style": "point"
+          "text": "Every point has y = 3",
+          "say": "So every point on this line has y equal to three.",
+          "style": "point",
+          "picture": {
+            "ref": "main",
+            "step": "s2"
+          }
         },
         {
           "id": "l10",
-          "text": "The line is  {{y = −3|box.g}}",
-          "say": "The line is named y equals minus three. It runs flat across the page, parallel to the x-axis, like a calm horizon.",
+          "text": "The line is  {{y = 3|box.g}}",
+          "say": "The line is named y equals three. It runs flat across the page, parallel to the x-axis, like a calm horizon.",
           "style": "rule"
         },
         {
@@ -126,7 +139,7 @@
     {
       "id": "b4",
       "kind": "show",
-      "say": "Gradient of each. Vertical: from (2,-1) to (2,3): rise 4, run 0, 4 / 0 is undefined. Horizontal: from (-2,-3) to (4,-3): rise 0, run 6, gradient 0. Use the first picture step to show the vertical line while working. No questions.",
+      "say": "Gradient of each. Vertical: from (-4,2) to (-4,9): rise 7, run 0, 7 / 0 is undefined. Horizontal: from (0,3) to (3,3): rise 0, run 3, gradient 0. Use the pictures while working. No questions.",
       "board": [
         {
           "type": "heading",
@@ -134,69 +147,85 @@
         },
         {
           "type": "picture",
-          "ref": "main",
+          "ref": "focus:vertical-lines-and-undefined-gradient",
           "step": "s2"
         }
       ],
       "lines": [
         {
           "id": "l12",
-          "text": "(2, −1) to (2, 3)",
-          "say": "Let's find the gradient of the vertical line. Rise over run. Take two points on it, (2, −1) and (2, 3).",
+          "text": "(−4, 2) to (−4, 9)",
+          "say": "Let's find the gradient of a vertical line. Rise over run. Take two points on it, (−4, 2) and (−4, 9).",
           "picture": {
-            "ref": "main",
-            "step": "s3"
+            "ref": "focus:vertical-lines-and-undefined-gradient",
+            "step": "s2"
           },
           "style": "point"
         },
         {
           "id": "l13",
-          "text": "rise = 3 − (−1) = 4",
-          "say": "The rise is how far we go up: from minus one up to three, that's four.",
-          "style": "work"
+          "text": "rise = 9 − 2 = 7",
+          "say": "The rise is how far we go up: from two up to nine, that's seven.",
+          "style": "work",
+          "picture": {
+            "ref": "focus:vertical-lines-and-undefined-gradient",
+            "step": "s3"
+          }
         },
         {
           "id": "l14",
-          "text": "run = 2 − 2 = 0",
-          "say": "The run is how far we go across. Both x-values are two, so we go nowhere sideways: zero.",
+          "text": "run = −4 − (−4) = 0",
+          "say": "The run is how far we go across. Both x-values are minus four, so we go nowhere sideways: zero.",
           "style": "work"
         },
         {
           "id": "l15",
-          "text": "gradient = 4 ÷ 0  →  UNDEFINED",
-          "say": "So the gradient is four divided by zero, and nobody can divide by zero. We say the gradient is undefined.",
-          "style": "rule"
+          "text": "gradient = 7 ÷ 0  →  UNDEFINED",
+          "say": "So the gradient is seven divided by zero, and nobody can divide by zero. We say the gradient is undefined.",
+          "style": "rule",
+          "picture": {
+            "ref": "focus:vertical-lines-and-undefined-gradient",
+            "step": "s4"
+          }
         },
         {
           "id": "l16",
-          "text": "(−2, −3) to (4, −3)",
-          "say": "Now the horizontal line. Take (−2, −3) and (4, −3).",
-          "style": "point"
+          "text": "(0, 3) to (3, 3)",
+          "say": "Now the horizontal line. Take (0, 3) and (3, 3).",
+          "style": "point",
+          "picture": {
+            "ref": "main",
+            "step": "s2"
+          }
         },
         {
           "id": "l17",
-          "text": "rise = −3 − (−3) = 0",
+          "text": "rise = 3 − 3 = 0",
           "say": "The rise is zero, because we stay at the same height.",
           "style": "work"
         },
         {
           "id": "l18",
-          "text": "run = 4 − (−2) = 6",
-          "say": "The run is six, from minus two across to four.",
+          "text": "run = 3 − 0 = 3",
+          "say": "The run is three, from zero across to three.",
           "style": "work"
         },
         {
           "id": "l19",
-          "text": "gradient = 0 ÷ 6 = 0",
-          "say": "Zero divided by six is just zero. A flat line has gradient zero.",
-          "style": "rule"
+          "text": "gradient = 0 ÷ 3 = 0",
+          "say": "Zero divided by three is just zero. A flat line has gradient zero.",
+          "style": "rule",
+          "picture": {
+            "ref": "main",
+            "step": "s3"
+          }
         }
       ]
     },
     {
       "id": "b5",
       "kind": "contrast",
-      "say": "A friend says a vertical line has gradient 0 because it 'doesn't slope'. Test it on (2,1) and (2,5). The picture steps through. Detective tone, no questions.",
+      "say": "A friend says a vertical line has gradient 0 because it 'doesn't slope'. Test it on (-4,2) and (-4,9). The picture steps through. Detective tone, no questions.",
       "board": [
         {
           "type": "heading",
@@ -211,14 +240,14 @@
       "lines": [
         {
           "id": "l20",
-          "text": "(2, 1) to (2, 5)",
-          "say": "A friend of mine says: a vertical line has gradient zero, because zero means no slope. Let's test it. Take (2, 1) and (2, 5).",
+          "text": "(−4, 2) to (−4, 9)",
+          "say": "A friend of mine says: a vertical line has gradient zero, because zero means no slope. Let's test it. Take (−4, 2) and (−4, 9).",
           "style": "point"
         },
         {
           "id": "l21",
-          "text": "rise = 5 − 1 = 4,   run = 2 − 2 = 0",
-          "say": "The rise is four. The run is zero.",
+          "text": "rise = 9 − 2 = 7,   run = −4 − (−4) = 0",
+          "say": "The rise is seven. The run is zero.",
           "picture": {
             "ref": "contrast:vertical-gradient-zero",
             "step": "s2"
@@ -227,8 +256,8 @@
         },
         {
           "id": "l22",
-          "text": "If 4 ÷ 0 = 0, then 0 × 0 = 4 ??",
-          "say": "If four divided by zero did equal zero, then by checking, zero times zero would have to equal four. Which is nonsense!",
+          "text": "If 7 ÷ 0 = 0, then 0 × 0 = 7 ??",
+          "say": "If seven divided by zero did equal zero, then by checking, zero times zero would have to equal seven. Which is nonsense!",
           "picture": {
             "ref": "contrast:vertical-gradient-zero",
             "step": "s3"
@@ -237,8 +266,8 @@
         },
         {
           "id": "l23",
-          "text": "No number × 0 gives 4, so 4 ÷ 0 is undefined",
-          "say": "No number multiplied by zero ever gives four. So the division simply has no answer.",
+          "text": "No number × 0 gives 7, so 7 ÷ 0 is undefined",
+          "say": "No number multiplied by zero ever gives seven. So the division simply has no answer.",
           "picture": {
             "ref": "contrast:vertical-gradient-zero",
             "step": "s4"
@@ -256,7 +285,7 @@
     {
       "id": "b6",
       "kind": "rule",
-      "say": "Summary of the three facts, plus why a vertical line is not the graph of a function. Reuse x = 2 with its three points. No questions.",
+      "say": "Summary of the three facts, plus why a vertical line is not the graph of a function. Reuse x = 2 with its three points (2,-1), (2,1), (2,3). No questions.",
       "board": [
         {
           "type": "heading",
@@ -278,8 +307,8 @@
         },
         {
           "id": "l27",
-          "text": "x = 2  pairs with y = −1, 0, 3, ... infinitely many",
-          "say": "Three. A vertical line like x equals two matches the single x-value two with infinitely many y-values: minus one, zero, three, and on and on.",
+          "text": "x = 2  pairs with y = −1, 1, 3, ... infinitely many",
+          "say": "Three. A vertical line like x equals two matches the single x-value two with infinitely many y-values: minus one, one, three, and on and on.",
           "style": "point"
         },
         {
@@ -466,5 +495,6 @@
   "meta": {
     "source": "authored",
     "generatedAt": "2026-10-14T00:00:00.000Z"
-  }
+  },
+  "photoBeat": "b2"
 }

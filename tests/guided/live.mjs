@@ -66,7 +66,7 @@ const STANDARD_TOOLS = ['update_chalkboard_notes', 'write_live_note', 'switch_bo
   console.log('\n── session asks for guided');
   const { R, got } = await run({ query: `&conceptId=${CONCEPT}&mode=guided`, play: true });
   const c = R.find((x) => x.kind === 'connect');
-  check(JSON.stringify(c?.tools) === JSON.stringify(['assess_child_reasoning', 'record_confusion_signal', 'advance_beat', 'next_line', 'fill_slot', 'write_aside', 'resume_lesson']), `guided tool list: ${c?.tools?.join(', ')}`);
+  check(JSON.stringify(c?.tools) === JSON.stringify(['assess_child_reasoning', 'record_confusion_signal', 'advance_beat', 'next_line', 'fill_slot', 'write_aside', 'show_picture', 'skip_to_practice', 'teach_skipped', 'resume_lesson']), `guided tool list: ${c?.tools?.join(', ')}`);
   check(c?.prompt.includes('THE BOARD (guided lesson)') && !c.prompt.includes('THE BOARD (voice channel)'), 'prompt has the guided board block instead of the standard one');
   check(c?.prompt.includes('HARD RULES') || /H13/.test(c?.prompt || ''), 'the persona and hard rules are still in the prompt');
   check(!c?.prompt.includes('THE BOARD PICTURES'), 'the standard picture block is not added');

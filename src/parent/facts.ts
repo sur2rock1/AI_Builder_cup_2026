@@ -9,7 +9,7 @@ import type {
 } from '../adaptive/learnerModel';
 import type { TeachingPlan } from '../plan/types';
 import type {
-  EvidenceCard, NextLessonPlan, ParentReport, StoryStep, StoryThread, TopicProgress,
+  EvidenceCard, LatestLesson, NextLessonPlan, ParentReport, StoryStep, StoryThread, TopicProgress,
 } from './types';
 import { outcomeWords, stageLabel, styleNoun, styleVerbing } from './plainLanguage';
 
@@ -143,6 +143,36 @@ export function planToParent(plan: TeachingPlan | null, name: string): NextLesso
   };
 }
 
+const EXPLAINED = new Set(['understood', 'applied', 'transferred', 'explained']);
+
+/** The most recent lesson: the one with the newest checked answer, or the newest stored summary. */
+export function latestLesson(
+  events: EvidenceEvent[],
+  summaries: NonNullable<LearnerProfile['sessionSummaries']>,
+  labelOf: (cid: string) => string,
+  evidence: Record<string, EvidenceCard>,
+): LatestLesson | null {
+  const lastEvent = events[events.length - 1];
+  const lastSummary = [...summaries].sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0))[0];
+  const sessionId = lastSummary && (!lastEvent || (lastSummary.endedAt || 0) >= lastEvent.timestamp) ? lastSummary.sessionId : lastEvent?.sessionId;
+  if (!sessionId) return null;
+  const ev = events.filter((e) => e.sessionId === sessionId);
+  const sum = summaries.find((s) => s.sessionId === sessionId);
+  if (!ev.length && !sum) return null;
+  const topics = [...new Set([...(ev.map((e) => e.conceptId)), ...(sum?.conceptsTouched || [])])].map(labelOf).filter(Boolean);
+  for (const e of ev) if (!evidence[e.eventId]) evidence[e.eventId] = toCard(e, labelOf(e.conceptId));
+  return {
+    sessionId,
+    at: sum?.endedAt || ev[ev.length - 1]?.timestamp || 0,
+    minutes: sum ? (sum.minutes ?? Math.max(1, Math.round(((sum.endedAt || 0) - (sum.startedAt || 0)) / 60000))) : null,
+    topics: [...new Set(topics)],
+    answersChecked: ev.length,
+    explained: ev.filter((e) => EXPLAINED.has(String((e as any).understandingDepth))).length,
+    evidenceIds: ev.map((e) => e.eventId).slice(-6),
+    notes: (sum?.liveNotes || []).slice(-4).map((n) => ({ at: n.at, text: n.noticed, ...(n.evidence ? { childSaid: n.evidence } : {}) })),
+  };
+}
+
 export function buildBaseReport(
   learner: LearnerProfile,
   subjectId: string,
@@ -189,6 +219,9 @@ export function buildBaseReport(
     || (b.steps[b.steps.length - 1]?.at || 0) - (a.steps[a.steps.length - 1]?.at || 0));
 
   const sessions = new Set(events.map((e) => e.sessionId).filter(Boolean));
+  // Lessons in this subject that have a stored summary (older lessons were never counted in sessionCount / totalMinutes).
+  const summaries = (learner.sessionSummaries || []).filter((s) => (s.conceptsTouched || []).some((c) => c.startsWith(subjectId)) || sessions.has(s.sessionId));
+  const summaryMinutes = summaries.reduce((n, s) => n + (s.minutes ?? Math.max(1, Math.round(((s.endedAt || 0) - (s.startedAt || 0)) / 60000))), 0);
   const confusionTotal = Object.values(learner.affect?.confusionSignals || {}).reduce((s, n) => s + n, 0);
   const flagged = events.filter((e) => e.selfReportedConfusion || e.helpRequested).length;
 
@@ -202,8 +235,8 @@ export function buildBaseReport(
     subjectLabel: subject?.subjectLabel || subjectId,
     generatedAt: now,
     stats: {
-      lessons: Math.max(sessions.size, subject?.sessionCount || 0),
-      minutes: subject?.totalMinutes || 0,
+      lessons: Math.max(sessions.size, subject?.sessionCount || 0, summaries.length),
+      minutes: Math.max(subject?.totalMinutes || 0, summaryMinutes),
       answersChecked: events.length,
       mixUpsFixed: fixed,
       mixUpsOpen: open,
@@ -212,6 +245,7 @@ export function buildBaseReport(
     journey,
     story,
     nextLesson: planToParent(plan, name),
+    latestLesson: latestLesson(events, summaries, labelOf, evidence),
     evidence,
     availableSubjects: Object.values(learner.subjects).map((s) => ({ subjectId: s.subjectId, label: s.subjectLabel })),
   };

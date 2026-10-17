@@ -59,7 +59,7 @@
 
 **Callouts:**
 - "Real-time voice via Gemini 3.8 Live"
-- "Board updates as tutor speaks (13 function-calling tools)"
+- "Chalkboard fills as the tutor speaks; pictures on request (8 function-calling tools)"
 - "Student can signal confusion at any time"
 - "Diagnostic classification shown in real-time"
 

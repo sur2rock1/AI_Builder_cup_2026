@@ -117,6 +117,8 @@ export interface GuidedScript {
   version: 1;
   conceptId: string;
   title: string;
+  /** Beat at which the lesson's photo goes up (default: first show / define / analogy beat). Use it when the photo's numbers or objects belong to a particular beat. */
+  photoBeat?: string;
   beats: Beat[];
   /** Where it came from (generated lessons): model, time, open warnings. Not used for teaching. */
   meta?: { source?: string; model?: string; generatedAt?: string; attempts?: number; warnings?: string[] };
@@ -152,4 +154,6 @@ export interface GuidedPayload {
   script: GuidedScript;
   /** pregen picture key → BoardVisual (JSON as stored). Typed loosely so this file stays dependency-free. */
   visuals: Record<string, unknown>;
+  /** The concept's vision-verified photo (never an unverified one) and the beat at which it goes up beside the chalk. */
+  photo?: { url: string; caption: string | null; beatId: string };
 }

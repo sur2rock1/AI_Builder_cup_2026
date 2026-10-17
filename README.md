@@ -14,6 +14,7 @@ Ananta uses Gemini Live for voice-first tutoring, Bayesian Knowledge Tracing for
 
 | Innovation | What it means |
 |---|---|
+| **Learns how each child learns** | Every checked answer updates, per type of idea, which ways of explaining work for this child. The next lesson's plan leads with what worked, avoids what didn't and watches for the child's own mix-ups, and the voice tutor is told so. Proof: `npm run test:adaptation` · [how it works](docs/ADAPTIVE_TEACHING.md) |
 | **Bayesian Knowledge Tracing (BKT)** | Mastery is a probability, not a score. pKnown ≥ 0.80 *and* ≥ 2 level-3 demonstrations required — a right answer from guessing doesn't count. |
 | **Deterministic plan compiler** | Teaching plans use zero GenAI — reproducible, auditable, never hallucinated. |
 | **Evidence-centered mastery gates** | Bare MCQ answers are capped at "recognised" level. The child must explain reasoning to advance. |
@@ -34,7 +35,7 @@ flowchart TD
     CUR --> PLAN["📋 Deterministic Plan Compiler"]
     PLAN --> SYS["🧠 Persona Composer → System Prompt"]
 
-    STU["🎤 Student Voice"] -->|"WebSocket /ws/live"| LIVE["⚡ Gemini 3.8 Live<br/>13 function-calling tools"]
+    STU["🎤 Student Voice"] -->|"WebSocket /ws/live"| LIVE["⚡ Gemini 3.8 Live<br/>8 function-calling tools"]
     SYS --> LIVE
 
     LIVE -->|"assess_child_reasoning"| DIAG["🔬 Gemini 3.6 Flash<br/>6.5s reasoning budget"]
@@ -54,7 +55,7 @@ flowchart TD
 
 | Gemini Feature | How Ananta Uses It | Depth |
 |---|---|---|
-| **Gemini 3.8 Live** | Real-time bidirectional voice tutoring with 13 function-calling tools, Puck voice, VAD | Deep |
+| **Gemini 3.8 Live** | Real-time bidirectional voice tutoring with 8 function-calling tools in the default guided tutor (13 in the standard tutor), Puck voice, VAD | Deep |
 | **Gemini 3.8 Flash** | PDF ingestion, lesson generation, profiler, parent reports, critic reviews, photo generation | Deep |
 | **Gemini 3.6 Flash** | Real-time reasoning assessment within a 6.5-second budget during live voice sessions | Deep |
 | **Gemini 3.1 Flash Lite** | Fallback model for diagnosis and lesson generation (resilience) | Redundancy |
@@ -84,7 +85,7 @@ npm run dev                    # opens http://localhost:5173
 ### Seed demo learners
 
 ```bash
-npm run seed:demo -- --reset   # creates Aisha, Marcus, Priya with rich evidence data
+npm run seed:g4 -- --reset     # creates Maya and Leo (Grade 4, simulated) with contrasting learning histories
 ```
 
 ---
@@ -103,25 +104,23 @@ Full setup guide: [docs/ANANTA_CLOUD_RUN_PLAN.md](docs/ANANTA_CLOUD_RUN_PLAN.md)
 
 ---
 
-## 13 Real-Time Voice Tools
+## Real-Time Voice Tools
 
-During a live tutoring session, Gemini Live calls these tools via function calling:
+The default **guided chalkboard tutor** gives Gemini Live 8 function-calling tools:
 
 | Tool | Purpose |
 |---|---|
-| `set_topic` | Navigate to a curriculum concept |
-| `set_figure` | Display a board picture (2D diagram, 3D model, or photo) |
-| `reveal_part` | Step-by-step reveal of diagram elements |
-| `update_diagram` | Modify the visual board in real time |
-| `switch_board_view` | Toggle between diagram, 3D, photo, and chalkboard views |
-| `update_chalkboard_notes` | Write structured notes on the chalk panel |
-| `write_live_note` | Add a quick annotation |
-| `highlight_concept` | Highlight a node in the concept map |
-| `generate_photo_visual` | Generate a real-world photo analogy |
-| `pose_quiz` | Present an assessment question |
-| `assess_child_reasoning` | Trigger the 6.5s reasoning assessment pipeline |
-| `show_student_thinking` | Make the student's reasoning visible on the board |
-| `record_confusion_signal` | Log when the student signals confusion |
+| `advance_beat` | Start the next part of the prepared lesson |
+| `next_line` | Write the next chalk line (or hold back an answer until the child replies) |
+| `fill_slot` | Write the child's own answer into a blank on the board |
+| `write_aside` | Answer the child's question on the board as a side note |
+| `show_picture` | Put a prepared picture on the board when the child asks to see something |
+| `resume_lesson` | Go back to exactly where the lesson stopped |
+| `assess_child_reasoning` | Send the child's answer, their reasoning and how the idea was explained (`representationUsed`) to the 6.5 s reasoning assessment |
+| `record_confusion_signal` | Log when the child signals confusion |
+
+The standard tutor (`?tutor=standard`) uses 13 tools instead (`set_figure`, `reveal_part`, `update_diagram`, `switch_board_view`,
+`update_chalkboard_notes`, `pose_quiz`, `generate_photo_visual`, …).
 
 ---
 
@@ -130,7 +129,7 @@ During a live tutoring session, Gemini Live calls these tools via function calli
 Parents see a plain-language report: what Ananta learned about their child, how it worked it out (with a *See why* link to the child's real answer behind every claim), the plan for the next lesson, and a home activity. An **Under the hood** toggle reveals the full engineering view with BKT curves, misconception ledgers, and strategy effectiveness data.
 
 ```bash
-npm run seed:story              # creates Maya — a 5-lesson story arc showing misconception detection → correction
+npm run seed:g4 -- --reset      # creates Maya and Leo (Grade 4, simulated): same lesson, two different plans
 npm run test:parent             # offline tests: sentence/evidence gates, jargon-leak check, story logic
 ```
 
@@ -139,7 +138,8 @@ npm run test:parent             # offline tests: sentence/evidence gates, jargon
 ## Test Suite
 
 ```bash
-npm test                        # core assessor + live + plan-delta tests
+npm test                        # core assessor + live + plan-delta tests (tests/live has 7 known stale baseline checks)
+npm run test:adaptation         # proof that a child's answers change the plan and the tutor's next move (10 checks)
 npm run test:quality            # quality gates, lesson gen, photo gen, quiz evidence, ladder, content spec
 npm run test:gates              # quality + visuals + curriculum ingest
 npm run test:parent             # parent report tests
@@ -153,11 +153,12 @@ npm run verify                  # tsc + all gates + scorecard
 
 | Document | Content |
 |---|---|
+| [ADAPTIVE_TEACHING.md](docs/ADAPTIVE_TEACHING.md) | How Ananta learns each child and changes how it teaches, with proof |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System map — what IS, not what was planned |
 | [CURRICULUM.md](docs/CURRICULUM.md) | Content pipeline: PDF → structured curriculum → pre-generated visuals |
 | [LEARNER_MODEL.md](docs/LEARNER_MODEL.md) | BKT parameters, evidence ladder, mastery gates |
 | [BOARD_VISUALS.md](docs/BOARD_VISUALS.md) | Visual generation: 2D diagrams, 3D models, photos, step-by-step reveals |
-| [GUIDED_TUTOR.md](docs/GUIDED_TUTOR.md) | Guided mode lesson scripting |
+| [GUIDED_TUTOR.md](docs/GUIDED_TUTOR.md) | The default chalkboard tutor: lesson scripts, conversational delivery, pictures |
 | [PARENT_VIEW.md](docs/PARENT_VIEW.md) | Parent portal design and evidence-backed narratives |
 | [TEACHING_PLAN.md](docs/TEACHING_PLAN.md) | Deterministic plan compiler design |
 | [TUTOR_PERSONA.md](docs/TUTOR_PERSONA.md) | Persona composition and age-band adaptation |
@@ -171,23 +172,25 @@ npm run verify                  # tsc + all gates + scorecard
 ### Quick Start (No Account Required)
 
 1. Open **[https://ananta-ivczdbgbja-as.a.run.app/](https://ananta-ivczdbgbja-as.a.run.app/)**
-2. Click **"Priya (Simulated)"** — she has a rich learning history with detected misconceptions
-3. Select **Mathematics** → pick any topic → **Start Lesson**
+2. Click **"Maya (Simulated)"** or **"Leo (Simulated)"** — two Grade 4 learners with contrasting histories (pictures helped Maya; worked examples helped Leo, who still mixes up negative numbers)
+3. Select **Mathematics** → **Money and decimal place value** → **Start Lesson** — the tutor opens differently for each child
+   (compare their Parent Portal pages: "Ananta's plan for the next lesson" is at the top)
 4. Allow microphone access → speak naturally to the tutor
 
 > No sign-in or credentials needed. DEMO_MODE is enabled for evaluation access.
 
 ### Sample Questions to Ask the Tutor
 
-- "Can you explain how to solve simultaneous equations graphically?"
-- "What happens if two lines are parallel — can they still have a solution?"
-- "I don't understand this" (triggers confusion detection and strategy switch)
-- "Can you show me a real-world example?" (triggers photo/visual generation)
-- "Quiz me on this" (triggers assessment pipeline with BKT mastery update)
+- "Why is minus five smaller than minus one?" (as Leo: his plan says to watch for exactly this mix-up)
+- "Can you show me a picture?" (puts a prepared picture on the board)
+- "Wait, why?" in the middle of a sentence (the tutor stops, answers, then carries on where it left off)
+- "I don't understand this" (confusion signal: the tutor explains it a different way)
+- "How many 10-cent coins make a dollar?" (an answer the tutor checks and records)
 
 ### Parent Portal
 
-From the login screen, click **"Parent Portal"** → select any student to see:
+From the login screen, click **"Parent Portal"** → select **Maya**, then **Leo**, to see:
+- **Ananta's plan for the next lesson** at the top: different for each child, built from their own answers
 - Plain-language learning report with *"See why"* evidence links
 - Misconception ledger with detection/resolution timeline
 - Home activity suggestions
@@ -196,7 +199,7 @@ From the login screen, click **"Parent Portal"** → select any student to see:
 
 | Service | Usage |
 |---|---|
-| **Gemini** | 5 model tiers — Live (voice), Flash (content gen), Flash fast (6.5s diagnosis), Flash Lite (fallback), Vision+Image (photo review/gen). Structured outputs, function calling (13 tools), thinking budget. |
+| **Gemini** | 5 model tiers — Live (voice), Flash (content gen), Flash fast (6.5s diagnosis), Flash Lite (fallback), Vision+Image (photo review/gen). Structured outputs, function calling (8 tools in the default guided tutor), thinking budget. |
 | **Cloud Run** | Full-stack deployment: REST API + Gemini Live WebSocket proxy + built SPA. Session affinity, 3600s timeout, scale-to-zero. |
 | **Firestore** | Learner profiles, evidence events, teaching plans, session data, curricula, pre-generated content cache. Security rules lock all learner data to server-only access. |
 | **Firebase Auth** | User authentication framework (bypassed in demo mode for evaluation access). |

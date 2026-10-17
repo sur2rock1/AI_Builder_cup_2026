@@ -179,7 +179,11 @@ See `docs/AGENT_GUIDE.md` for the full, maintained list — it is the doc you mu
 
 The default tutor is the guided chalkboard tutor (`src/guided/*`; full description in `docs/GUIDED_TUTOR.md`). The server holds
 the board (`GuidedSession`) and streams `guided_state` snapshots to the browser; the voice model receives guided tools
-(`advance_beat`, `next_line`, `fill_slot`, `write_aside`, `resume_lesson`) instead of the standard board tools, and a watchdog
+(`advance_beat`, `next_line`, `fill_slot`, `write_aside`, `show_picture`, `resume_lesson`, plus `assess_child_reasoning` and
+`record_confusion_signal`) instead of the standard board tools, and a watchdog
 nudges it if it goes silent. Lessons are bundled (`src/guided/scripts`, `src/guided/generated`) or, when made at PDF-upload
 time, stored in Firestore `guidedScripts` (+ `data/guided/runtime/` locally) and re-read by `server.ts` every 10 s
 (`src/guided/store.ts`, `registry.ts`). Standard mode remains in the code (`?tutor=standard` / `TUTOR_MODE=standard`).
+Since 2026-10-16 the guided tutor teaches conversationally and puts stored pictures up by teaching stage or on request
+(`GuidedSession.setPictures` / `showPicture`); the verified photo travels in the guided payload (`payload.photo`). How the
+per-child plan changes what the tutor does: `docs/ADAPTIVE_TEACHING.md`.

@@ -22,7 +22,14 @@ ENV LIVE_MODEL=gemini-3.8-live
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
+# PDF upload launches background jobs with `npx tsx scripts/...` (pre-generation, guided-lesson generation).
+# They need the sources and tsx at runtime; tsx is a devDependency, so add just that one package.
+RUN npm install --no-save --no-package-lock tsx@"$(node -p "require('./package.json').devDependencies.tsx.replace(/^[^0-9]*/, '')")" && npm cache clean --force
 COPY --from=build /app/dist ./dist
+COPY tsconfig.json ./
+COPY src ./src
+COPY scripts ./scripts
+COPY server ./server
 
 # Writable data dir for any local fallbacks (sessions / uploads)
 RUN mkdir -p /app/data /app/logs /tmp/pt-uploads && chown -R node:node /app

@@ -65,6 +65,8 @@ export interface BKTObservation {
 }
 
 export interface BKTResult {
+  /** This observation was itself evidence of knowing (a sound answer with no standing misconception) - unlike `delta`, which the learning-transition term pushes up even after a wrong answer. */
+  supportsMastery: boolean;
   /** Posterior P(knows skill), 0..1 */
   pKnown: number;
   /** Same value on the 0–100 scale the UI already uses. */
@@ -123,9 +125,13 @@ export function updateMastery(
     ` · pS=${pS.toFixed(2)} pG=${pG.toFixed(2)} pT=${learnRate.toFixed(2)}`;
 
   return {
+    supportsMastery: observedCorrect,
     pKnown: pNext,
     masteryScore,
-    delta: masteryScore - Math.round(priorScore),
+    // Relative to the prior this observation was actually weighed against. On a first attempt that is the model's starting
+    // belief (pL0), not the stored 0: otherwise a WRONG first answer still reads as "mastery went up", and the strategy
+    // that was used is credited with a gain it did not produce (strategy profile, docs/LEARNER_MODEL.md §6.2).
+    delta: masteryScore - Math.round(pL * 100),
     derivation,
   };
 }

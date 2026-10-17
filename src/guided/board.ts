@@ -108,8 +108,10 @@ export function addAside(state: GuidedBoardState, text: string, question?: strin
   const clean = String(text ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_ASIDE_CHARS);
   if (!clean) return state;
   const q = String(question ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_ASIDE_CHARS);
+  const lastAsked = [...state.items].reverse().find((p) => p.item.type === 'aside' && (p.item as { question?: string }).question);
+  const sameQuestion = !!q && !!lastAsked && String((lastAsked.item as { question?: string }).question).toLowerCase() === q.toLowerCase();
   const beatId = state.beatIndex >= 0 ? (state.items[state.items.length - 1]?.beatId ?? 'aside') : 'aside';
-  const item: PlacedItem = { key: `aside:${state.asideCount}`, beatId, item: { type: 'aside', text: clean, ...(q ? { question: q } : {}) } };
+  const item: PlacedItem = { key: `aside:${state.asideCount}`, beatId, item: { type: 'aside', text: clean, ...(q && !sameQuestion ? { question: q } : {}) } };
   return { ...state, items: [...state.items, item], asideCount: state.asideCount + 1 };
 }
 
@@ -141,6 +143,6 @@ export function currentPicture(state: GuidedBoardState): { ref: string; step: st
 export function itemsToStagger(prev: GuidedBoardState, next: GuidedBoardState): string[] {
   if (next.beatIndex === prev.beatIndex) return [];
   const known = new Set(prev.items.map((p) => p.key));
-  const fresh = next.items.filter((p) => !known.has(p.key) && p.item.type !== 'line' && p.item.type !== 'aside' && p.item.type !== 'question');
+  const fresh = next.items.filter((p) => !known.has(p.key) && p.item.type !== 'line' && p.item.type !== 'aside' && p.item.type !== 'question' && p.item.type !== 'picture');
   return fresh.slice(1).map((p) => p.key);
 }

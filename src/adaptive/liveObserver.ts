@@ -190,6 +190,8 @@ export class LiveObserver {
   private childTurns = 0;
   private childSinceLast = false;
   private newTurn = false;
+  /** Every distinct "what I noticed" line, kept so the session summary can store them (they used to reach the screen only). */
+  private history: Array<{ at: number; concept: string; understanding: number; level: Level; noticed: string; evidence: string }> = [];
 
   constructor(
     private topic: string,
@@ -243,6 +245,8 @@ export class LiveObserver {
   }
 
   close() { this.closed = true; }
+  /** The notes made during this lesson, oldest first. */
+  notes() { return [...this.history]; }
   get current() { return this.snapshot; }
 
   private childHasSaidSomething() {
@@ -261,6 +265,11 @@ export class LiveObserver {
         const raw = JSON.parse(text.replace(/```json\s*|\s*```/g, '').trim());
         this.snapshot = mergeObservation(this.snapshot, raw, this.childTurns);
         console.log(`[LiveObserver] ${this.snapshot.concept.label}: ${this.snapshot.understanding}% (${this.snapshot.level}) in ${Date.now() - t0}ms`);
+        const s = this.snapshot;
+        if (s.noticed && this.history[this.history.length - 1]?.noticed !== s.noticed) {
+          this.history.push({ at: Date.now(), concept: s.concept.label, understanding: s.understanding, level: s.level, noticed: s.noticed, evidence: s.evidence });
+          if (this.history.length > 40) this.history.shift();
+        }
         this.onUpdate(this.snapshot);
       } while (this.rerun && !this.closed);
     } catch (e: any) {
