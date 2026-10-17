@@ -6,7 +6,7 @@
 
 Ananta uses Gemini Live for voice-first tutoring, Bayesian Knowledge Tracing for evidence-based mastery, and a deterministic teaching plan compiler to deliver personalised, quality-gated lessons for any curriculum. Parents see every claim backed by the child's own words.
 
-🔗 **[Live Demo on Cloud Run](https://ananta-ivczdbgbja-as.a.run.app/)** · 📑 **[Pitch Deck (PDF)](docs/Ananta_Submission_Deck.pdf)** · 🎬 **[Demo Video Script & Cues](docs/DEMO_VIDEO_SCRIPT.md)** · 🎙️ **[Presenter Voice Script](docs/PRESENTER_VIDEO_SCRIPT.md)** · 🎯 **[Use Case & Pitch Narrative](docs/USE_CASE_TALK.md)** · 💡 **[Adaptive Teaching Proof](docs/ADAPTIVE_TEACHING.md)** · 📊 **[Empirical Evaluation (EV-01)](docs/EVALUATION.md)** · 🏆 **[Rules Audit & Deliverables](docs/HACKATHON_AUDIT.md)**
+🔗 **[Live Demo on Cloud Run](https://ananta-ivczdbgbja-as.a.run.app/)** · 📑 **[Official Submission Deck (PDF)](docs/Submission_Template_AI_Builder_Cup_Filled.pdf)** · 🎬 **[Demo Video Script & Cues](docs/DEMO_VIDEO_SCRIPT.md)** · 🎙️ **[Presenter Voice Script](docs/PRESENTER_VIDEO_SCRIPT.md)** · 🎯 **[Use Case & Pitch Narrative](docs/USE_CASE_TALK.md)** · 💡 **[Adaptive Teaching Proof](docs/ADAPTIVE_TEACHING.md)** · 📊 **[Empirical Evaluation (EV-01)](docs/EVALUATION.md)** · 🏆 **[Rules Audit & Deliverables](docs/HACKATHON_AUDIT.md)**
 
 ---
 
@@ -186,8 +186,8 @@ npm test                        # core assessor + plan delta tests
 
 | Document | Description |
 |---|---|
-| [ADAPTIVE_TEACHING.md](docs/ADAPTIVE_TEACHING.md) | Mathematical & empirical proof of how Ananta learns each child and adapts |
-| [Ananta_Submission_Deck.pdf](docs/Ananta_Submission_Deck.pdf) | Official 10-slide pitch presentation deck for the AI Builder Cup |
+| [Submission_Template_AI_Builder_Cup_Filled.pdf](docs/Submission_Template_AI_Builder_Cup_Filled.pdf) | Official AI Builder Cup presentation deck (PDF, created from official template) |
+| [Submission_Template_AI_Builder_Cup_Filled.pptx](docs/Submission_Template_AI_Builder_Cup_Filled.pptx) | Official AI Builder Cup presentation deck (editable PPTX template) |
 | [DEMO_VIDEO_SCRIPT.md](docs/DEMO_VIDEO_SCRIPT.md) | Timed 3:35 demo video script with visual cue sheet and production guidelines |
 | [PRESENTER_VIDEO_SCRIPT.md](docs/PRESENTER_VIDEO_SCRIPT.md) | Word-for-word voiceover teleprompter script with vocal direction |
 | [USE_CASE_TALK.md](docs/USE_CASE_TALK.md) | Comprehensive use case narrative, Bloom's 2-Sigma problem, and executive pitch |

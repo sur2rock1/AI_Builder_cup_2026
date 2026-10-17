@@ -1,31 +1,31 @@
-# Diagnosis accuracy: run 2026-10-15T02-41-21
+# Diagnosis accuracy: run 2026-10-17T04-24-16
 
-Model(s): gemini-3.1-flash-lite · cases: 45 (45 scored, 0 fell back) · code ac0195a · assessor 848ebc368b · cases 938897d660
+Model(s): gemini-3.6-flash · cases: 45 (45 scored, 0 fell back) · code d0a068c+uncommitted · assessor 848ebc368b · cases 938897d660
 
 ## Headline
 
 - **Catches a right answer reached by a broken method:** 100% (10/10, 95% CI 72–100%)
 - **False alarms on sound reasoning:** 0% (0/10, 95% CI 0–28%)
 - **Names the correct misconception when it flags one (hidden cases):** 100% (10/10, 95% CI 72–100%)
-- **Exact classification (5 classes):** 93% (42/45, 95% CI 82–98%); merging "thin" and "no reasoning": 96% (43/45, 95% CI 85–99%)
-- **Latency per diagnosis:** p50 6760 ms, p95 21778 ms, max 34191 ms
+- **Exact classification (5 classes):** 96% (43/45, 95% CI 85–99%); merging "thin" and "no reasoning": 96% (43/45, 95% CI 85–99%)
+- **Latency per diagnosis:** p50 3154 ms, p95 4820 ms, max 5790 ms
 
 ## Baseline comparison (same 45 cases)
 
 | System | Catches hidden misconception | False alarm on sound reasoning | Precision of its flags |
 |---|---|---|---|
 | Answer-checking only (what most quiz apps do) | 0% (0/10, 95% CI 0–28%) | 0% (0/10, 95% CI 0–28%) | n/a |
-| Plain Gemini prompt: "does the child understand?" | 90% (9/10, 95% CI 60–98%) | 0% (0/10, 95% CI 0–28%) | 82% (9/11, 95% CI 52–95%) |
-| Ananta reasoning assessor | 100% (10/10, 95% CI 72–100%) | 0% (0/10, 95% CI 0–28%) | 91% (10/11, 95% CI 62–98%) |
+| Plain Gemini prompt: "does the child understand?" | 100% (10/10, 95% CI 72–100%) | 0% (0/10, 95% CI 0–28%) | 91% (10/11, 95% CI 62–98%) |
+| Ananta reasoning assessor | 100% (10/10, 95% CI 72–100%) | 0% (0/10, 95% CI 0–28%) | 100% (10/10, 95% CI 72–100%) |
 
 The answer-checking baseline cannot question a correct answer, so it scores 0% by construction. The plain-prompt baseline is told the correct answer and the child's explanation, which is generous to it.
 
 ## Safety checks
 
-- Probes instead of moving on when not clearly right: 91% (31/34, 95% CI 77–97%)
-- Possible answer leaks in probe/guidance (checkable cases only): 6% (2/33, 95% CI 2–20%)
+- Probes instead of moving on when not clearly right: 27% (9/33, 95% CI 15–44%)
+- Possible answer leaks in probe/guidance (checkable cases only): 9% (3/33, 95% CI 3–24%)
 - Prompt-injection cases not marked "clear reasoning": 100% (2/2, 95% CI 34–100%)
-- Misconception id attached to a case with none in the catalogue: 4% (1/24, 95% CI 1–20%)
+- Misconception id attached to a case with none in the catalogue: 0% (0/24, 95% CI 0–14%)
 
 ## Limits of this evidence
 

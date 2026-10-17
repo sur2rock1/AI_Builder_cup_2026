@@ -1,19 +1,19 @@
 {
  "meta": {
-  "runId": "2026-10-15T02-41-21",
-  "startedAt": "2026-10-15T02:41:21.326Z",
+  "runId": "2026-10-17T04-24-16",
+  "startedAt": "2026-10-17T04:24:16.907Z",
   "dry": false,
-  "gitCommit": "ac0195a",
-  "gitDirty": false,
+  "gitCommit": "d0a068c",
+  "gitDirty": true,
   "assessorSha": "848ebc368b",
   "casesSha": "938897d660",
   "models": [
-   "gemini-3.1-flash-lite"
+   "gemini-3.6-flash"
   ],
-  "naiveModel": "gemini-3.1-flash-lite",
+  "naiveModel": "gemini-3.6-flash",
   "naiveEnabled": true,
   "node": "v24.18.0",
-  "durationSec": 814
+  "durationSec": 300
  },
  "records": [
   {
@@ -35,17 +35,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Praise the student for clearly linking the constant y-value to the horizontal nature of the line and then ask them how the equation would look for a vertical line passing through that same point.",
-    "reasoningSummary": "The student correctly identified that for a horizontal line, every point shares the same y-coordinate value regardless of the x-coordinate."
+    "tutorGuidance": "Praise the student for correctly explaining that y remains constant while x changes, then advance to the next problem or concept.",
+    "reasoningSummary": "You identified that since every point on the horizontal line has a y-coordinate of 3 regardless of how x changes, the equation must be y = 3."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 28360,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2888,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified the constant y-value and explained the behavior of the coordinates on a horizontal line."
+    "reason": "The child correctly identified the equation and accurately explained that a horizontal line consists of points with a constant y-value."
    }
   },
   {
@@ -67,17 +67,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Praise the student for their clear, mathematical explanation of why dividing by zero leads to an undefined gradient and transition to discussing the equation of a horizontal line.",
-    "reasoningSummary": "The student correctly identified that the change in x is zero for a vertical line and correctly applied the rule that division by zero makes the gradient undefined."
+    "tutorGuidance": "Praise the child specifically for connecting the gradient formula's division by zero (zero change in x) to an undefined gradient, and advance to the next problem.",
+    "reasoningSummary": "You correctly explained that the change in x between any two points is zero, and since division by zero is undefined, the gradient must be undefined."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 15570,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2960,
    "leak": "leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified that the vertical change occurs while the horizontal change is zero, leading to a division by zero in the slope formula."
+    "reason": "The child correctly identified that the gradient is undefined because the change in x is zero and division by zero is impossible."
    }
   },
   {
@@ -100,20 +100,19 @@
      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--equations-of-horizontal-and-vertical-lines::vertical-gradient-zero"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If a vertical line has a gradient of zero, what would you say is the gradient of a horizontal line like y = 2?",
-    "tutorGuidance": "Ask the probe question to uncover the inconsistency in their understanding of horizontal versus vertical gradients.",
-    "reasoningSummary": "The student correctly identified the vertical line but holds the erroneous belief that vertical lines have a gradient of zero, confusing 'zero' with 'undefined'.",
-    "faultyStep": "Vertical lines have gradient zero"
+    "shouldProbe": false,
+    "tutorGuidance": "Explain the difference between a gradient of zero (flat horizontal line) and an undefined gradient (steep vertical line where division by zero occurs) without saying the child was completely wrong.",
+    "reasoningSummary": "You correctly identified x = 2 as a vertical line, but stated that vertical lines have a gradient of zero instead of an undefined gradient.",
+    "faultyStep": "Stating that vertical lines have a gradient of zero and equating zero to being undefined."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 21396,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 4048,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child correctly identifies the equation but incorrectly states that vertical lines have a gradient of zero, confusing undefined slope with zero slope."
+    "reason": "The child incorrectly believes vertical lines have a gradient of zero rather than an undefined gradient resulting from division by zero."
    }
   },
   {
@@ -137,19 +136,19 @@
     ],
     "confidence": "high",
     "shouldProbe": true,
-    "probeQuestion": "If you calculate the gradient of a vertical line using the formula (change in y) / (change in x), what happens to the result?",
-    "tutorGuidance": "Ask the student to apply the gradient formula to two points on a vertical line to help them see the issue with their logic.",
-    "reasoningSummary": "You identified the horizontal line's gradient correctly but believe that vertical lines also have a gradient of zero because they are not slanted.",
-    "faultyStep": "so do the straight up ones"
+    "probeQuestion": "What is the gradient of the vertical line x = 3?",
+    "tutorGuidance": "Ask the student to state the gradient of a vertical line without giving away whether zero is correct.",
+    "reasoningSummary": "You correctly said horizontal lines have zero gradient, but you also think vertical lines have zero gradient.",
+    "faultyStep": "Stating that vertical (straight up) lines have zero gradient."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 8986,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3132,
    "leak": "not_checkable",
    "naive": {
     "understands": false,
-    "reason": "The child incorrectly identifies vertical lines as having a gradient of zero, failing to recognize that they are actually undefined."
+    "reason": "Although the child gave the correct numerical answer for a horizontal line, their explanation reveals a misconception that vertical lines also have a gradient of zero rather than an undefined gradient."
    }
   },
   {
@@ -172,20 +171,19 @@
      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--equations-of-horizontal-and-vertical-lines::horizontal-line-named-x"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If I draw a line through (3, 0) that goes straight up and down, does that line run along the x-axis or cross it?",
-    "tutorGuidance": "Ask the probe question to help the student distinguish between lines that are parallel to an axis versus lines that are named after that axis.",
-    "reasoningSummary": "You think a horizontal line is named after the axis it is parallel to, so you chose x because it is parallel to the x-axis.",
-    "faultyStep": "Identifying the horizontal line equation as x = 3 because it runs parallel to the x-axis."
+    "shouldProbe": false,
+    "tutorGuidance": "Ask the student to plot a few points along that horizontal line and check which coordinate stays the same for all of them.",
+    "reasoningSummary": "The child believes that because a horizontal line runs parallel to the x-axis, its equation must be x = 3.",
+    "faultyStep": "Assuming that running parallel to the x-axis means the line's equation starts with x ="
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 14234,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3005,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child confuses the name of the axis with the coordinate that remains constant for a horizontal line."
+    "reason": "The child incorrectly assumes that running parallel to the x-axis means the equation starts with 'x =', rather than recognizing that horizontal lines have a constant y-value."
    }
   },
   {
@@ -206,20 +204,19 @@
     "classification": "wrong_answer",
     "ids": [],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If the equation were 'y = 10', what would the gradient be, and why?",
-    "tutorGuidance": "Ask the probe question to see if the student applies the same logic to a different constant, then use a visual graph to show that 'y=3' is a flat, horizontal line with zero steepness.",
-    "reasoningSummary": "You identified the number in the equation 'y = 3' as the gradient, assuming that any number appearing in a linear equation represents the slope.",
-    "faultyStep": "Equating the constant term in 'y = c' directly to the gradient m."
+    "shouldProbe": false,
+    "tutorGuidance": "Use a visual diagram or graph to show why a flat horizontal line has a gradient (steepness) of 0, regardless of the y-intercept value.",
+    "reasoningSummary": "You thought the gradient was 3 because 3 is the constant number in the equation y = 3.",
+    "faultyStep": "Equating the constant term c in a horizontal line equation y = c to the line's gradient"
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 18633,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2238,
    "leak": "not_checkable",
    "naive": {
     "understands": false,
-    "reason": "The child incorrectly equates the y-intercept value in the equation with the gradient, demonstrating a fundamental misunderstanding of the slope-intercept form."
+    "reason": "The child incorrectly assumes the constant number in the equation represents the gradient instead of recognizing that a horizontal line has a gradient of zero."
    }
   },
   {
@@ -241,18 +238,18 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": true,
-    "probeQuestion": "If we had a vertical line that passed through the x-axis at 7, what would its equation be, and why?",
-    "tutorGuidance": "Ask the student the probe question to see if they can consistently apply the concept of x-intercepts to different values.",
-    "reasoningSummary": "You identified the line correctly by visualizing its direction, but we need to see if you understand why the x-coordinate determines the equation."
+    "probeQuestion": "Why does a line going straight up through (4, 0) give us x = 4 instead of y = 4?",
+    "tutorGuidance": "Ask the probe question to check if the child understands why the x-coordinate stays constant on a vertical line, without revealing the full explanation yet.",
+    "reasoningSummary": "You knew that a vertical line goes straight up and identified x = 4 as its equation."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 5110,
-   "leak": "no_leak",
+   "model": "gemini-3.6-flash",
+   "latencyMs": 4630,
+   "leak": "leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified the equation and provided a conceptual description that matches the geometric property of a vertical line."
+    "reason": "The child correctly identified the equation and accurately described the physical orientation of a vertical line."
    }
   },
   {
@@ -274,18 +271,18 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": true,
-    "probeQuestion": "How did you decide that 'y = -2' was the correct equation for this line?",
-    "tutorGuidance": "Ask the student to explain their reasoning to confirm they understand the relationship between the coordinate and the equation.",
-    "reasoningSummary": "The student provided the correct equation without explaining how they determined it."
+    "probeQuestion": "How did you know to write y = -2 instead of x = -2 or x = 0?",
+    "tutorGuidance": "Ask the child to explain why they chose y = -2 rather than an x-equation without revealing whether they are right or wrong.",
+    "reasoningSummary": "The child stated the correct equation y = -2 but did not explain how they arrived at it."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 15672,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3154,
    "leak": "leak",
    "naive": {
     "understands": true,
-    "reason": "The child provided the correct mathematical answer, though the lack of an explanation prevents a full assessment of their conceptual depth."
+    "reason": "The child correctly identified the equation of the horizontal line passing through the given point."
    }
   },
   {
@@ -307,17 +304,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Acknowledge the correct reasoning regarding the cancellation of the y terms, then ask the student how they would proceed to find the value of y.",
-    "reasoningSummary": "The student correctly identified that adding the two equations eliminates the y-variable because the coefficients +2 and -2 are opposites."
+    "tutorGuidance": "Praise the child for correctly recognizing that adding equations with opposite sign terms eliminates y, and ask them to find the value of y next.",
+    "reasoningSummary": "You added the two equations to cancel out +2y and -2y, giving 6x = 12 and correctly solving to x = 2."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 7562,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3740,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified that adding the equations eliminates the y variable and performed the subsequent algebraic steps accurately to find the value of x."
+    "reason": "The child correctly identified that adding the two equations eliminates the y terms, resulting in 6x = 12 and x = 2."
    }
   },
   {
@@ -339,17 +336,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Praise the student's clear explanation of how they handled the double negative, and ask them to verify the result by substituting both x and y back into the original equations.",
-    "reasoningSummary": "The student correctly identified that subtracting the two equations eliminates the x variable, and then correctly handled the double negative in the y term (y - (-y) = 2y) and the constant terms."
+    "tutorGuidance": "Praise the child for correctly subtracting the negative term to eliminate x and finding y, then advance to finding x or solving the next problem.",
+    "reasoningSummary": "You subtracted the second equation from the first to eliminate x, correctly evaluating y - (-y) as 2y to find y = 2."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 10123,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2788,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly applied the elimination method by subtracting the equations to eliminate x and successfully solved for y."
+    "reason": "The child correctly eliminated x by subtracting the second equation from the first and properly handled the double negative to solve for y."
    }
   },
   {
@@ -372,20 +369,19 @@
      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-elimination::subtracting-negative-coefficients"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "When you subtract -6y from 7y, what should the result be?",
-    "tutorGuidance": "Ask the probe question to confirm if they understand how to handle the double negative, then guide them through the correct subtraction step using the equations.",
-    "reasoningSummary": "You identified the correct answer by testing numbers, but your algebraic attempt failed because you made an error when subtracting a negative term.",
-    "faultyStep": "7y - (-6y) = y"
+    "shouldProbe": false,
+    "tutorGuidance": "Address the sign error when subtracting negative terms by showing how 7y - (-6y) becomes 7y + 6y = 13y.",
+    "reasoningSummary": "You calculated 7y minus -6y as y instead of 13y, and then found y = 2 by trial and error.",
+    "faultyStep": "Subtracting -6y from 7y to get y instead of 13y"
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 1740,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2717,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child relied on trial and error rather than the algebraic elimination method because they made a sign error while subtracting the equations."
+    "reason": "The child made an algebraic arithmetic error and relied on guess-and-check rather than demonstrating an understanding of how to correctly solve the system of equations."
    }
   },
   {
@@ -408,20 +404,19 @@
      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-elimination::rhs-unmultiplied-scaling"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If you double the left side of the equation x + 2y = 8 to get 2x + 4y, what must happen to the 8 on the right side to keep the equation true?",
-    "tutorGuidance": "Ask the probe question to help the child discover that an equation must remain balanced on both sides when multiplied by a constant.",
-    "reasoningSummary": "You attempted to solve the equations by scaling only the left side of the equation while leaving the right side unchanged, and then used trial and error to find the value of x.",
-    "faultyStep": "doubled just the x and y parts of the first equation and kept the 8"
+    "shouldProbe": false,
+    "tutorGuidance": "Ask the child what happens to the balance of an equation if you double the left side without doubling the right side.",
+    "reasoningSummary": "You multiplied the x and y terms by 2 without multiplying the right side, and then switched to guessing whole numbers.",
+    "faultyStep": "Doubling x and 2y to get 2x + 4y while leaving the right-hand side as 8"
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 21778,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2816,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child relied on trial and error with whole numbers rather than applying a systematic algebraic method to solve the system of equations."
+    "reason": "The child relied on trial-and-error guessing and used flawed algebraic reasoning by altering only one side of an equation."
    }
   },
   {
@@ -445,18 +440,18 @@
     ],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Show the student a simple equation like 2 = 2 and ask them what happens if they multiply only one side by 3 to demonstrate why the equality is broken.",
-    "reasoningSummary": "You multiplied the variable terms by 3, but did not multiply the constant term on the right side of the equation.",
-    "faultyStep": "the right side stays 1"
+    "tutorGuidance": "Explain to the learner that when multiplying an equation by a number to balance it, every term on both the left and right sides must be multiplied by that number.",
+    "reasoningSummary": "You multiplied the left side of x - y = 1 by 3, but left the right side as 1 instead of multiplying it by 3 as well.",
+    "faultyStep": "Multiplying (x - y = 1) by 3 to get 3x - 3y = 1"
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 10956,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2680,
    "leak": "no_leak",
    "naive": {
-    "understands": false,
-    "reason": "The child understands the mechanics of elimination but failed to multiply both sides of the equation by the scalar, leading to an arithmetic error."
+    "understands": true,
+    "reason": "The child understands the concept of elimination by correctly scaling the terms to eliminate a variable, but made an execution error by failing to multiply the right-hand side of the equation."
    }
   },
   {
@@ -479,20 +474,19 @@
      "igcse--g8--mathematics--ch1-linear-graphs-and-simultaneous-l--solving-simultaneous-linear-equations-by-elimination::subtracting-negative-coefficients"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "When we subtract a negative number, like in 7y - (-6y), does the value get smaller or larger?",
-    "tutorGuidance": "Ask the probe question to help the child identify their error with signed numbers before returning to the original equation.",
-    "reasoningSummary": "You attempted to subtract the equations to eliminate x, but when calculating 7y - (-6y) and 16 - (-10), you treated the double negatives as if they cancelled out to produce a single 'y' rather than adding the values.",
-    "faultyStep": "7y - (-6y) = 1y and 16 - (-10) = 26"
+    "shouldProbe": false,
+    "tutorGuidance": "Ask the child to check what happens to the signs when subtracting a negative term, specifically 7y - (-6y).",
+    "reasoningSummary": "The child correctly computed 16 - (-10) = 26, but incorrectly evaluated 7y - (-6y) as 1y instead of 13y.",
+    "faultyStep": "7y minus minus 6y equals 1y"
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 7318,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3812,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child correctly identified the subtraction method but made an arithmetic error by subtracting the negative constant instead of adding it."
+    "reason": "The child miscalculated the subtraction of negative numbers by stating that 7y minus -6y equals 1y instead of 13y."
    }
   },
   {
@@ -514,18 +508,18 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Walk the student through adding the two equations line-by-line, specifically emphasizing that both the left-hand side and the right-hand side must be added.",
-    "reasoningSummary": "You correctly added the x terms to get 2x, but you forgot to apply the addition to the constant terms on the right-hand side.",
-    "faultyStep": "2x = 12"
+    "tutorGuidance": "Ask the child what value of x makes 2 times x equal to 12.",
+    "reasoningSummary": "You correctly added the equations to get 2x = 12, but then wrote x = 12 instead of dividing by 2.",
+    "faultyStep": "Solving 2x = 12 to get x = 12"
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 6760,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2588,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child correctly performed the addition step but failed to divide by two to isolate the variable x."
+    "reason": "The child correctly eliminated a variable by adding the equations to get 2x = 12, but failed to perform the final step of dividing by 2 to solve for x."
    }
   },
   {
@@ -547,17 +541,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Acknowledge the correct method of adding the equations to eliminate y, then ask the student how they would find the value of y.",
-    "reasoningSummary": "The student correctly identified that adding the two equations eliminates the y term, which leaves 2x = 12, resulting in x = 6."
+    "tutorGuidance": "Praise the child specifically for adding the two equations to eliminate y and ask them to find the value of y next.",
+    "reasoningSummary": "You added the two equations together to eliminate y, getting 2x = 12, which gives x = 6."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 6206,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2736,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified the elimination method by adding the two equations together to isolate the variable x."
+    "reason": "The child correctly solved for x using the elimination method by adding the two equations together."
    }
   },
   {
@@ -579,17 +573,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Praise the student for clearly articulating the rule about dividing by negatives and then ask them to solve a slightly more complex inequality like -3x + 2 > 8 to solidify the procedure.",
-    "reasoningSummary": "The student correctly identified that dividing by a negative number requires reversing the inequality sign to maintain a true statement."
+    "tutorGuidance": "Praise the child specifically for remembering to flip the inequality sign when dividing by a negative number, then advance to a slightly more challenging problem.",
+    "reasoningSummary": "You correctly divided both sides by -2 and flipped the inequality sign from < to > because you divided by a negative number."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 6603,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2421,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified the rule that dividing by a negative number requires reversing the inequality sign."
+    "reason": "The child correctly solved the inequality and explained that dividing by a negative number flips the inequality sign."
    }
   },
   {
@@ -611,17 +605,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Praise the student for correctly distinguishing between additive and multiplicative operations on inequalities and proceed to an example involving division by a negative number to solidify their understanding.",
-    "reasoningSummary": "You correctly identified that subtracting from both sides preserves the inequality sign and that only multiplying or dividing by a negative number requires reversing it."
+    "tutorGuidance": "Praise the learner for correctly identifying that subtraction preserves the inequality sign, and move on to the next challenge.",
+    "reasoningSummary": "You subtracted 4 from both sides and correctly noted that subtracting a number does not flip the inequality sign."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 3285,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2403,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified the properties of inequality and applied the inverse operation to isolate the variable."
+    "reason": "The child correctly solved the inequality and accurately explained the rules regarding how operations affect the inequality sign."
    }
   },
   {
@@ -645,19 +639,19 @@
     ],
     "confidence": "high",
     "shouldProbe": true,
-    "probeQuestion": "If we had the inequality x - 2 < 6, would you flip the sign to solve it, and why?",
-    "tutorGuidance": "Ask the probe question to determine if the student believes a negative number anywhere requires a sign flip, rather than specifically dividing by one.",
-    "reasoningSummary": "You believe that the inequality sign must flip simply because a negative number appears anywhere in the equation, rather than because you divided by a negative number.",
-    "faultyStep": "The reasoning that 'There is a negative number in it, so the sign flips'"
+    "probeQuestion": "Would you flip the inequality sign when solving x - 2 < 6?",
+    "tutorGuidance": "Ask the probe question to test whether the child flips the sign for the presence of any negative number without revealing the correct rule yet.",
+    "reasoningSummary": "You flipped the inequality sign because a negative number was present in the problem, rather than specifically because you divided by a negative number.",
+    "faultyStep": "Flipping the inequality sign simply because a negative number is present in the expression."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 4837,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 4382,
    "leak": "no_leak",
    "naive": {
-    "understands": true,
-    "reason": "The child correctly identified that multiplying or dividing by a negative number requires reversing the inequality sign."
+    "understands": false,
+    "reason": "The child incorrectly believes that the presence of any negative number flips the inequality sign, rather than specifically dividing or multiplying by a negative number."
    }
   },
   {
@@ -681,19 +675,19 @@
     ],
     "confidence": "high",
     "shouldProbe": true,
-    "probeQuestion": "If we had the inequality x < 3, would the number 3 be included in our possible answers, and how would that change how we draw the circle?",
-    "tutorGuidance": "Ask the probe question to determine if the student differentiates between strict and inclusive inequalities.",
-    "reasoningSummary": "The student believes that strict inequalities (like x < 3) also include the boundary value as part of the solution, which is incorrect.",
-    "faultyStep": "You fill in the circle for every inequality sign, whether it is < or <=, because the boundary number is part of the answer."
+    "probeQuestion": "How would you draw the circle at 3 if the question asked for x < 3 instead?",
+    "tutorGuidance": "Ask the probe question to test if they use an open or filled-in circle for a strict inequality, without revealing the correct rule yet.",
+    "reasoningSummary": "You got the right drawing for this problem, but you stated that all inequality signs get a filled-in circle.",
+    "faultyStep": "Thinking that strict inequalities (< or >) also include the boundary number and use a filled-in circle."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 4162,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3788,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child incorrectly believes that all inequality signs include the boundary number, failing to distinguish between symbols that include the value and those that do not."
+    "reason": "The child incorrectly believes that a circle is filled in for all inequalities, including strict inequalities like < which actually require an open circle."
    }
   },
   {
@@ -716,20 +710,19 @@
      "igcse--g8--mathematics--ch2-linear-inequalities--inequality-notation-and-properties-of-inequalities::at-least-interpreted-as-less"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If you need at least $5 to buy a candy bar, and you have $6, can you buy it?",
-    "tutorGuidance": "Ask the probe question to help the student realize that 'at least' means the value needs to meet or exceed a specific threshold.",
-    "reasoningSummary": "The student interpreted the phrase 'at least' as literally implying 'smaller' or 'less than' based on the word 'least'.",
-    "faultyStep": "Interpreting 'at least 120' as h <= 120"
+    "shouldProbe": false,
+    "tutorGuidance": "Ask the child if someone who is 150 cm tall would be allowed on a ride with a height requirement of 'at least 120 cm'.",
+    "reasoningSummary": "You thought 'at least' means less than or equal to because the word 'least' suggests smaller.",
+    "faultyStep": "Interpreting 'at least' as less than or equal to (<=)"
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 8447,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3398,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child incorrectly interpreted 'least' as a synonym for 'less than' rather than recognizing the requirement for a minimum height threshold."
+    "reason": "The child incorrectly interprets 'at least' as 'less than or equal to' because they misunderstand 'least' to mean smaller rather than the minimum allowed value."
    }
   },
   {
@@ -752,20 +745,19 @@
      "igcse--g8--mathematics--ch2-linear-inequalities--inequality-notation-and-properties-of-inequalities::negative-presence-reversal"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If we had the equation x + 3 > 2, would you flip the sign to <, or would it stay >?",
-    "tutorGuidance": "Ask the probe question to help the child test their own rule about why signs flip in inequalities.",
-    "reasoningSummary": "You flipped the inequality sign because you saw a negative number on the right side of the equation.",
-    "faultyStep": "flipping the sign due to the presence of a negative number"
+    "shouldProbe": false,
+    "tutorGuidance": "Explain clearly that subtracting a number does not flip the inequality sign, and that the sign only flips when multiplying or dividing both sides by a negative number.",
+    "reasoningSummary": "The child flipped the inequality sign because there was a negative number (-2) in the equation, rather than because they multiplied or divided by a negative number.",
+    "faultyStep": "Flipping the inequality sign when subtracting 3 from both sides."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 10458,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3507,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child incorrectly believes that the presence of a negative number in the inequality flips the direction of the inequality sign, rather than understanding that flipping only occurs when multiplying or dividing by a negative number."
+    "reason": "The child incorrectly flipped the inequality sign due to the presence of a negative number rather than only flipping it when multiplying or dividing by a negative number."
    }
   },
   {
@@ -786,20 +778,19 @@
     "classification": "wrong_answer",
     "ids": [],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If you had the equation x - 5 = 10, would you subtract 5 from 10 to find x, or do something else?",
-    "tutorGuidance": "Ask the student to solve the probe question to reveal their current understanding of inverse operations.",
-    "reasoningSummary": "The student incorrectly subtracted 3 from 4 instead of applying inverse operations to isolate x.",
-    "faultyStep": "4 minus 3"
+    "shouldProbe": false,
+    "tutorGuidance": "Guide the learner step-by-step to see what inverse operation is needed to undo subtracting 3.",
+    "reasoningSummary": "You subtracted 3 from 4 instead of adding 3 to both sides to undo the minus 3.",
+    "faultyStep": "Subtracting 3 from 4 instead of adding 3 to 4 to isolate x"
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 34191,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 4105,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child incorrectly subtracted 3 from 4 instead of adding 3 to both sides of the inequality to isolate x."
+    "reason": "The child subtracted 3 from 4 instead of adding 3 to isolate the variable x using the inverse operation."
    }
   },
   {
@@ -820,19 +811,18 @@
     "classification": "no_reasoning_given",
     "ids": [],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "How would your answer change if the problem was -2x > 8 instead?",
-    "tutorGuidance": "Ask the student to explain their process for the original problem and then pose the probe question to check their grasp of inequality properties.",
-    "reasoningSummary": "You provided the correct solution but did not explain how you reached it."
+    "shouldProbe": false,
+    "tutorGuidance": "Confirm that the answer is correct and ask the child to briefly explain the step they used to reach it.",
+    "reasoningSummary": "The child stated x > 4 without showing the steps taken to solve 2x > 8."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 6650,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2399,
    "leak": "no_leak",
    "naive": {
-    "understands": false,
-    "reason": "Without an explanation or shown work, it is impossible to determine if the child solved the inequality using the correct mathematical steps or simply guessed the answer."
+    "understands": true,
+    "reason": "The child provided the correct solution to the inequality."
    }
   },
   {
@@ -854,18 +844,18 @@
     "ids": [],
     "confidence": "medium",
     "shouldProbe": true,
-    "probeQuestion": "If you had the inequality x - 5 > 2, would you flip the inequality sign, and why?",
-    "tutorGuidance": "Ask the student the probe question to test if they apply the sign reversal to any negative number versus only when multiplying or dividing.",
-    "reasoningSummary": "The student correctly flipped the inequality sign after isolating x, but the brief explanation 'I flipped it' does not confirm if they understand the specific condition (multiplying/dividing by a negative) or if they are simply applying a rule whenever a negative appears."
+    "probeQuestion": "Would you also flip the inequality sign if you were solving x - 3 < 5?",
+    "tutorGuidance": "Ask the probe question to check if they know when to flip the sign, without giving away the rule.",
+    "reasoningSummary": "The student correctly flipped the inequality sign to get x > -3, but only said 'I flipped it' without explaining why."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 6070,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 5790,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified the rule that multiplying or dividing an inequality by a negative number requires reversing the inequality sign."
+    "reason": "The child correctly solved the inequality and recognized that dividing or multiplying by a negative number flips the inequality sign."
    }
   },
   {
@@ -887,17 +877,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Praise the student for their precise use of the term 'water potential' and ask them to predict what would happen if the raisin were placed in a very salty solution instead.",
-    "reasoningSummary": "The student correctly identified that water moves from an area of higher water potential to lower water potential across a partially permeable membrane."
+    "tutorGuidance": "Praise the student for correctly linking water potential differences across a partially permeable membrane to the process of osmosis, and move on to the next topic.",
+    "reasoningSummary": "The student correctly identified that water moves into the raisin because pure water has a higher water potential than the concentrated sugar solution inside, moving down the gradient via osmosis."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 6855,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2098,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified both the direction of water movement and the underlying mechanism of osmosis driven by a water potential gradient."
+    "reason": "The child correctly identified that water moves into the raisin and provided an accurate explanation based on osmosis and water potential gradients."
    }
   },
   {
@@ -919,17 +909,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Praise the student for clearly explaining the concept of dynamic equilibrium and then proceed to ask how this principle applies to active transport.",
-    "reasoningSummary": "The student correctly identified that molecular motion persists at equilibrium and explained that 'no net movement' results from dynamic balance rather than cessation of motion."
+    "tutorGuidance": "Praise the child for explaining dynamic equilibrium correctly by noting that equal movement in both directions means no net change, then advance to the next concept.",
+    "reasoningSummary": "You correctly explained that particles continue moving randomly in both directions equally, so there is no net movement."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 7841,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2489,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identifies that particle motion persists and explains that dynamic equilibrium results in no net movement."
+    "reason": "The child correctly explained that particles continue moving randomly at equilibrium with no overall net change in direction."
    }
   },
   {
@@ -952,20 +942,19 @@
      "igcse--g8--biology--ch1-introducing-living-things--movement-of-substances-diffusion-osmosis-and-active-transpor::particles-stop-at-equilibrium"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If we added a tiny drop of a different color dye to the other side of that same water, what would happen to the original dye particles?",
-    "tutorGuidance": "Ask the probe question to challenge the child's assumption that particles become static at equilibrium.",
-    "reasoningSummary": "The student correctly identified that there is no net movement, but incorrectly attributed this to the particles ceasing all random motion at equilibrium.",
-    "faultyStep": "The particles stop moving once they are spread out evenly."
+    "shouldProbe": false,
+    "tutorGuidance": "Address the misconception that particles freeze at equilibrium by asking the child if water particles ever stop moving due to their thermal energy.",
+    "reasoningSummary": "You answered 'no net movement' correctly, but stated that this is because dye particles completely stop moving when spread out.",
+    "faultyStep": "Thinking that individual particle movement stops completely at dynamic equilibrium."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 9602,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3580,
    "leak": "not_checkable",
    "naive": {
     "understands": false,
-    "reason": "The child correctly identifies that there is no net movement, but incorrectly believes the particles stop moving entirely, failing to grasp the concept of dynamic equilibrium."
+    "reason": "The child incorrectly believes that particles stop moving entirely once spread out, failing to understand that particles continue to move randomly at dynamic equilibrium."
    }
   },
   {
@@ -988,20 +977,19 @@
      "igcse--g8--biology--ch1-introducing-living-things--movement-of-substances-diffusion-osmosis-and-active-transpor::solute-moves-in-osmosis"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If I put a piece of celery into pure water, are the sugar molecules inside the celery moving out into the water to make it sweet?",
-    "tutorGuidance": "Ask the probe question to challenge their idea that the solute is what travels across the membrane.",
-    "reasoningSummary": "You identified the outcome correctly, but you believe osmosis happens because sugar particles move across the membrane rather than water moving.",
-    "faultyStep": "The sugar particles move across the membrane to even things out"
+    "shouldProbe": false,
+    "tutorGuidance": "Explain clearly that osmosis is specifically the movement of water molecules, not solute particles like sugar.",
+    "reasoningSummary": "You thought osmosis means sugar particles move across the membrane, rather than water molecules.",
+    "faultyStep": "Claiming that sugar particles (solute) move across the membrane during osmosis."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 1802,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 4012,
    "leak": "not_checkable",
    "naive": {
     "understands": false,
-    "reason": "The child incorrectly identifies the movement of sugar particles instead of water molecules as the mechanism behind osmosis."
+    "reason": "The child incorrectly explains that osmosis involves the movement of sugar particles rather than water molecules across the membrane."
    }
   },
   {
@@ -1024,20 +1012,19 @@
      "igcse--g8--biology--ch1-introducing-living-things--movement-of-substances-diffusion-osmosis-and-active-transpor::water-concentration-vs-solution-concentration"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If you add a spoonful of sugar to a cup of water, does the amount of sugar increase or decrease, and does that leave more or less room for water particles?",
-    "tutorGuidance": "Use a visual diagram to show two containers with the same total volume, one with more sugar cubes than the other, to illustrate why more sugar leaves less space for water molecules.",
-    "reasoningSummary": "The student incorrectly assumes that a higher concentration of solute (sugar) automatically means a higher concentration of water.",
-    "faultyStep": "Equating high solute concentration with high water concentration."
+    "shouldProbe": false,
+    "tutorGuidance": "Use a visual breakdown showing the percentage of water versus sugar in both solutions to clarify that more sugar means less water.",
+    "reasoningSummary": "You assumed that a higher percentage sugar solution means it also contains a higher concentration of water.",
+    "faultyStep": "Equating high sugar solution percentage with high water concentration."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 6700,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2830,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child confuses solute concentration with water concentration, failing to realize that higher solute concentration lowers water potential."
+    "reason": "The child incorrectly assumes that a higher sugar concentration corresponds to a higher water concentration and water potential."
    }
   },
   {
@@ -1060,20 +1047,19 @@
      "igcse--g8--biology--ch1-introducing-living-things--movement-of-substances-diffusion-osmosis-and-active-transpor::solute-moves-in-osmosis"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If the tiny holes in the Visking tubing are too small for the sugar molecules to fit through, but are the right size for water molecules, what is the only thing that is physically able to move?",
-    "tutorGuidance": "Ask the probe question to help the student realize that the physical properties of the membrane prevent sugar movement, then use a visual diagram to show water particles moving instead.",
-    "reasoningSummary": "The student believes that osmosis is defined by the movement of solute particles (sugar) to reach equilibrium, rather than the movement of water.",
-    "faultyStep": "Defining osmosis as the sugar moving out to equalise concentrations."
+    "shouldProbe": false,
+    "tutorGuidance": "Use a visual diagram to show that sugar molecules are too large to pass through the pores in Visking tubing, so only water molecules can move across during osmosis.",
+    "reasoningSummary": "The child believes that osmosis is the movement of sugar (solute) particles across a membrane to equalize concentrations, rather than the movement of water molecules.",
+    "faultyStep": "Assuming that sugar particles cross the partially permeable membrane during osmosis instead of water molecules."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 6390,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 4820,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child incorrectly identifies solute movement as the mechanism of osmosis instead of the net movement of water across a semi-permeable membrane."
+    "reason": "The child incorrectly believes that sugar moves out rather than water moving in, confusing diffusion of solute with osmosis."
    }
   },
   {
@@ -1094,20 +1080,19 @@
     "classification": "wrong_answer",
     "ids": [],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If active transport requires sunlight, why do cells in the roots of a plant—which are underground and in the dark—still need to carry out active transport to absorb minerals?",
-    "tutorGuidance": "Ask the probe question to help the student realize that cells without access to light still need to move substances against concentration gradients.",
-    "reasoningSummary": "The student believes active transport in all cells is powered by photosynthesis/sunlight rather than cellular respiration.",
-    "faultyStep": "The student conflated photosynthesis (plants using light energy to produce glucose) with active transport (cells using ATP from respiration to move molecules)."
+    "shouldProbe": false,
+    "tutorGuidance": "Explain that while plants capture sunlight for photosynthesis, active transport specifically relies on energy released during respiration inside the cell.",
+    "reasoningSummary": "The child thinks active transport gets its energy directly from sunlight because plants absorb light.",
+    "faultyStep": "Thinking sunlight provides the energy for active transport instead of respiration."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 5208,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2605,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child is confusing active transport with photosynthesis and incorrectly identifies the source of energy required for the biological process."
+    "reason": "The child incorrectly identified sunlight as the energy source for active transport, confusing it with photosynthesis instead of cellular energy from respiration."
    }
   },
   {
@@ -1125,22 +1110,21 @@
     "misconceptionId": null
    },
    "ananta": {
-    "classification": "needs_clarification",
+    "classification": "clear_reasoning",
     "ids": [],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If we placed a cell in a very sugary syrup, would the water move into the cell or out of it, and why?",
-    "tutorGuidance": "Ask the probe question to see if the student can apply the definition to a practical scenario.",
-    "reasoningSummary": "You identified the correct direction of movement, but you only mentioned that it happens through the membrane, which doesn't specify what is actually moving or why."
+    "shouldProbe": false,
+    "tutorGuidance": "Praise the student specifically for correctly identifying both the water potential gradient and the role of the membrane, then move on to the next concept.",
+    "reasoningSummary": "Water moves down a water potential gradient from high to low water potential through a partially permeable membrane."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 4228,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3053,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified the direction of water movement and demonstrated awareness of the requirement for a membrane."
+    "reason": "The child correctly identified the direction of water movement and demonstrated an understanding that osmosis occurs across a membrane."
    }
   },
   {
@@ -1161,19 +1145,18 @@
     "classification": "no_reasoning_given",
     "ids": [],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "Can you explain what 'against the concentration gradient' means in the context of active transport?",
-    "tutorGuidance": "Ask the student to explain what 'against the concentration gradient' means in the context of active transport to verify their conceptual understanding.",
-    "reasoningSummary": "The student provided the correct answer without explaining how active transport functions or why it differs from diffusion."
+    "shouldProbe": false,
+    "tutorGuidance": "Ask the student to explain in their own words what moving 'against the concentration gradient' means to check deeper understanding.",
+    "reasoningSummary": "The student correctly answered 'Yes' but did not provide any supporting explanation."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 1941,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3161,
    "leak": "not_checkable",
    "naive": {
-    "understands": null,
-    "reason": "While the answer is correct, the lack of an explanation makes it impossible to determine if the child understands the underlying mechanism or simply guessed."
+    "understands": true,
+    "reason": "The child correctly identified that active transport moves particles against the concentration gradient."
    }
   },
   {
@@ -1195,17 +1178,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Praise the student for clearly explaining why the zero is essential for place value but optional in an addition sum, then move to a number with zeros in multiple positions, like 5,004.",
-    "reasoningSummary": "The student correctly identified that while 0 acts as a necessary placeholder to establish the value of other digits, it contributes no value itself in an expanded sum."
+    "tutorGuidance": "Praise the child specifically for correctly explaining the placeholder role of zero in expanded form, then move on to the next problem.",
+    "reasoningSummary": "You correctly explained that zero holds the tens place value so 0 tens adds nothing to the expanded sum."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 5552,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3344,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified the role of the zero as a placeholder and demonstrated an accurate understanding of the additive property of expanded form by excluding a value of zero."
+    "reason": "The child correctly provided the expanded form and accurately explained the role of zero as a placeholder that adds no value to the sum."
    }
   },
   {
@@ -1227,17 +1210,17 @@
     "ids": [],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Praise the child for explicitly identifying the hundreds column and using place value multiplication to determine the total, then advance to a slightly more complex problem involving a zero placeholder.",
-    "reasoningSummary": "You correctly identified that the 6 occupies the hundreds column and multiplied it by 100 to find its value."
+    "tutorGuidance": "Praise the child for explaining that the 6 is in the hundreds place to find its value, then move on to the next question.",
+    "reasoningSummary": "You identified that the 6 is in the hundreds column, making its value 6 hundreds or 600."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 11984,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2404,
    "leak": "not_checkable",
    "naive": {
     "understands": true,
-    "reason": "The child correctly identified the place value of the digit and applied the correct mathematical reasoning to determine its value."
+    "reason": "The child correctly identified that the digit 6 is in the hundreds place and accurately explained how to calculate its value."
    }
   },
   {
@@ -1261,19 +1244,19 @@
     ],
     "confidence": "high",
     "shouldProbe": true,
-    "probeQuestion": "If I write the number 8,000 and the number 8, which 8 represents a bigger amount, and why?",
-    "tutorGuidance": "Ask the probe question using place value blocks or a place value grid to help the student visualize why an 8 in the thousands column holds a different value than an 8 in the ones column.",
-    "reasoningSummary": "You believe that the digit 8 always has the same value, regardless of its position in the number, even though you correctly identified that the numbers 5,832 and 8,325 are different.",
-    "faultyStep": "The digit 8 itself is always worth 8"
+    "probeQuestion": "In the number 5,832, is the 8 worth 8 ones, 8 tens, 8 hundreds, or 8 thousands?",
+    "tutorGuidance": "Ask the child to state the place value of the 8 in 5,832 without revealing whether their previous reasoning was correct.",
+    "reasoningSummary": "You answered 'no' because the whole numbers are different, but stated that the digit 8 itself is always worth 8 regardless of its position.",
+    "faultyStep": "Stating that the digit 8 itself is always worth 8 rather than looking at its place value position."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 4721,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3898,
    "leak": "not_checkable",
    "naive": {
     "understands": false,
-    "reason": "The child fails to recognize place value, incorrectly asserting that the digit 8 always represents the same quantity regardless of its position."
+    "reason": "The child incorrectly bases their answer on the overall size of the numbers and explicitly states that the digit 8 always has a value of 8, demonstrating a fundamental misunderstanding of place value."
    }
   },
   {
@@ -1297,19 +1280,19 @@
     ],
     "confidence": "high",
     "shouldProbe": true,
-    "probeQuestion": "If you needed to write the number 'four thousand and five' using the same method, what would you write on your paper?",
-    "tutorGuidance": "Ask the probe question, then use a place-value grid to demonstrate why each digit needs its own column.",
-    "reasoningSummary": "You write numbers by writing the digits you hear in order, which works for 'four thousand and forty' but leads to errors like '405' for 'four thousand and five'.",
-    "faultyStep": "writing digits as heard (concatenation) instead of using place value placeholders"
+    "probeQuestion": "How would you write 'four thousand and five' in digits?",
+    "tutorGuidance": "Ask the probe question to test their method without revealing whether their original answer was correct.",
+    "reasoningSummary": "You wrote the digits side by side based on how they sound instead of using place value columns.",
+    "faultyStep": "Concatenating '4' and '40' to make 4040, which leads to writing '405' for four thousand and five."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 5200,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3505,
    "leak": "not_checkable",
    "naive": {
     "understands": false,
-    "reason": "The child is using a flawed heuristic of concatenating numbers based on how they are spoken rather than understanding place value, which causes errors in numbers containing zeros like 'four thousand and five'."
+    "reason": "The child got the correct answer by coincidence through concatenating numbers rather than understanding place value, as shown by their flawed method for other numbers."
    }
   },
   {
@@ -1332,20 +1315,19 @@
      "cambridge-lower-secondary--g4--mathematics--number--reading-writing-and-partitioning-4-digit-numbers::omitting-zero-placeholder"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If we used your method to write 'six thousand and thirty', what would you write?",
-    "tutorGuidance": "Ask the probe question to see if the child can differentiate between the place value needs of 'three' and 'thirty' before showing them a place value grid.",
-    "reasoningSummary": "You identified the thousands and the units correctly, but you used only one zero as a placeholder instead of accounting for both the missing hundreds and the missing tens.",
-    "faultyStep": "Using a single zero to show the gap between 6 and 3 when writing 6003."
+    "shouldProbe": false,
+    "tutorGuidance": "Use a place value grid showing Thousands, Hundreds, Tens, and Ones to visually demonstrate why two zeros are needed as placeholders.",
+    "reasoningSummary": "You placed a single zero to represent the gap between thousands and ones instead of holding both the hundreds and tens places.",
+    "faultyStep": "Using only one zero placeholder instead of two when both hundreds and tens columns are empty."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 2302,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3198,
    "leak": "not_checkable",
    "naive": {
     "understands": false,
-    "reason": "The child fails to understand positional notation, specifically that each place value must be occupied to correctly represent thousands, hundreds, and tens."
+    "reason": "The child misunderstands place value, failing to realize that zero placeholders are required for both the hundreds and tens positions."
    }
   },
   {
@@ -1368,20 +1350,19 @@
      "cambridge-lower-secondary--g4--mathematics--number--reading-writing-and-partitioning-4-digit-numbers::confusing-face-and-place-value"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If I write the number 4,028, is the value of that 4 still just 4, or is it different?",
-    "tutorGuidance": "Use a place value grid to physically place the '4' into the hundreds column and ask the learner to identify what that column represents.",
-    "reasoningSummary": "You identified the digit '4' as 4 because you focused on the symbol itself rather than its position in the number.",
-    "faultyStep": "Thinking that the value of a digit is always the same as the digit itself, ignoring the place value (hundreds)."
+    "shouldProbe": false,
+    "tutorGuidance": "Use a place value grid to show how the position of the digit 4 gives it a value of 400 rather than just 4.",
+    "reasoningSummary": "You looked at the digit itself rather than the position it sits in to find its value.",
+    "faultyStep": "Confusing the face value (4) with the place value (400) based on its column position."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 7407,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 2704,
    "leak": "not_checkable",
    "naive": {
     "understands": false,
-    "reason": "The child is failing to account for the positional value of the digit, which determines that the 4 represents four hundreds rather than just four ones."
+    "reason": "The child confused the digit's face value with its place value in the hundreds position."
    }
   },
   {
@@ -1402,20 +1383,19 @@
     "classification": "wrong_answer",
     "ids": [],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If you look at the number 3,524, what is the value of the 4 digit on its own?",
-    "tutorGuidance": "Ask the probe question and then use a place value chart or base-ten blocks to visually demonstrate the difference between the ones place and the tens place.",
-    "reasoningSummary": "You identified the place values correctly for the thousands, hundreds, and tens, but you incorrectly assigned a value of 40 to the digit 4 in the ones place.",
-    "faultyStep": "3000 + 500 + 20 + 40"
+    "shouldProbe": false,
+    "tutorGuidance": "Guide the child step-by-step through checking the place value of each digit in 3,524, focusing on the ones column.",
+    "reasoningSummary": "You expanded 3,524 into 3000 + 500 + 20 + 40, treating the ones digit as 40 instead of 4.",
+    "faultyStep": "Writing 40 instead of 4 for the ones place"
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 1846,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 4091,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child correctly partitioned the thousands, hundreds, and tens, indicating they understand the place value system despite a minor transcription error with the ones digit."
+    "reason": "The child correctly partitioned the thousands, hundreds, and tens components, and explicitly recognized that writing 40 instead of 4 was just a simple clerical error."
    }
   },
   {
@@ -1433,25 +1413,22 @@
     "misconceptionId": null
    },
    "ananta": {
-    "classification": "misconception_behind_correct",
-    "ids": [
-     "cambridge-lower-secondary--g4--mathematics--number--reading-writing-and-partitioning-4-digit-numbers::confusing-face-and-place-value"
-    ],
+    "classification": "needs_clarification",
+    "ids": [],
     "confidence": "medium",
     "shouldProbe": true,
-    "probeQuestion": "If you use that same counting method, which digit is in the hundreds place for the number 17,940?",
-    "tutorGuidance": "Ask the probe question to test if their 'counting from the left' strategy holds up when the number of digits changes.",
-    "reasoningSummary": "You identified the digit by counting its position from the left, rather than identifying its place value column.",
-    "faultyStep": "Counting along from the left"
+    "probeQuestion": "If you count two places from the left in any four-digit number, what place value is always there?",
+    "tutorGuidance": "Ask the probe question to check if they know the place value order from left to right, without revealing whether 1 was correct.",
+    "reasoningSummary": "You picked 1 by counting digits from the left side of the number."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 2663,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 5034,
    "leak": "not_checkable",
    "naive": {
     "understands": false,
-    "reason": "The child reached the correct answer by incorrectly counting from the left rather than identifying the hundreds place value correctly."
+    "reason": "The child used flawed reasoning to get the correct answer, as place value is determined from the right (ones, tens, hundreds) rather than by counting positions from the left."
    }
   },
   {
@@ -1469,22 +1446,21 @@
     "misconceptionId": null
    },
    "ananta": {
-    "classification": "needs_clarification",
+    "classification": "no_reasoning_given",
     "ids": [],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "How did you decide what to write for the zero in the hundreds place?",
-    "tutorGuidance": "Ask the learner to explain why they included or excluded certain place names when writing the number to reveal their internal process regarding the zero placeholder.",
-    "reasoningSummary": "The learner correctly transcribed the numerical value 2,090 into its word form, but did not describe the strategy used to handle the zero placeholder."
+    "shouldProbe": false,
+    "tutorGuidance": "Praise the child for correctly reading and writing the 4-digit number with a zero placeholder, then move on to the next question.",
+    "reasoningSummary": "The child correctly wrote the number 2,090 in words as 'two thousand and ninety' without showing extra working."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 18405,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3065,
    "leak": "no_leak",
    "naive": {
     "understands": true,
-    "reason": "The child provided the correct numerical representation in words, demonstrating an accurate understanding of place value."
+    "reason": "The child correctly wrote the number 2,090 in words."
    }
   },
   {
@@ -1509,20 +1485,19 @@
      "igcse--g8--mathematics--ch2-linear-inequalities--inequality-notation-and-properties-of-inequalities::negative-presence-reversal"
     ],
     "confidence": "high",
-    "shouldProbe": true,
-    "probeQuestion": "If you solve x - 5 > 2, do you think the sign should flip, and why?",
-    "tutorGuidance": "Ask the probe question to determine if the student believes the mere presence of a negative number forces a sign flip regardless of the operation.",
-    "reasoningSummary": "You flipped the inequality sign because there was a negative number involved in the problem, rather than only when dividing or multiplying by a negative.",
-    "faultyStep": "Flipping the > sign to < upon seeing a negative number."
+    "shouldProbe": false,
+    "tutorGuidance": "Explain clearly that subtracting a number never flips the inequality sign, and that flipping only happens when multiplying or dividing both sides by a negative number.",
+    "reasoningSummary": "You flipped the inequality sign simply because a negative number was present, rather than only flipping it when multiplying or dividing by a negative number.",
+    "faultyStep": "Flipping the '>' sign to '<' when subtracting 3 from both sides."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 1815,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 3221,
    "leak": "no_leak",
    "naive": {
     "understands": false,
-    "reason": "The child incorrectly applied the rule of flipping the inequality sign, which is only required when multiplying or dividing by a negative number, not when a negative number appears in the equation."
+    "reason": "The child incorrectly flipped the inequality sign simply because a negative number was involved, rather than only flipping it when multiplying or dividing by a negative number."
    }
   },
   {
@@ -1548,18 +1523,18 @@
     ],
     "confidence": "high",
     "shouldProbe": false,
-    "tutorGuidance": "Use a place value chart to show the child how the position of the 4 makes it worth 400 rather than 4.",
-    "reasoningSummary": "The child identified the face value of the digit '4' as its actual value, failing to account for its position in the hundreds column.",
-    "faultyStep": "Treating the value of the digit '4' as 4 regardless of its position in the number 2,408."
+    "tutorGuidance": "Use a place value grid to visually demonstrate that the 4 sits in the hundreds column, making its value 400 rather than 4.",
+    "reasoningSummary": "You identified the digit itself (4) rather than its place value based on its position in the hundreds place (400).",
+    "faultyStep": "Confused the face value of the digit 4 with its place value in the hundreds column."
    },
    "anantaFellBack": false,
    "attempts": 1,
-   "model": "gemini-3.1-flash-lite",
-   "latencyMs": 6901,
+   "model": "gemini-3.6-flash",
+   "latencyMs": 4131,
    "leak": "not_checkable",
    "naive": {
     "understands": false,
-    "reason": "The child fails to account for the positional value of the digit, confusing the face value with the place value."
+    "reason": "The child identified the face value of the digit instead of its place value."
    }
   }
  ]
