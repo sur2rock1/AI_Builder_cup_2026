@@ -14,15 +14,13 @@ export function paceGuidance(pace: Pace): string {
   switch (pace) {
     case 'slow':
       return 'PACE: SLOW. The learner asked for a slow pace. Speak in short sentences, one idea at a time, in the simplest words you can, '
-        + 'and add one small everyday example when an idea is new. Say a little more about each line than usual. '
-        + 'Slow means smaller steps, NOT stopping: never ask a check-in question of your own and never wait for a reply unless the lesson itself asks a question. Keep going.';
+        + 'and add one small everyday example when an idea is new. Give them time: when you ask something, wait for their answer.';
     case 'quick':
       return 'PACE: QUICK. The learner asked for a brisk pace. Get to the point, skip recaps and extra examples, '
-        + 'and ask nothing beyond the lesson\'s own questions. Stay clear and kind.';
+        + 'and keep your own questions few and short. Stay clear and kind.';
     default:
-      return 'PACE: STEADY. Teach the way a good teacher talks at a board: say the idea, write it, and flow straight on to the next. '
-        + 'Never finish with a check-in question of your own, and never wait for a reply unless the lesson itself asks a question. '
-        + 'Stop and check in only if the learner has gone quiet for a long time, sounds unsure, or says they are lost.';
+      return 'PACE: STEADY. Calm and unhurried, one idea at a time, like a good tutor talking at a board, '
+        + 'with a short question to the learner now and then.';
   }
 }
 

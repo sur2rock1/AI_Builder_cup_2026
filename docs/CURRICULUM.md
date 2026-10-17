@@ -272,7 +272,10 @@ no Firestore doc cap to worry about.
   `src/curriculum/pythagoras.ts`. The deployed Firestore project was **not** touched — delete its old
   `curricula` documents (and old `learners`) from the Firebase console, or through the admin library
   once they are visible there.
-- **Demo learners:** `npm run seed:demo -- [--course <id>] [--reset] [--list]` seeds Aisha / Marcus /
+- **Demo learners (current demo):** `npm run seed:g4 [-- --reset]` seeds Maya and Leo (Simulated), Grade 4, with contrasting
+  histories (`docs/ADAPTIVE_TEACHING.md`). The older `seed:demo` below seeds Aisha / Marcus / Priya; they were removed from
+  the demo data on 2026-10-17.
+- **Demo learners (older):** `npm run seed:demo -- [--course <id>] [--reset] [--list]` seeds Aisha / Marcus /
   Priya (Simulated) against a course that is actually in the library, using that course's own
   misconception catalogue ids, board and grade. Upload a textbook first.
 - **Tests:** `npm run test:curriculum` (`tests/smoke/curriculum-ingest.mjs`) — catalog parsing, age

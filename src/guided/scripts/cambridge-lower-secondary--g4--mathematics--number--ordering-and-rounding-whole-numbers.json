@@ -131,7 +131,7 @@
     {
       "id": "b5",
       "kind": "method",
-      "say": "Rounding to the nearest ten. Number line idea: 47 is between 40 and 50. Look at the ones digit: 5 or more round up, less than 5 round down. Do 47 and 43. No questions.",
+      "say": "Rounding to the nearest ten, with the number line picture: 48 is between 40 and 50, past the halfway mark 45. Look at the ones digit: 5 or more round up, less than 5 round down. Do 48 and 43. No questions.",
       "board": [
         {
           "type": "heading",
@@ -141,27 +141,43 @@
       "lines": [
         {
           "id": "l13",
-          "text": "47 is between 40 and 50",
-          "say": "Rounding means finding the nearest friendly number. Look at forty-seven. It sits between forty and fifty. Which is it closer to?",
-          "style": "point"
+          "text": "48 is between 40 and 50",
+          "say": "Rounding means finding the nearest friendly number. Look at forty-eight on the number line. It sits between forty and fifty, and the halfway mark is forty-five. Which is it closer to?",
+          "style": "point",
+          "picture": {
+            "ref": "focus:rounding-to-the-nearest-ten",
+            "step": "s1"
+          }
         },
         {
           "id": "l14",
-          "text": "Look at the ones digit: {{7|circle.p}}",
-          "say": "Here's the trick. Look at the ones digit. It's a 7, which is five or more, so the number climbs up to the next ten.",
-          "style": "point"
+          "text": "Look at the ones digit: {{8|circle.p}}",
+          "say": "Here's the trick. Look at the ones digit. It's an 8, which is five or more, and on the line 48 is past the halfway mark, so the number climbs up to the next ten.",
+          "style": "point",
+          "picture": {
+            "ref": "focus:rounding-to-the-nearest-ten",
+            "step": "s2"
+          }
         },
         {
           "id": "l15",
-          "text": "47 → 50",
-          "say": "Forty-seven rounds up to fifty.",
-          "style": "work"
+          "text": "48 → 50",
+          "say": "Forty-eight rounds up to fifty.",
+          "style": "work",
+          "picture": {
+            "ref": "focus:rounding-to-the-nearest-ten",
+            "step": "s3"
+          }
         },
         {
           "id": "l16",
           "text": "43 → 40  (ones digit 3 is less than 5)",
-          "say": "Forty-three has a 3 in the ones place, less than five, so it stays down at forty.",
-          "style": "work"
+          "say": "Now forty-three. It has a 3 in the ones place, less than five, so it stays down at forty.",
+          "style": "work",
+          "picture": {
+            "ref": "focus:rounding-to-the-nearest-ten",
+            "step": "s4"
+          }
         },
         {
           "id": "l17",
@@ -174,7 +190,7 @@
     {
       "id": "b6",
       "kind": "rule",
-      "say": "Rounding to the nearest hundred and thousand for 4-digit numbers: look at the digit just to the right of the place you are rounding to. Do 362 -> 400, 348 -> 300 and 350 -> 400. No questions.",
+      "say": "Rounding to the nearest hundred, with the number line picture: 830 sits between 800 and 900, below the halfway mark 850. Look at the digit just to the right of the place you are rounding to: the tens digit. Do 830 -> 800 and 850 -> 900, then warn about the slip of looking at the hundreds digit. No questions.",
       "board": [
         {
           "type": "heading",
@@ -184,21 +200,33 @@
       "lines": [
         {
           "id": "l18",
-          "text": "362  →  look at the tens digit",
-          "say": "To round to the nearest hundred, we look at the tens digit, the one right next door. In three hundred and sixty-two, the tens digit is a 6, so we round up to four hundred.",
-          "style": "work"
+          "text": "830 is between 800 and 900",
+          "say": "Now the nearest hundred. Look at eight hundred and thirty. It sits between eight hundred and nine hundred, and the halfway mark is eight hundred and fifty.",
+          "style": "work",
+          "picture": {
+            "ref": "focus:rounding-to-the-nearest-hundred",
+            "step": "s2"
+          }
         },
         {
           "id": "l19",
-          "text": "362 → 400     348 → 300     350 → 400",
-          "say": "Three hundred and forty-eight has a 4 in the tens place, so it stays at three hundred. And exactly three hundred and fifty has a 5, so by our rule it goes up to four hundred.",
-          "style": "work"
+          "text": "830 → 800     850 → 900",
+          "say": "To round to the nearest hundred, we look at the tens digit, the one right next door. In 830 the tens digit is a 3, less than five, so it rounds down to eight hundred. But exactly 850 has a 5 in the tens place, so by our rule it goes up to nine hundred.",
+          "style": "work",
+          "picture": {
+            "ref": "focus:rounding-to-the-nearest-hundred",
+            "step": "s4"
+          }
         },
         {
           "id": "l20",
           "text": "Look at the digit one place to the RIGHT",
-          "say": "The rule never changes, whatever place you round to. Peek at the neighbour on the right-hand side, and let that digit decide.",
-          "style": "rule"
+          "say": "The rule never changes, whatever place you round to. A common slip is to look at the hundreds digit, the 8, which would wrongly send 830 all the way up to 900. Peek at the neighbour on the right-hand side, and let that digit decide.",
+          "style": "rule",
+          "picture": {
+            "ref": "contrast:checking-wrong-digit-when-rounding",
+            "step": "s3"
+          }
         }
       ]
     },

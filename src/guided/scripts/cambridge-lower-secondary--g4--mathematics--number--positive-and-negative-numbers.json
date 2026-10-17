@@ -31,7 +31,38 @@
     {
       "id": "b2",
       "kind": "define",
-      "say": "Number line: zero in the middle, positives to the right, negatives to the left with a minus sign. Bigger as you go right, smaller as you go left. No questions.",
+      "say": "Thermometer picture: temperatures 3, 0, -2 and -5. Zero in the middle; above zero positive and warm, below zero negative with a minus sign and cold. Say how far below zero -5 and -2 are. No questions.",
+      "board": [
+        {
+          "type": "heading",
+          "text": "The thermometer and zero"
+        }
+      ],
+      "lines": [
+        {
+          "id": "l3",
+          "text": "3   0   -2   -5",
+          "say": "Here's a thermometer, with some temperatures on it: three, zero, minus two and minus five. Zero is special: it's neither positive nor negative.",
+          "style": "point"
+        },
+        {
+          "id": "l4",
+          "text": "above zero → positive, warm     below zero → negative, cold",
+          "say": "Temperatures above zero, like three, are positive, and they tell us it's warm. Temperatures below zero are negative. They have a minus sign, and they tell us it's cold.",
+          "style": "rule"
+        },
+        {
+          "id": "l5",
+          "text": "-5 is 5 steps BELOW zero",
+          "say": "So minus five is five steps below zero, and minus two is only two steps below zero.",
+          "style": "work"
+        }
+      ]
+    },
+    {
+      "id": "b3",
+      "kind": "show",
+      "say": "The number line: zero in the middle, positives to the right and getting bigger, negatives to the left and getting smaller. Use -5 and -2 as in the picture: -5 is further left, so it is smaller. No questions.",
       "board": [
         {
           "type": "heading",
@@ -40,52 +71,21 @@
       ],
       "lines": [
         {
-          "id": "l3",
-          "text": "-3  -2  -1   0   1   2   3",
-          "say": "Here's a number line, with zero in the middle. Zero is special: it's neither positive nor negative.",
-          "style": "point"
-        },
-        {
-          "id": "l4",
-          "text": "right → positive, bigger     left → negative, smaller",
-          "say": "Numbers to the right of zero are positive, and they get bigger as we go right. Numbers to the left of zero are negative. They have a minus sign, and they get smaller as we go left.",
-          "style": "rule"
-        },
-        {
-          "id": "l5",
-          "text": "-3 is 3 steps LEFT of zero",
-          "say": "So minus three is three steps to the left of zero.",
-          "style": "work"
-        }
-      ]
-    },
-    {
-      "id": "b3",
-      "kind": "show",
-      "say": "Thermometer: a vertical number line. Above zero positive, below zero negative. Show temperatures falling 2, 1, 0, -1, -2. No questions.",
-      "board": [
-        {
-          "type": "heading",
-          "text": "The thermometer"
-        }
-      ],
-      "lines": [
-        {
           "id": "l6",
-          "text": "a thermometer is a number line standing up",
-          "say": "A thermometer is just a number line standing upright. Going up, the numbers get bigger. Going down, they get smaller.",
+          "text": "-5  -4  -3  -2  -1   0   1   2   3",
+          "say": "Now let's lay those numbers out on a number line, with zero in the middle. It's the same thermometer, just lying on its side.",
           "style": "point"
         },
         {
           "id": "l7",
-          "text": "2°C → 1°C → 0°C → -1°C → -2°C",
-          "say": "Let's watch it get colder. Two degrees, one degree, zero, and then it keeps going: minus one, minus two. Every step down is one degree colder.",
+          "text": "right → bigger     left → smaller",
+          "say": "Numbers to the right of zero are positive, and they get bigger as we go right. Numbers to the left of zero are negative, and they get smaller as we go left.",
           "style": "work"
         },
         {
           "id": "l8",
-          "text": "-2°C is colder than 0°C",
-          "say": "Minus two is two degrees below freezing. It's colder than zero, so minus two is less than zero.",
+          "text": "-5 is further left than -2, so -5 < -2",
+          "say": "Look at minus five and minus two. Minus five is further to the left than minus two, so it's the smaller number. Minus five is less than minus two.",
           "style": "point"
         }
       ]
@@ -93,7 +93,7 @@
     {
       "id": "b4",
       "kind": "contrast",
-      "say": "A friend thinks -8 is bigger than -2 because 8 is bigger than 2. Test it: which is colder? Show -8 is further left, so smaller. No questions.",
+      "say": "A friend thinks -5 is bigger than -1 because 5 is bigger than 1. Test it with the thermometer: which is colder? -5 is 5 steps below zero, -1 only 1 step, so -5 is smaller. No questions.",
       "board": [
         {
           "type": "heading",
@@ -103,20 +103,20 @@
       "lines": [
         {
           "id": "l9",
-          "text": "-8  or  -2 ?",
-          "say": "A friend of mine says minus eight is bigger than minus two, because eight is bigger than two. Let's test it like detectives. Think about temperatures.",
+          "text": "-5  or  -1 ?",
+          "say": "A friend of mine says minus five is bigger than minus one, because five is bigger than one. Let's test it like detectives. Think about temperatures.",
           "style": "point"
         },
         {
           "id": "l10",
-          "text": "-8°C is much colder than -2°C",
-          "say": "Minus eight degrees is far colder than minus two degrees. The colder one is the smaller number.",
+          "text": "-5°C is 5 steps below zero; -1°C is only 1 step below",
+          "say": "Minus five degrees is five steps below zero, far colder than minus one degree, which is only one step below zero. The colder one is the smaller number.",
           "style": "point"
         },
         {
           "id": "l11",
-          "text": "-8 < -2",
-          "say": "On the number line, minus eight is further to the left, so it's less. With negatives, a bigger digit means further below zero, so a smaller number.",
+          "text": "-5 < -1",
+          "say": "Minus five is further down the thermometer, and further to the left on the number line, so it's less. With negatives, a bigger digit means further below zero, so a smaller number.",
           "style": "rule"
         }
       ]
@@ -124,31 +124,31 @@
     {
       "id": "b5",
       "kind": "method",
-      "say": "Ordering mixed numbers using the number line: -5, 2, -1, 0. Place each, read left to right. No questions.",
+      "say": "Thermometer falling: 2, 1, 0, -1, -2, as in the picture. A thermometer is a number line standing up: going up the numbers get bigger, going down they get smaller. Every step down is one degree colder. No questions.",
       "board": [
         {
           "type": "heading",
-          "text": "Ordering with a number line"
+          "text": "Watching the thermometer"
         }
       ],
       "lines": [
         {
           "id": "l12",
-          "text": "-5   2   -1   0",
-          "say": "Let's order these four, from smallest to greatest. The number line is our friend.",
+          "text": "a thermometer is a number line standing up",
+          "say": "A thermometer is just a number line standing upright. Going up, the numbers get bigger. Going down, they get smaller.",
           "style": "point"
         },
         {
           "id": "l13",
-          "text": "-5  -1  0  2",
-          "say": "Minus five is furthest left, then minus one, then zero, then two on the right. Reading left to right gives smallest to greatest.",
+          "text": "2°C → 1°C → 0°C → -1°C → -2°C",
+          "say": "Let's watch it get colder. Two degrees, one degree, zero, and then it keeps going: minus one, minus two. Every step down is one degree colder.",
           "style": "work"
         },
         {
           "id": "l14",
-          "text": "Left to right = smallest to greatest",
-          "say": "Whenever you're stuck, picture the number line and read left to right.",
-          "style": "rule"
+          "text": "-2°C is colder than 0°C",
+          "say": "Minus two is two degrees below freezing. It's colder than zero, so minus two is less than zero.",
+          "style": "point"
         }
       ]
     },

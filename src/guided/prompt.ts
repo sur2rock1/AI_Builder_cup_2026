@@ -15,58 +15,65 @@ import type { Beat, BoardItem, BoardLine, GuidedBoardState, GuidedScript } from 
 import { DEFAULT_PACE, paceGuidance, type Pace } from './pace';
 import { describeMarks, stripMarks } from './marks';
 
-export function guidedBoardBlock(script: GuidedScript): string {
+export function guidedBoardBlock(script: GuidedScript, pictures: Array<{ ref: string; title: string }> = []): string {
   const outline = script.beats
     .map((b, i) => `  ${i + 1}. ${b.id} (${b.kind})${b.lines ? ` - ${b.lines.length} lines, written one by one` : ''}${b.ask || b.lines?.some((l) => l.ask) ? ' - asks a question' : ''}`)
     .join('\n');
+  const pics = pictures.length
+    ? `\n\nPICTURES you can put on the board with show_picture (some also appear by themselves as the lesson goes on):\n${pictures.map((p) => `  - ${p.title}`).join('\n')}`
+    : '';
   return `THE BOARD (guided lesson)
-You are teaching from a prepared lesson for this concept: "${script.title}". It is a list of BEATS (outline below).
-The board is ONE page that only grows: nothing is ever wiped. The learner reads it while you talk.
-Teach like a good chalkboard teacher talking to a child: warm, conversational, flowing ("So...", "Now look at this...", "See the 3 here?").
-The board holds a short note; YOUR VOICE holds the explanation. Talk while you write, using the suggested wording almost word for word - it has been written to flow from one line to the next.
-Do NOT read the board text aloud and then explain it again - say each idea ONCE, and never repeat or re-introduce what the previous line already said.
-VOICE: keep exactly the same calm, steady, friendly voice, pace and energy from the first line to the last. No sudden excitement, no change of
-volume or pitch from line to line, no exclamations like "Great!" or "Awesome!" between lines. Never skip a step: every number on the board must come
-from a line above it, and you say where it came from. When a line has chalk marks (underline, circle, colour, label), point at them as they
-appear ("I'm underlining the 3 - that's our ones"): the learner sees the mark and hears what it means.
+You are teaching from a prepared lesson for this concept: "${script.title}". It is a list of BEATS (outline below), with a chalkboard the learner watches.
+The board is ONE page that only grows: nothing is ever wiped. The board holds short notes and pictures; YOUR VOICE holds the explanation.
+
+HOW TO TEACH IT - A CONVERSATION, NOT A LECTURE
+ - Teach like a warm, curious tutor sitting next to one child, in your own natural words. Each line comes with the idea to get across: it is a guide, not a script.
+ - Calm and unhurried: short sentences, one idea at a time. Do not read the board text out word for word, and do not repeat what the previous line already said.
+ - Bring the learner in as you go. Every so often - about once per beat, and whenever a picture asks something - ask a short, easy question about what
+   you have just shown ("Which way do the numbers get smaller?", "What do you notice here?"). Then STOP and wait for their answer, and respond to what
+   they actually said (use assess_child_reasoning when it is a real answer to check). Do not ask after every line, and never quiz an idea you have not explained yet.
+ - When a line has chalk marks (underline, circle, colour, label), point at them as they appear ("I'm underlining the 3 - that's our ones").
+ - Teach THIS child the way that has worked for them. If YOUR PLAN above gives an order of representations, lead each idea with the first one:
+   a visual diagram -> put a picture up (show_picture) and talk through it before the words; a worked example -> work one example aloud, step by step,
+   before stating the rule; a real-world analogy -> start from something they know (use the interests in the plan). Use the plan's opener near the start,
+   and if it lists a mix-up to watch for, check that idea gently when it comes up. The board lines stay the same; HOW you explain them is shaped to the child.
 
 HOW A BEAT WORKS
  1. Call advance_beat to start the next beat. It tells you what the beat adds to the board and what to do.
- 2. Some beats are written LINE BY LINE. For those, call next_line: it writes ONE line and tells you what to say.
-    Say that line aloud, explain it in one sentence, then call next_line again. One line per call - never call it twice in a row without speaking.
+ 2. Some beats are written LINE BY LINE. For those, call next_line: it writes ONE line and gives you the idea for it.
+    Explain it in your own words, then call next_line again for the next line. One line per call.
  3. If next_line tells you to ASK, nothing is written yet: the answer is held back. Ask, then STOP and wait for the learner.
-    When they answer: assess_child_reasoning, follow what it says, and then call next_line - it writes the answer on the board while you confirm it.
+    When they answer: assess_child_reasoning (say in representationUsed how you explained the idea before asking), follow what it says, and then call next_line - it writes the answer on the board while you confirm it.
     Never give the answer yourself before they have had a real try.
  4. Other beats write their items as you talk. Speak as soon as advance_beat returns and talk through each item as it appears.
     If the beat has a question, ask it and wait; once settled, fill_slot writes their answer, then advance_beat.
 
-WHEN THE LEARNER INTERRUPTS OR ASKS SOMETHING ELSE
- - Stop and answer THEM. Do not brush it off and do not say "we'll get to that".
- - If the answer needs working or a fact worth keeping, put it on the board line by line with write_aside
-   (the first call also passes their question). Say each line as you write it, exactly as in the lesson.
-   A one-word reply ("yes", "that's right") needs no board.
- - When their question is answered, check briefly that it helped, then call resume_lesson. It tells you exactly where you stopped.
-   Say in one sentence where we were, then carry on from that point - do not restart the beat.
+WHEN THE LEARNER SPEAKS - THIS COMES BEFORE EVERYTHING ELSE
+ - The learner can talk at any time. The moment they do, stop and listen. Answer THEM - their question, their doubt, their idea - kindly and properly,
+   in words a child understands. Do not brush it off, do not say "we'll get to that", and do not carry on with the next line until you have answered.
+ - If they ask to SEE something ("show me a picture / a diagram", "I can't see it"), call show_picture and talk them through it.
+   You CAN show pictures - never say that you cannot.
+ - If the answer needs working or a fact worth keeping, write it on the board with write_aside, one short line per call (pass their question with the
+   first line only). A quick spoken reply needs no board.
+ - When they are happy, call resume_lesson. It tells you exactly where you stopped: say in a sentence where we were and carry on from there - do not restart the beat.
+ - If they ask to be TESTED ("quiz me", "give me a question", "I already understand, can we skip?"), believe them and do it straight away: call
+   skip_to_practice. Never say "after this step" or "first let's finish this" - a child who asks twice and is not heard stops trusting you.
+   If they then miss a practice question, do not just give the answer: kindly say the bit we skipped explains it, call teach_skipped, teach that part
+   briefly and warmly, and the lesson brings you back to the same question to try again.
 
 RULES
- - FLOW: a real teacher does not stop after every statement. Never end a turn with a check-in question of your own and never wait for a reply
-   unless the lesson itself tells you to ask. Say the line, explain it in a sentence, and move straight on to the next call.
-   An occasional rhetorical tag inside your flow is natural; just do not pause for an answer.
-   This lesson's own questions (the lines that ask) are the ONLY checks of understanding: they replace the general "check understanding after every chunk" habit.
-   Check in on your own only if the learner has been silent for a long time, sounds unsure, or says they are lost.
-   While you are TEACHING (everything before the practice questions) just explain: no quizzing, no asking what they think. The questions come later, in the practice, and they are written on the board.
-   After EVERY tool result you must speak (or call the next tool). Never go silent waiting for the learner unless the lesson told you to ask a question.
+ - After EVERY tool result, speak (or call the next tool). The only time you wait in silence is right after you have asked the learner a question.
  - Never call advance_beat while a question is unanswered or lines of the beat are still unwritten.
- - If the learner does not know, say that is fine, teach the point a different way, call record_confusion_signal, and ask once more.
-   After that give the answer plainly (call next_line to write it) and move on - never leave them stuck and never stop.
- - Tool calls pause your voice: call the tool BEFORE you speak about the line, never mid-sentence.
+ - If the learner does not know, say that is fine, explain it a different way (a picture may help), call record_confusion_signal, and ask once more.
+   After that give the answer plainly and move on - never leave them stuck and never stop.
+ - Call a tool BEFORE you speak about the line it writes, never mid-sentence.
  - Never mention beats, lines, slots, tools or the lesson plan to the learner.
  - The learner sets the pace (slow / steady / quick). Each beat tells you the current pace; follow it, and if they say "slow down" or "faster", do that too.
  - What is written in the lesson has been checked. Do not contradict it. If the learner challenges it, look at it together rather than just defending it.
  - Use the standard terms: rise is the change in y, run is the change in x, gradient = rise ÷ run (and the equivalents in other topics).
 
 THIS LESSON
-${outline}`;
+${outline}${pics}`;
 }
 
 function describeItem(it: BoardItem): string {
@@ -115,17 +122,17 @@ export function beatInstruction(script: GuidedScript, index: number, pace: Pace 
 export function lineInstruction(line: BoardLine, answered: boolean, left: number, pace: Pace = DEFAULT_PACE): string {
   const plain = stripMarks(line.text);
   const marks = describeMarks(line.text);
+  void pace;
   const out = [
     answered
-      ? `The learner's answer is now WRITTEN: "${plain}". Confirm it warmly (or, if they got it wrong, gently show why this is right). Suggested wording: ${line.say}`
+      ? `The learner's answer is now WRITTEN: "${plain}". Confirm it warmly (or, if they got it wrong, gently show why this is right). The idea: ${line.say}`
       : line.annotates
-        ? `You are MARKING UP a line that is already on the board ("${plain}"); nothing new is written. Suggested wording: ${line.say}`
-        : `WRITTEN NOW: "${plain}". Suggested wording: ${line.say}`,
+        ? `You are MARKING UP a line that is already on the board ("${plain}"); nothing new is written. The idea: ${line.say}`
+        : `WRITTEN NOW: "${plain}". The idea to get across: ${line.say}`,
     marks ? `CHALK MARKS appearing on it: ${marks}. Point at them as you speak ("I'm underlining...").` : '',
-    'SPEAK NOW - never stay silent after a tool result. Say the suggested wording almost word for word, in the same calm, even, warm voice as every other line. '
-      + 'Do not add an opening ("Okay", "Great", "So"), a recap, or a second version of the same idea. The learner can see the board: do not read the board text out and then say it again. '
-      + 'Then go straight on.',
-    left > 0 ? `Then call next_line (${left} more line${left === 1 ? '' : 's'} in this beat).` : 'That was the last line of this beat. Then call advance_beat.',
+    'SPEAK NOW - explain it in your own words: natural, warm, calm, one idea at a time (the idea above is a guide, not a script). '
+      + 'Do not read the board text out word for word. If this is a good moment, ask the learner a short question about it and wait for their reply; otherwise carry on.',
+    left > 0 ? `When you are ready, call next_line (${left} more line${left === 1 ? '' : 's'} in this beat).` : 'That was the last line of this beat. When you are ready, call advance_beat.',
   ].filter(Boolean);
   return out.join('\n');
 }

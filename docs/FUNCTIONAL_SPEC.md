@@ -103,8 +103,9 @@ Priority: **M** = must · **H** = high value · **N** = nice to have.
 ### Added after v1.0 (retroactive, 2026-10-09)
 | ID | Requirement | Pri | Acceptance criteria / status |
 |---|---|---|---|
-| FR-47 | Guided tutor mode is the **default** tutor (2026-10-14): the tutor follows a prepared beat script and writes one growing, scrolling board with chalk marks; questions only in apply/check beats, written on the board first; Standard/Guided toggle hidden (`?tutor=standard` / `TUTOR_MODE=standard` restore standard); falls back to standard when a concept has no script. A PDF upload also generates guided lessons in the background (runtime store, no rebuild) | H | `src/guided/*`, `scripts/generate-guided.ts`, `src/curriculum/pdfIngest.ts`; `docs/GUIDED_TUTOR.md`; tests `tests/guided/generate.mjs`, `tests/guided/runtime.mts` — status 🟨 (live voice stalls mitigated by a watchdog, not fully verified) |
+| FR-47 | Guided tutor is the **default** tutor: prepared beat script, one growing chalkboard with chalk marks, stored pictures by teaching stage and on request (`show_picture`), verified photo beside the chalk; **conversational delivery** (own words, short questions along the way, answers interruptions first, resumes where it stopped); leads with the child's best approach from the plan. Standard tutor at `?tutor=standard` / `TUTOR_MODE=standard`; a concept with no script runs standard. | M | Implemented (D-2026-10-14-2, D-2026-10-16-13/14); offline tests pass; not yet verified in a live voice session |
 | FR-48 | Child names the tutor at login; name saved on the profile and used in UI + prompt (cleaned, ≤24 chars) | N | `tests/tutor-name/run.mjs` 13/13; not verified in browser (D-2026-10-07-1) |
+| FR-49 | With every checked answer the tutor reports how it explained the idea (`representationUsed`), so the strategy profile credits the approach actually used | M | Added 2026-10-17; scoring covered by `npm run test:adaptation`; live reporting not yet verified |
 
 ### Teaching plan
 | ID | Requirement | Pri | Acceptance criteria |
@@ -156,7 +157,7 @@ All numbers are reported as **measured on simulated learners** unless real user 
 |---|---|---|
 | 0:00–0:20 | Problem: children don't ask; teachers can't give unlimited individual explanation | One line + visual |
 | 0:20–0:45 | Why existing tools fall short: they answer, or quiz and score; they don't diagnose *why* or remember what worked for *this* child | — |
-| 0:45–1:30 | **Same question, two learners.** A new learner vs "Aisha, 6 weeks (simulated)". Different opening, representation and watch-list — the reasoning panel shows why, with evidence | Plan diff side by side |
+| 0:45–1:30 | **Same question, two learners.** Maya vs Leo (simulated, Grade 4), same lesson. Different opening, representation and watch-list — the reasoning panel shows why, with evidence | Plan diff side by side |
 | 1:30–2:15 | **Live exchange:** correct answer → "walk me through it" → flawed reasoning → probe → misconception confirmed → mastery goes *down* despite a correct answer → representation switch → transfer. Learner card updates live | Ledger, BKT derivation, card |
 | 2:15–2:40 | Architecture: persona (fixed) + learner model (evidence) + plan (deterministic) + Gemini where necessary (diagnosis, profiling, teaching) | One diagram |
 | 2:40–3:00 | Measured: diagnosis detection/FP rates; simulated turns-to-resolution base vs adapted; privacy stance | EV-01/EV-02 numbers |

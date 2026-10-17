@@ -95,7 +95,10 @@ UI `GuidedBoard.tsx`, `useGuidedTutor.ts`, `TutorModeSwitch.tsx`. Generation: `s
 validate → critic → repair). Upload path: `pdfIngest.ts` runs pregen, then `generate-guided.ts --runtime --skip-existing`; lessons
 land in Firestore `guidedScripts` / `data/guided/runtime/` and are served within ~10 s. Extra endpoints: `GET /api/tutor-mode`
 (`{default, guidedConcepts}`), `GET /api/guided-script?conceptId=` (script + board pictures). Env: `TUTOR_MODE`,
-`DISABLE_GUIDED_GENERATION`, `GUIDED_STALL_MS`, `GUIDED_RUNTIME_DIR`.
+`DISABLE_GUIDED_GENERATION`, `GUIDED_STALL_MS`, `GUIDED_RUNTIME_DIR`, `GUIDED_TEMPERATURE` (optional; unset = the model's
+default since 2026-10-16). Guided tools: `advance_beat`, `next_line`, `fill_slot`, `write_aside`, `show_picture`, `resume_lesson`,
+plus `assess_child_reasoning` (optional `representationUsed`, 2026-10-17) and `record_confusion_signal`. `/api/guided-script`
+returns every stored picture and the verified photo (`photo`). Adaptation: `docs/ADAPTIVE_TEACHING.md`.
 
 ## 4. APIs
 

@@ -17,6 +17,7 @@
     "test:tutor-turn": "npx --yes tsx tests/smoke/tutor-turn.mjs",
     "test:tutor-turn-offline": "node tests/smoke/tutor-turn-offline.mjs",
     "test:plan-delta-outcome": "node tests/smoke/plan-delta-outcome.mjs",
+    "test:adaptation": "npx --yes tsx tests/smoke/adaptation-proof.mjs",
     "test": "node tests/run.mjs && node tests/live/run.mjs && node tests/smoke/plan-delta-outcome.mjs",
     "pregen:first": "npx --yes tsx scripts/pregenerate-assets.ts --first-only",
     "pregen": "npx --yes tsx scripts/pregenerate-assets.ts",
@@ -29,6 +30,7 @@
     "verify:models": "npx --yes tsx scripts/verify-models.ts",
     "seed:demo": "npx --yes tsx scripts/seed-demo-learners.ts",
     "seed:story": "npx --yes tsx scripts/seed-story-learner.ts",
+    "seed:g4": "npx --yes tsx scripts/seed-g4-pair.ts",
     "test:parent": "npx --yes tsx tests/parent/run.mjs",
     "test:curriculum": "npx --yes tsx tests/smoke/curriculum-ingest.mjs",
     "migrate:cloud": "npx --yes tsx scripts/migrate-local-to-cloud.ts",
@@ -53,7 +55,12 @@
     "eval:diagnosis": "npx --yes tsx evals/diagnosis/run.ts",
     "eval:diagnosis:dry": "npx --yes tsx evals/diagnosis/run.ts --dry",
     "eval:diagnosis:report": "npx --yes tsx evals/diagnosis/report.ts evals/diagnosis/results/latest",
-    "test:eval": "npx --yes tsx tests/eval/metrics.mts"
+    "test:eval": "npx --yes tsx tests/eval/metrics.mts",
+    "sync:cloud": "npx --yes tsx scripts/sync-cloud-to-local.ts",
+    "check:pictures": "tsx scripts/check-picture-numbers.ts",
+    "check:scripts": "tsx scripts/check-guided-scripts.ts",
+    "test:skip": "tsx tests/guided/skip-practice.mjs",
+    "test:latest-lesson": "tsx tests/parent/latest-lesson.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

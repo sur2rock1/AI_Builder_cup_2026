@@ -243,7 +243,7 @@ ok(!!lineScript, 'at least one lesson has a line-by-line beat');
   ok(gui.includes('THE BOARD (guided lesson)') && !gui.includes('THE BOARD (voice channel)'), 'guided prompt swaps in the guided board block');
   ok(std.replace(/THE BOARD \(voice channel\)[\s\S]*?say the idea in your own words and move on\./, '') .length > 1000, 'standard prompt otherwise intact');
   const names = G.guidedToolDeclarations().map((t) => t.name).sort();
-  ok(JSON.stringify(names) === JSON.stringify(['advance_beat', 'assess_child_reasoning', 'fill_slot', 'next_line', 'record_confusion_signal', 'resume_lesson', 'write_aside']), `guided tools: ${names.join(', ')}`);
+  ok(JSON.stringify(names) === JSON.stringify(['advance_beat', 'assess_child_reasoning', 'fill_slot', 'next_line', 'record_confusion_signal', 'resume_lesson', 'show_picture', 'skip_to_practice', 'teach_skipped', 'write_aside']), `guided tools: ${names.join(', ')}`);
   ok(!names.includes('update_chalkboard_notes') && !names.includes('update_diagram'), 'guided tools do not include the standard board tools');
   ok(G.ALL_TOOLS.some((t) => t.name === 'update_chalkboard_notes') && !G.ALL_TOOLS.some((t) => t.name === 'advance_beat'), 'standard tool list is unchanged by guided mode');
 }

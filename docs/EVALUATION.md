@@ -76,3 +76,27 @@ If every model fails for a case, the assessor returns a conservative fallback. T
 ## Results
 
 _Not yet run against Gemini. Run `npm run eval:diagnosis`, then paste `summary.md` here and note the date, model and commit._
+
+## Related: adaptation proof (offline)
+
+Diagnosis accuracy (above) asks whether Ananta reads a child's reasoning correctly. A separate offline test checks that what
+it reads changes how it teaches: `npm run test:adaptation` (`tests/smoke/adaptation-proof.mjs`, 10 checks, throwaway data,
+no API key). Three children with different histories get three different plans for the same lesson; the tutor is told what
+to open with and what to avoid; wrong answers never count in favour of the approach used; after a miss the tutor switches to
+the next approach in that child's order. Walkthrough and limits: `docs/ADAPTIVE_TEACHING.md`. This is a test of the
+mechanism, not a measure of learning outcomes: EV-02 (adapted vs base) is still not built.
+
+Known stale tests: `tests/live/run.mjs` fails 7 checks that compare against the pre-persona "original build" baseline
+(failing since 28 Sep, unchanged on the 15 Oct commit); `tests/guided/run.mjs` and `tests/guided/live.mjs` fail checks written
+for an older content set and the retired pilot lesson.
+
+## Related: picture and chalk consistency (offline)
+
+`npm run check:pictures` fails if a number drawn in a beat's picture or photo (3+ digits, or a decimal) is missing from that beat's chalk and spoken
+text; `npm run check:scripts` validates all 30 guided scripts. Both are offline, no model, no key. Last run: 36 of 36 picture beats agree; 30 of 30 scripts pass.
+It checks numbers only, not whether a picture shows the right idea. See `docs/GUIDED_TUTOR.md` section 12.
+
+## Related: offline checks added 2026-10-17
+
+`npm run test:skip` (quiz-me skip and return, 15 checks) and `npm run test:latest-lesson` (Parent View latest lesson, 6 checks).
+`tests/guided/live.mjs` still fails 17 checks, all written for the retired 11-beat pilot lesson or for the old "standard is the default" setting (17 on the 15 Oct commit as well).

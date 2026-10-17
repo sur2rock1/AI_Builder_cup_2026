@@ -189,7 +189,7 @@ The `firestore.indexes.json` has no composite indexes defined, but event queries
 ### 5. Clean Up Repository
 Before making GitHub public:
 - [ ] Remove `ananta-update-*.zip` files (4 zip files in root)
-- [ ] Remove `Claude outputs/` folder
+- [ ] Remove the old screenshots folder (renamed `screenshots/`)
 - [ ] Remove `manifest-before.txt`
 - [ ] Ensure `.env` is in `.gitignore` (contains real API key)
 - [ ] Remove `backups/` folder or move to `.gitignore`

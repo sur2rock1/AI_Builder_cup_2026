@@ -368,7 +368,7 @@ app.get('/api/guided-script', async (req, res) => {
   if (!script) return res.status(404).json({ error: 'No guided lesson for this concept.' });
   try {
     const record = await loadPregen(String(req.query.topic || ''), conceptId);
-    res.json(buildGuidedPayload(script, (record?.visuals ?? null) as Record<string, unknown> | null));
+    res.json(buildGuidedPayload(script, (record?.visuals ?? null) as Record<string, unknown> | null, verifiedPhoto(record)));
   } catch (err: any) {
     console.warn('[guided] could not load pictures for', conceptId, err?.message);
     res.json(buildGuidedPayload(script, null));
@@ -1252,6 +1252,15 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
     ? null
     : getGuidedScript(conceptId);
   const guidedSession = guidedScript ? new GuidedSession(guidedScript, resolvePace(url.searchParams.get('pace'))) : null;
+  // Stored pictures: put up by teaching stage, and on request (show_picture).
+  if (guidedSession) {
+    try {
+      const rec = await loadPregen(topic, conceptId);
+      guidedSession.setPictures(Object.entries<any>(rec?.visuals ?? {}).filter(([k, v]) => !k.startsWith('alt:') && v && Array.isArray(v.steps) && v.steps.length)
+        .map(([k, v]) => ({ ref: k, title: String(v.title || k), steps: v.steps.map((st: any) => String(st.id)) })));
+      console.log(`[guided] ${guidedSession.pictureList().length} stored picture(s): ${guidedSession.pictureList().map((x) => x.ref).join(', ') || 'none'}`);
+    } catch (e: any) { console.warn('[guided] could not load pictures (non-fatal):', e?.message); }
+  }
   console.log(`[WebSocket] tutor mode: ${guidedSession ? 'guided' : 'standard'} (requested=${requestedMode || '-'}, default=${process.env.TUTOR_MODE || '-'}, concept=${conceptId || '-'})`);
 
   // Build curriculum intelligence context if we have a subject and concept
@@ -1378,6 +1387,13 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
       return;
     }
     const conceptStateHere = await getConceptState(studentId, subjectId, conceptId);
+    // Which way the tutor explained it before this answer: the tutor reports it (representationUsed); without that, the last one
+    // recorded on this concept. This is what the strategy profile credits, so the plan can learn what works for this child.
+    const REPRESENTATIONS: TeachingStrategy[] = ['direct_explanation', 'worked_example', 'visual_diagram', 'real_world_analogy', 'socratic_questioning',
+      'step_by_step', 'story_context', 'interactive_simulation', 'peer_comparison', 'prerequisite_review'];
+    const representationUsed: TeachingStrategy = REPRESENTATIONS.includes(args.representationUsed)
+      ? args.representationUsed as TeachingStrategy
+      : (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy;
 
     const deadlineResult = await assessReasoningWithDeadline({
       concept: conceptDef,
@@ -1386,7 +1402,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
       childAnswer: String(args.childAnswer || ''),
       childReasoning: String(args.childReasoning || ''),
       expectedAnswer: args.expectedAnswer ? String(args.expectedAnswer) : undefined,
-      currentStrategy: (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy,
+      currentStrategy: representationUsed,
       apiKey,
       // Course context so the diagnosis is phrased for this subject and age
       // (docs/CURRICULUM.md §7) rather than assuming Grade 8 maths.
@@ -1428,7 +1444,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
       understandingDepth: assessment.understandingDepth,
       candidateMisconceptions,
       confidence: assessment.confidence,
-      strategyInUse: (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy,
+      strategyInUse: representationUsed,
       moveUsed: assessment.shouldProbe ? 'DISCRIMINATING_PROBE' : 'ELICIT_REASONING',
       sessionId: sessionIdParam,
       planVersion: resolvedPlan?.planVersion,
@@ -1478,7 +1494,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
       const delta = compilePlanDelta(resolvedPlan, deltaState, {
         conceptId,
         outcome,
-        representationUsed: (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy,
+        representationUsed,
         questionKey: String(args.questionAsked || conceptId),
         hasReasoning: String(args.childReasoning || '').trim().length > 3,
       });
@@ -1636,7 +1652,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
         planBlock: planBlockText,
         curriculumContext: curriculumCtx?.systemPromptBlock,
         boardContext: guidedSession ? undefined : boardContextText,
-        boardBlockOverride: guidedScript ? guidedBoardBlock(guidedScript) : undefined,
+        boardBlockOverride: guidedScript ? guidedBoardBlock(guidedScript, guidedSession?.pictureList() ?? []) : undefined,
         topic,
       });
 
@@ -1667,7 +1683,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
           voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } },
         },
         // Guided lessons are read from a script: a low temperature keeps the delivery (wording and tone) the same from line to line.
-        ...(guidedSession ? { temperature: Number(process.env.GUIDED_TEMPERATURE ?? 0.3) } : {}),
+        ...(guidedSession && process.env.GUIDED_TEMPERATURE ? { temperature: Number(process.env.GUIDED_TEMPERATURE) } : {}),
         inputAudioTranscription: {},
         outputAudioTranscription: {},
         systemInstruction: dynamicSystemInstruction,
@@ -1937,14 +1953,24 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
     // learner (has studentId+subjectId, i.e. not a guest session) with a
     // real API key is required; guests and misconfigured servers skip
     // silently rather than erroring into an empty console.
-    if (studentId && subjectId && apiKey) {
+    if (studentId && subjectId) {
       const sessionStartedAt = activeSession?.sessionStarted || wsConnectedAt;
-      runProfiler({
-        studentId, subjectId,
-        sessionId: sessionIdParam || `adhoc_${studentId}_${wsConnectedAt}`,
-        sessionStartedAt,
-        apiKey,
-      }).catch((err) => console.error('[Profiler] runProfiler threw:', err));
+      const minutes = Math.max(1, Math.round((Date.now() - sessionStartedAt) / 60000));
+      const liveNotes = observer?.notes() ?? [];
+      // One after the other: both read-modify-write the same profile.
+      (async () => {
+        // Lessons and minutes on the subject (shown in the Parent View and Under the hood; this was never counted before).
+        try { await incrementSessionCount(studentId, subjectId, minutes); } catch (err) { console.error('[Session] could not count the lesson:', err); }
+        if (apiKey) {
+          await runProfiler({
+            studentId, subjectId,
+            sessionId: sessionIdParam || `adhoc_${studentId}_${wsConnectedAt}`,
+            sessionStartedAt,
+            apiKey,
+            liveNotes,
+          });
+        }
+      })().catch((err) => console.error('[Profiler] runProfiler threw:', err));
     }
   });
 });

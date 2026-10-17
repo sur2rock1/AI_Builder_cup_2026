@@ -25,6 +25,10 @@
     "noEmit": true
   },
   "exclude": [
-    "functions"
+    "functions",
+    "node_modules",
+    "dist",
+    "backups",
+    "parked"
   ]
 }

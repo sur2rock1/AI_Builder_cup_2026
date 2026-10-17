@@ -15,12 +15,12 @@ answers two questions in plain language:
 
 | # | Section | Source | AI-written? |
 |---|---|---|---|
+| 0 | **Ananta's plan for {child}'s next lesson** — first on the page and highlighted (since 2026-10-17): what to start with, what to avoid, what to watch for | `compileTeachingPlan()` — the same function the live tutor uses | No |
 | 1 | "In a few sentences" letter, each sentence with **See why** (opens the child's real answer) | `narrative.letter` | Yes (Gemini), validated; offline template otherwise |
 | 2 | Lessons · minutes · answers checked · mix-ups fixed (+ "I don't get it" count) | learner profile + evidence log | No |
 | 3 | Understanding, topic by topic: 5-step journey in words, mix-up chip | `ladder.highestLevel` → `plainLanguage.STAGE_LABELS` | No |
 | 4 | **How Ananta figured the child out**: noticed → seen again → changed how it teaches → fixed (or "keeping an eye on it") | misconception ledger + evidence events | No (deterministic; quotes the child's own words) |
 | 5 | What seems to help the child | validated profiler claims (`strategy`) + the "changed" step of a fixed story | Reuses existing validated AI output |
-| 6 | Ananta's plan for the next lesson | `compileTeachingPlan()` — the same function the live tutor uses | No |
 | 7 | Try this at home (3–8 min) | Gemini, validated; template fallback | Yes |
 
 No mastery percentage, ladder level, BKT value, move id or strategy id is ever shown (see §5). "Under the hood" (toggle)
@@ -78,6 +78,12 @@ runs fully offline. Story: flat line named "x = c" (noticed, lesson 1) → seen 
 it") → Ananta switches from explaining to showing points on the line (lesson 3) → fixed on a rectangle question never
 seen (lesson 4) → next topic, one sign slip, "keeping an eye on it" (lesson 5). Next-lesson plan then targets that topic.
 
+**Grade 4 demo pair (2026-10-17).** `npm run seed:g4` (`scripts/seed-g4-pair.ts`) creates `demo_g4_maya` "Maya (Simulated)"
+and `demo_g4_leo` "Leo (Simulated)": the same three Grade 4 concepts, opposite histories (pictures helped Maya; worked
+examples helped Leo, who still holds a mix-up about negative numbers). Their plan cards and stories differ accordingly; see
+`docs/ADAPTIVE_TEACHING.md`. Do not also run `seed:story` before a demo: it creates a second, Grade 8 "Maya (Simulated)"
+(`demo_maya`).
+
 ## 7. Known limitations (logged, not hidden)
 
 - Maya's answers are simulated; the pipeline is real. State this in the video. Real-lesson learner (Student-1) shows the
@@ -87,3 +93,21 @@ seen (lesson 4) → next topic, one sign slip, "keeping an eye on it" (lesson 5)
 - **Fixed 2026-10-14 (found in review of the live page):** Biology showed a Maths letter. Cause: `LearnerRepository.listEvents({subjectId})` is declared but NOT implemented by either the file or the Firestore repository, so every subject received all of the child's answers. The report now filters strictly in `eventsForSubject()` (regression test in `tests/parent`); a subject with no lessons shows "No lessons in <subject> yet" and never calls Gemini. The repositories still ignore `subjectId` (not changed: a Firestore `where` would need a new composite index) — any other caller relying on it gets all subjects' events.
 - `DEMO_MODE` lists all learners to any caller (existing); per-family sign-in is the next step.
 - First load after new lessons shows the template letter for a few seconds while Gemini writes the real one.
+
+## Latest lesson, lesson counts and live notes (2026-10-17)
+
+A parent who opens the page right after a lesson looks for that lesson. Three gaps were found and fixed:
+
+1. **Latest lesson card** (second on the page, after the next-lesson plan): date, minutes, topic(s), answers checked and how many
+   were explained in the child's own words, and "See the answers from this lesson" (the real exchanges). Built in `latestLesson()` in
+   `src/parent/facts.ts` from the newest session (its checked answers and its stored summary).
+2. **Lessons and minutes were never counted**: `incrementSessionCount` had no caller, so "minutes learning" and "Sessions / Study time"
+   (Under the hood) showed 0. The server now counts each lesson when it ends; the report and Under the hood fall back to the stored
+   session summaries; `scripts/repair-lesson-counts.ts` fixed the existing local profiles.
+3. **Live notes were screen-only**: the observer's "What I noticed" lines reached the learner panel and were then lost. They are now kept
+   (`LiveObserver.notes()`), stored on the session summary (`liveNotes`, with the child's own words) and shown in the latest-lesson card and,
+   per lesson, in Under the hood ("Recent lessons"). They are labelled as live impressions: they never change mastery or claims; only
+   checked answers do.
+
+Under the hood also lists topics newest first (it was oldest first, so the latest topic was at the bottom).
+Test: `npm run test:latest-lesson` (6 checks). The two lessons before this change have no stored live notes.

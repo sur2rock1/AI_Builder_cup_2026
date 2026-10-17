@@ -13,10 +13,10 @@
 
 > The Google DevRel speaker recommends: "Open with a product, ask a question, and before the response comes out, go back to the technical architecture, then come back and show the response."
 
-**[Action: App is already open at https://ananta-ivczdbgbja-as.a.run.app/ — click "Priya (Simulated)" → Mathematics → pick a topic → Start Voice Lesson]**
+**[Action: App is already open at https://ananta-ivczdbgbja-as.a.run.app/ — click "Leo (Simulated)" → Mathematics → Money and decimal place value → Start Voice Lesson]**
 
 > **Voiceover:**
-> "This is Ananta — an adaptive AI tutor, live on Google Cloud Run. Let's ask it to teach simultaneous equations to a Grade 8 student who we already know has a misconception about parallel lines."
+> "This is Ananta — an adaptive AI tutor, live on Google Cloud Run. Let's ask it to teach money and decimals to a Grade 4 student it already knows: worked examples help him, and he still thinks minus five is bigger than minus one."
 
 **[Let Ananta greet the student — pause for 3-5 seconds of Ananta speaking]**
 
@@ -38,7 +38,7 @@
 **[Show: Architecture diagram — full-screen for 10 seconds]**
 
 > **Voiceover:**
-> "Under the hood, five tiers of Google Gemini power Ananta. Gemini 3.8 Live handles real-time bidirectional voice with thirteen function-calling tools. Gemini Flash runs a 6.5-second diagnostic assessment during conversation. The teaching plan is deliberately deterministic — no AI decides what to teach next. A rule-based compiler ensures every lesson is reproducible and auditable. Every piece of generated content passes an independent critic review. Failures are quarantined — never served."
+> "Under the hood, five tiers of Google Gemini power Ananta. Gemini 3.8 Live handles real-time bidirectional voice with function-calling tools that write the chalkboard, show pictures and send every answer for diagnosis. Gemini Flash runs a 6.5-second diagnostic assessment during conversation. The teaching plan is deliberately deterministic — no AI decides what to teach next. A rule-based compiler ensures every lesson is reproducible and auditable. Every piece of generated content passes an independent critic review. Failures are quarantined — never served."
 
 ---
 
@@ -47,12 +47,12 @@
 **[Cut back to the running session — Ananta should be mid-teach by now]**
 
 > **Voiceover (brief — then let Ananta talk):**
-> "Back to our session. Watch the interactive board updating in real-time as Ananta teaches — diagrams, step-by-step reveals, chalkboard notes, all controlled by Gemini function calling."
+> "Back to our session. Watch the chalkboard fill line by line as Ananta teaches — chalk notes, pictures that build up step by step, and side notes when the student asks something, all controlled by Gemini function calling."
 
 **[Show these moments — let them happen naturally, ~15-20 seconds each:]**
 
-1. **Ananta explaining a concept** — board updates with diagram via `reveal_part` tool
-2. **Ananta asks a check question** — quiz panel appears via `pose_quiz` tool
+1. **Ananta explaining a concept** — chalk lines appear (`next_line`) and a prepared picture builds up beside them
+2. **Ananta asks a check question** — the question is written on the board; the answer stays hidden until the student replies
 3. **Student answers** (speak into mic) — show the diagnostic classification appearing
 4. **Mastery updating** — understanding depth indicator changes, BKT mastery ring updates
 
@@ -76,14 +76,14 @@
 
 ## 2:15 – 2:50 | PARENT PORTAL — EVIDENCE ACCOUNTABILITY
 
-**[Action: Navigate to Parent Portal → select Priya]**
+**[Action: Navigate to Parent Portal → select Maya, then Leo (side by side if possible) — point at "Ananta's plan for the next lesson" at the top: Maya → lead with a picture; Leo → worked example, watch for −5 vs −1]**
 
 > **Voiceover:**
 > "Every session is accountable. The Parent Portal gives a plain-language report — what Ananta learned about the child, backed by evidence. Parents click 'See why' to see the EXACT question asked, the child's EXACT answer, and HOW Ananta diagnosed it. No black box."
 
 **[Show in sequence — 5-7 seconds each:]**
-1. **Overview** — mastery %, sessions completed, study time
-2. **Misconception ledger** — show a detected misconception with status (disputed → resolved)
+1. **Ananta's plan for the next lesson** (top of the page) — Maya: start with a picture; Leo: a worked example, avoid pictures, watch for −5 vs −1
+2. **How Ananta figured the child out** — Maya: switched to drawing it out → fixed; Leo: switched to a worked example, mix-up still open
 3. **Evidence replay** — click "See why" → actual question-answer exchange appears
 4. **Home activity** — the AI-generated suggestion for parents
 
@@ -129,7 +129,7 @@
 
 Before recording:
 
-- [ ] **Dry run** — start a voice session with Priya, let Ananta teach for 60 seconds, confirm audio works both ways
+- [ ] **Dry run** — start a voice session with Leo, let Ananta teach for 60 seconds, confirm audio works both ways (answer at least one question so the session appears in the Parent Portal)
 - [ ] **Pre-warm the app** — open the URL once so Cloud Run isn't cold during recording
 - [ ] **Test Parent Portal** — click through evidence replay to make sure data loads
 - [ ] **Prepare architecture diagram** — have it ready as an image or screenshot for the 0:40 cutaway

@@ -58,6 +58,35 @@ export const GUIDED_ONLY_TOOLS: any[] = [
     },
   },
   {
+    name: 'show_picture',
+    description:
+      'Puts a prepared picture on the board. Use it when the learner asks to SEE something ("show me a picture / diagram / example", "I can\'t see it"), '
+      + 'or when a picture would answer their question better than words. Pass what they want to see in a few words, or a picture name from your list. '
+      + 'Then talk them through the picture. After that call resume_lesson.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: { which: { type: Type.STRING, description: 'What to show: a picture name from your list, or a few words (e.g. "thermometer", "number line").' } },
+      required: ['which'],
+    },
+  },
+  {
+    name: 'skip_to_practice',
+    description:
+      'The learner asks to be tested now ("quiz me", "give me a question", "I already know this, can we skip?"). Jumps straight to the practice questions. '
+      + 'Call it as soon as they ask - do not make them wait for the explanation to finish. If they then miss a question, call teach_skipped.',
+    parameters: { type: Type.OBJECT, properties: {} },
+  },
+  {
+    name: 'teach_skipped',
+    description:
+      'After the learner skipped ahead and then missed a practice question: goes back to teach one skipped part (pass its beat id from the list you were given; '
+      + 'leave empty for the first). When that part is taught, advance_beat brings you back to the question they missed.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: { beat_id: { type: Type.STRING, description: 'Optional. The skipped part to teach, e.g. "b4".' } },
+    },
+  },
+  {
     name: 'resume_lesson',
     description:
       'After answering a side question, returns exactly where the lesson stopped (beat, last line written, any question still waiting) so you can carry on from there.',

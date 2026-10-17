@@ -81,6 +81,10 @@ interface FullLearner extends StudentProfile {
   subjects: Record<string, SubjectData>;
   globalInsights: string[];
   escalations?: EscalationEvent[];
+  sessionSummaries?: Array<{
+    sessionId: string; startedAt: number; endedAt: number; conceptsTouched: string[]; narrative: string; minutes?: number;
+    liveNotes?: Array<{ at: number; concept: string; understanding: number; level: string; noticed: string; evidence: string }>;
+  }>;
 }
 
 const MASTERY_COLOR: Record<string, string> = {
@@ -229,6 +233,10 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
     Object.values(learner.subjects).reduce((s, sub) => s + (sub.totalMinutes || 0), 0);
 
   const subjectData = selected && selectedSubject ? selected.subjects[selectedSubject] : null;
+  // Lessons in this subject, newest first (from the session summaries written when a lesson ends).
+  const subjectLessons = (selected?.sessionSummaries || [])
+    .filter((x) => selectedSubject && (x.conceptsTouched || []).some((c) => c.startsWith(selectedSubject)))
+    .sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0));
 
   if (loading) return (
     <div className="min-h-app bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center">
@@ -391,8 +399,8 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
                       { icon: Star, label: 'Avg Mastery', value: `${Math.round((Object.values(subjectData.conceptStates) as ConceptState[]).reduce((s,c)=>s+c.masteryScore,0)/Math.max(1,Object.values(subjectData.conceptStates).length))}%`, color: 'text-amber-400' },
-                      { icon: Clock, label: 'Study Time', value: `${subjectData.totalMinutes || 0} min`, color: 'text-sky-400' },
-                      { icon: BarChart3, label: 'Sessions', value: String(subjectData.sessionCount || 0), color: 'text-indigo-400' },
+                      { icon: Clock, label: 'Study Time', value: `${Math.max(subjectData.totalMinutes || 0, subjectLessons.reduce((n, x) => n + (x.minutes ?? Math.max(1, Math.round((x.endedAt - x.startedAt) / 60000))), 0))} min`, color: 'text-sky-400' },
+                      { icon: BarChart3, label: 'Sessions', value: String(Math.max(subjectData.sessionCount || 0, subjectLessons.length)), color: 'text-indigo-400' },
                       { icon: AlertTriangle, label: 'Misconceptions', value: String((Object.values(subjectData.conceptStates) as ConceptState[]).flatMap(c=>c.confirmedMisconceptions||[]).length), color: 'text-rose-400' },
                     ].map(({ icon: Icon, label, value, color }) => (
                       <div key={label} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
@@ -403,6 +411,41 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
                     ))}
                   </div>
 
+                  {/* Recent lessons: the profiler's summary and the live observer's notes ("What I noticed"), newest first */}
+                  {subjectLessons.length > 0 && (
+                    <div>
+                      <h3 className="text-slate-300 text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Clock className="w-4 h-4" /> Recent lessons
+                      </h3>
+                      <div className="space-y-2">
+                        {subjectLessons.slice(0, 5).map((x) => (
+                          <div key={x.sessionId} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                            <div className="flex items-center justify-between gap-3 mb-1">
+                              <p className="text-white text-sm font-medium truncate">
+                                {(x.conceptsTouched || []).map((c) => subjectData.conceptStates[c]?.label || c.split('--').pop()).join(' · ') || 'Lesson'}
+                              </p>
+                              <span className="text-slate-500 text-xs flex-shrink-0">{relativeTime(x.endedAt)} · {x.minutes ?? Math.max(1, Math.round((x.endedAt - x.startedAt) / 60000))} min</span>
+                            </div>
+                            {x.narrative && <p className="text-slate-400 text-xs leading-relaxed">{x.narrative}</p>}
+                            {(x.liveNotes || []).length > 0 && (
+                              <div className="mt-2 border-t border-white/5 pt-2">
+                                <p className="text-slate-500 text-[11px] uppercase tracking-wider mb-1">Live notes during the lesson (observer, not evidence)</p>
+                                <ul className="space-y-1">
+                                  {(x.liveNotes || []).slice(-6).map((n, i) => (
+                                    <li key={i} className="text-xs text-slate-300 leading-snug">
+                                      <span className="text-slate-500">{n.understanding}% · {n.level.replace('_', ' ')} · </span>{n.noticed}
+                                      {n.evidence && <span className="block text-slate-500 italic">“{n.evidence}”</span>}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Concept progress */}
                   <div>
                     <h3 className="text-slate-300 text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -410,7 +453,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
                     </h3>
                     <div className="space-y-2">
                       {(Object.values(subjectData.conceptStates) as ConceptState[])
-                        .sort((a,b) => a.lastVisited - b.lastVisited)
+                        .sort((a,b) => (b.lastVisited || 0) - (a.lastVisited || 0))
                         .map(concept => {
                           const expanded = expandedConcepts.has(concept.conceptId);
                           const hasMisconceptions = (concept.confirmedMisconceptions || []).length > 0;

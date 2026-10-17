@@ -1,7 +1,7 @@
 # Guided Tutor — how Ananta teaches (the default mode)
 
-Status: **default tutor since 2026-10-14** (decision D-2026-10-14-2). The earlier "standard" tutor is still in the code,
-hidden from the UI. Source: `src/guided/*`, `scripts/generate-guided.ts`, `server.ts` (guided blocks).
+Status: **default tutor since 2026-10-14** (decision D-2026-10-14-2); **conversational delivery and pictures since 2026-10-16** (§11,
+D-2026-10-16-13). The earlier "standard" tutor is still in the code, hidden from the UI (`?tutor=standard`). Source: `src/guided/*`, `scripts/generate-guided.ts`, `server.ts` (guided blocks).
 
 ## 1. What it is, in one paragraph
 
@@ -178,6 +178,69 @@ exercised in live voice; uploaded PDFs still get Gemini-generated lessons (runti
 
 ## Delivery rules (added after live test, 2026-10-14)
 * A beat starts with `next_line`, never a spoken set-up sentence: the beat summary is background only. (The old set-up sentence made the tutor say the opening idea twice.)
-* Each line is spoken from its scripted `say`, almost word for word, in one steady voice; no openers ("Great!"), recaps or second versions. Guided Live sessions use `GUIDED_TEMPERATURE` (default 0.3) to keep wording and tone the same line to line.
+* Each line is spoken from its scripted `say`, almost word for word, in one steady voice; no openers ("Great!"), recaps or second versions. Guided Live sessions use `GUIDED_TEMPERATURE` (default 0.3) to keep wording and tone the same line to line. _(Superseded on 2026-10-16: see §11.)_
 * Labelled chalk marks are given a minimum width so neighbouring labels (thousands / hundreds / tens / ones) cannot overlap.
 * Regression test: `npx tsx tests/guided/voice.mts`.
+
+## 11. Conversational delivery, pictures and the child's plan (2026-10-16/17)
+
+Live tests on 2026-10-16 showed the script-reading delivery felt one-sided: no questions while teaching, scripted wording, a
+picture only where a script named one, and "I am a voice assistant and cannot show images" when the child asked for one.
+What changed (D-2026-10-16-13, D-2026-10-16-14):
+
+* **A conversation, not a lecture.** Each line's `say` is the idea to get across, not a script: the tutor explains it in its
+  own words, calmly, one idea at a time. About once per beat, and whenever a picture asks something, it asks a short, easy
+  question about what it has just shown, waits, and responds to what the child actually said. It never quizzes an idea it has
+  not explained. The lesson's own questions (`ask` lines) work as before. A low temperature is no longer forced
+  (`GUIDED_TEMPERATURE` applies only if set).
+* **The learner comes first.** The moment the child speaks, the tutor stops and answers them; `write_aside` puts working on the
+  board, `show_picture` puts up a picture when they ask to see something, and `resume_lesson` returns to where the lesson
+  stopped. A side note no longer repeats the same "You asked" label on every line.
+* **Pictures.** `show_picture(which)` matches the request against the concept's stored pictures (title or key). Lessons that
+  name no picture get the stored pictures by teaching stage (`GuidedSession.setPictures`): the overview with the `define`
+  beat, a focus picture with each `show` / `analogy` / `method` beat, the "friend's idea" picture with the `contrast` beat,
+  none on `apply` / `check` (their examples are the child's to work out). The picture builds up one step per line written.
+  A vision-verified photo goes up beside the chalk when the first `show` (or `define` / `analogy`) beat starts
+  (`payload.photo`, `/api/guided-script`).
+* **The child's plan.** The tutor leads each idea with the plan's first representation (a picture via `show_picture`, an
+  example worked aloud, or an analogy from the child's interests), uses the plan's opener, checks the watched mix-ups, and
+  reports how it explained the idea (`representationUsed`) when it calls `assess_child_reasoning`. See
+  `docs/ADAPTIVE_TEACHING.md`.
+* **Not yet verified in a live voice session.** Offline: `tsc` clean; `tests/guided/run.mjs` and `live.mjs` show only the
+  stale failures they already had on the 15 Oct commit (content and the retired pilot lesson), none new.
+
+## 12. Pictures must match the chalk (2026-10-17)
+
+A lesson's pictures (place-value chart, number line, thermometer, graph) and its photo are drawn from the stored pictures; the
+chalk text and the tutor's words are written separately. A live check showed they could disagree: the photo said 3472, the
+chart 4040, the chalk was about 3246. For a child that is a teaching error, so three rules now hold:
+
+1. **Text uses the picture's numbers.** In every beat that shows a picture, the chalk lines and the spoken lines use the numbers drawn in
+   it (4-digit numbers: photo 3472, chart 4507, expanded form 4567, zero placeholder 440 vs 4040; money: $3.70 / $3.07, $4.05 vs
+   $4.50; rounding: 48 and 830 on their number lines; negatives: -5, -2, -1; horizontal and vertical lines: x = 2, y = 3, (-4, 2) to (-4, 9)).
+2. **A picture belongs to its beat.** `GuidedBoard.tsx` shows the picture and the photo only for the beat they were put up for and
+   takes them down when the next beat starts, so a 4040 chart can never sit beside a 6481 exercise. A picture the child asks for
+   (`show_picture`) belongs to the beat it was asked in.
+3. **The photo goes where its subject belongs.** A script may set `photoBeat` (beat id); default is the first show / define / analogy beat.
+   (Car dashboard photo: the opening beat; vertical-cliff photo: the vertical-line beat.)
+
+Checked by `npm run check:pictures` (`scripts/check-picture-numbers.ts`): for every lesson with stored pictures it works out which
+picture and photo each beat shows, the same way the server does, and fails when a number drawn in them (3+ digits or decimals)
+is missing from that beat's text. `npm run check:scripts` validates the structure of all 30 scripts. Current result: all picture
+beats agree; all 30 scripts pass. The checker covers numbers only; a picture of the wrong *idea* is not detected.
+
+## 13. "Quiz me": skipping to practice, and coming back (2026-10-17)
+
+A live test showed the tutor refusing a child who asked six times to be quizzed ("we'll get to the quiz after this step"). A child who is
+not heard stops trusting the tutor, so the learner can now jump ahead:
+
+* **`skip_to_practice`** (new guided tool). When the learner asks to be tested ("quiz me", "I already know this"), the tutor calls it at once.
+  The lesson jumps to the next practice beat (`apply` / `check`). The beats in between are not written on the board; the session remembers them
+  (beat id, and the line a half-finished beat stopped at).
+* **`teach_skipped`** (new guided tool). If the learner then misses a practice question (wrong, or right but cannot say why), the tutor says kindly
+  that this is what the skipped part explains, and calls `teach_skipped` with the part that fits (it is given the list). That part is taught,
+  line by line, from where it stopped; when it is done, `advance_beat` returns to the **same practice question**, which is asked again.
+  This is the product loop: teach -> assess -> re-teach -> re-assess.
+* The prompt (`guidedBoardBlock`) now says: believe the request and call `skip_to_practice` straight away; never "after this step".
+* Code: `src/guided/session.ts` (`skipToPractice`, `teachSkipped`, return point in `advance`), `tools.ts`, `prompt.ts`, `useGuidedTutor.ts`.
+* Test: `npm run test:skip` (`tests/guided/skip-practice.mjs`, 15 checks, offline). Not yet tried in a live voice session.

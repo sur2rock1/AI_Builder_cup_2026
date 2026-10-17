@@ -276,8 +276,10 @@ applying it consistently rather than inventing a new one.
 
 ### 6.2 Strategy effectiveness (new, cross-concept)
 For each (conceptType, representation), a Beta(α, β) with prior Beta(1, 1). Expected success
-= α / (α + β). The plan ranks representations by a **Thompson sample** (or by the mean in demo
-mode, for determinism) so untried representations still get explored.
+= α / (α + β). The plan ranks representations by this mean (always; a Thompson sample was designed but is not
+implemented, so untried representations are explored only through the default order). A representation with
+≥ 3 uses and mean < 0.3 is marked avoid. Old evidence fades (factor 0.9 per 30 days, `strategyProfile.ts`).
+Walkthrough and proof: `docs/ADAPTIVE_TEACHING.md`, `npm run test:adaptation`.
 Minimum evidence before a strategy claim may be written: 3 uses.
 
 ### 6.3 Claim confidence
@@ -343,3 +345,5 @@ BUILD_PLAN T02). A delete endpoint removes the profile and its subcollections.
 | Live observer snapshot | ⚠️ session-only, not persisted, not linked to `studentId` | Merge into the Diagnostician → `recordEvidence` |
 | Persistence | ⚠️ JSON file + partial Firestore | Single repository, Firestore-first |
 | Ladder, mastery status, review, claims, affect, onboarding | ❌ | New |
+
+> **Correction 2026-10-16 (D-2026-10-16-4).** A strategy's "gain" used to be `masteryAfter > masteryBefore`. Because BKT's learning-transition term lifts the score after every turn, and the first attempt was compared with a stored 0 rather than the prior, a WRONG answer still counted as a gain and every representation looked effective, so the plan never avoided a failing one. A gain is now: the observation was itself sound (`BKTResult.supportsMastery`: a sound answer with no standing misconception) or it reached a higher ladder rung. `delta` is now measured against the prior actually used. Strategy profiles built before this date over-credit every strategy.

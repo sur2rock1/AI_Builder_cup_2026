@@ -31,7 +31,7 @@
     {
       "id": "b2",
       "kind": "define",
-      "say": "Teach tenths and hundredths with money: 100 cents in a dollar; one tenth of a dollar is 10 cents (a dime); one hundredth is 1 cent. Mark 3.45 IN PLACE: tenths pink, hundredths yellow. The tutor does the talking.",
+      "say": "Teach tenths and hundredths with money, using the chart: 100 cents in a dollar; one tenth (1/10 = 0.1) is 10 cents, a dime; one hundredth (1/100 = 0.01) is 1 cent. Then read two prices IN PLACE, $3.70 and $3.07, as the chart does: tenths pink, hundredths yellow. The tutor does the talking.",
       "board": [
         {
           "type": "heading",
@@ -47,33 +47,33 @@
         },
         {
           "id": "l4",
-          "text": "one tenth of a dollar = 10 cents = $0.10",
-          "say": "If I cut a dollar into ten equal parts, each part is a tenth, and it's worth ten cents. That's a dime.",
+          "text": "one tenth of a dollar = 1/10 = 0.1 = 10 cents",
+          "say": "If I cut a dollar into ten equal parts, each part is a tenth. One tenth, one over ten, is nought point one, and it's worth ten cents. That's a dime.",
           "style": "point"
         },
         {
           "id": "l5",
-          "text": "one hundredth of a dollar = 1 cent = $0.01",
-          "say": "If I cut the dollar into a hundred equal parts, each part is a hundredth, and it's worth one cent.",
+          "text": "one hundredth of a dollar = 1/100 = 0.01 = 1 cent",
+          "say": "If I cut the dollar into a hundred equal parts, each part is a hundredth, nought point nought one, and it's worth one cent.",
           "style": "point"
         },
         {
           "id": "l6",
-          "text": "3 . 45",
-          "say": "So let's go back to our price, three dollars forty-five.",
+          "text": "3 . 7 0",
+          "say": "Now let's read two prices from the chart. The first is three dollars seventy.",
           "style": "point"
         },
         {
           "id": "l7",
-          "text": "3 . {{4|ul.p|tenths}}{{5|ul|hundredths}}",
-          "say": "The first digit after the dot is the tenths place, so the 4 is four tenths, four dimes. The second digit is the hundredths place, so the 5 is five hundredths, five cents.",
+          "text": "3 . {{7|ul.p|tenths}} {{0|ul|hundredths}}",
+          "say": "The first digit after the dot is the tenths place, so the 7 is seven tenths, seven dimes, which is seventy cents. The second digit is the hundredths place, and it holds a zero: no single cents.",
           "style": "point",
           "annotates": "l6"
         },
         {
           "id": "l8",
-          "text": "$3.45 = 3 dollars + 4 dimes + 5 cents",
-          "say": "So three dollars forty-five is three whole dollars, four dimes and five cents. The dot kept the dollars on one side and the pieces on the other.",
+          "text": "$3.07 = 3 dollars + 0 dimes + 7 cents",
+          "say": "Now look at the other price in the chart, three dollars and seven cents, written $3.07. This time the 7 is in the hundredths place, so it's only seven cents, and a zero holds the tenths place open. Same digits, different places, very different money.",
           "style": "work"
         }
       ]
@@ -89,6 +89,12 @@
         }
       ],
       "lines": [
+        {
+          "id": "l8a",
+          "text": "$3.45 = 3 dollars + 4 dimes + 5 cents",
+          "say": "Look at the picture: three whole dollar bills, four dimes and five pennies. That's $3.45. The three dollars sit before the dot, the four dimes are the tenths, and the five pennies are the hundredths.",
+          "style": "point"
+        },
         {
           "id": "l9",
           "text": "3.45 = 3 + {{0.4|ul.p}} + {{0.05|ul}}",
@@ -106,7 +112,7 @@
     {
       "id": "b4",
       "kind": "contrast",
-      "say": "The five-cents trap: $0.05 vs $0.5. Show that 5 cents needs a zero to hold the tenths place, and that $2.5 means $2.50. Detective tone, no questions.",
+      "say": "The five-cents trap, as in the picture: 4 dollars and 5 cents is $4.05, not $4.5. Show that 5 cents needs a zero to hold the tenths place, and that $4.5 means $4.50. Detective tone, no questions.",
       "board": [
         {
           "type": "heading",
@@ -116,26 +122,26 @@
       "lines": [
         {
           "id": "l11",
-          "text": "5 cents",
-          "say": "Let's try writing five cents as a decimal. A lot of people write nought point five.",
+          "text": "4 dollars and 5 cents",
+          "say": "Let's try writing four dollars and five cents as a decimal. A lot of people write four point five.",
           "style": "point"
         },
         {
           "id": "l12",
-          "text": "$0.5 = 5 tenths = 50 cents (NOT 5 cents)",
-          "say": "But nought point five has the 5 in the tenths place. That's five dimes, which is fifty cents! Quite a difference.",
+          "text": "$4.5 = 4 dollars + 5 tenths = $4.50 (NOT $4.05)",
+          "say": "But four point five has the 5 right after the dot, in the tenths place. That's five dimes, which is fifty cents, so it's four dollars fifty! Quite a difference.",
           "style": "point"
         },
         {
           "id": "l13",
-          "text": "5 cents = $0.05",
-          "say": "To get five cents, the 5 must sit in the hundredths place, so we put a zero in the tenths place to hold it open: nought point nought five.",
+          "text": "4 dollars 5 cents = $4.05",
+          "say": "To get five single cents, the 5 must sit in the hundredths place, so we put a zero in the tenths place to hold it open: four point nought five.",
           "style": "rule"
         },
         {
           "id": "l14",
-          "text": "$2.5 → $2.50",
-          "say": "And in the other direction, a price like two point five means five tenths, fifty cents, so in money we write two dollars fifty, with a zero at the end.",
+          "text": "$4.5 → $4.50",
+          "say": "And in the other direction, a price like four point five means five tenths, fifty cents, so in money we write four dollars fifty, with a zero at the end.",
           "style": "point"
         }
       ]

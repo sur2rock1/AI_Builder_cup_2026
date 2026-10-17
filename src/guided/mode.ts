@@ -20,8 +20,8 @@
 export const TUTOR_MODES = ['standard', 'guided'] as const;
 export type TutorMode = typeof TUTOR_MODES[number];
 
-/** Guided is the product's default (decision 2026-10-14). 'standard' stays in the codebase, reachable with
- *  ?tutor=standard or TUTOR_MODE=standard, and is hidden from the UI (see SHOW_MODE_TOGGLE). */
+/** Guided is the product's default (D-2026-10-16-13: guided content, conversational delivery). 'standard' stays reachable with
+ *  ?tutor=standard or TUTOR_MODE=standard, and the switch is hidden from the UI (see SHOW_MODE_TOGGLE). */
 export const DEFAULT_TUTOR_MODE: TutorMode = 'guided';
 
 /** The on-screen Standard/Guided toggle is hidden. Set true to bring it back; nothing else changes. */

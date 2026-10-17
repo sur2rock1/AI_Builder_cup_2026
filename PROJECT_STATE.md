@@ -1,7 +1,19 @@
 # PROJECT STATE
 
-_Last updated: 2026-10-15 (diagnosis-accuracy evaluation harness added; theme settled; 2026-10-09 audit below — see docs/AUDIT_2026-10-09.md)_
+_Last updated: 2026-10-17 (see the 2026-10-17 update first)_
 
+
+## UPDATE 2026-10-17 — current state (read first; supersedes conflicting lines below)
+- **"Quiz me" (D-2026-10-17-4):** the learner can skip to practice (`skip_to_practice`); a missed practice question sends the tutor back to teach the skipped part (`teach_skipped`) and then re-asks the question. `npm run test:skip` 15/15. Not yet tried live.
+- **Parent View latest lesson (D-2026-10-17-5):** latest-lesson card; lessons and minutes now counted; live observer notes stored per lesson and shown (Parent View + Under the hood "Recent lessons"); Under the hood lists topics newest first. `npm run test:latest-lesson` 6/6.
+- **Pictures match the chalk (D-2026-10-17-3):** scripts for 4-digit numbers, money, ordering and rounding, positive and negative numbers, and horizontal and vertical lines now use the numbers drawn in their pictures; a picture or photo shows only for its own beat; `npm run check:pictures` and `npm run check:scripts` guard it. Not yet seen live.
+- **Tutor code** = the 15 Oct commit (1664233) plus the changes below. The 16 Oct guided-only build (standard tutor removed, then several delivery redesigns) was rolled back after live tests (D-2026-10-16-12). Files written for it that the app no longer uses are in `parked/after-restore-2026-10-17/` (not shipped, not in git).
+- **Default tutor:** the guided chalkboard tutor with conversational delivery (D-2026-10-16-13): own words, short questions along the way, answers interruptions first, `show_picture`, stored pictures by teaching stage, verified photo beside the chalk. The standard tutor is still available at `?tutor=standard`.
+- **Adaptive teaching** is documented end to end with proof: `docs/ADAPTIVE_TEACHING.md`, `npm run test:adaptation` (10 checks). The strategy-gain fix (wrong answers must not count as gains, D-2026-10-16-4) was re-applied to `bkt.ts` / `learnerStore.ts`. The tutor now reports `representationUsed` on `assess_child_reasoning`, so live sessions credit the approach actually used (D-2026-10-17-2).
+- **Demo learners:** Maya and Leo (Grade 4, simulated, `npm run seed:g4`); the Grade 8 simulated learners were removed from local data. Parent View: "Ananta's plan for {child}'s next lesson" is now the first section.
+- **Verified here:** `tsc` 0 errors (backups/ and parked/ excluded in `tsconfig.json`); `test:adaptation` 10/10; `test:parent` 25/25; assessor scenarios, plan-delta, plan-and-store, profiler, claim-validator and quiz-evidence tests pass. Stale, unchanged from the 15 Oct commit: `tests/live/run.mjs` 7 failures; `tests/guided/run.mjs` 31; `tests/guided/live.mjs` 15 (was 17).
+- **NOT verified:** a live voice session with the conversational guided tutor; whether Gemini Live fills in `representationUsed`; the Parent View after a server restart.
+- **Cloud (the judges' URL) is NOT updated yet:** redeploy (`npm run deploy:live`); add Maya and Leo (`npx tsx scripts/migrate-local-to-cloud.ts --only learners`); delete `demo_aisha`, `demo_marcus`, `demo_priya` from Firestore `learners`.
 
 ## UPDATE 2026-10-15 — Diagnosis-accuracy evaluation harness (EV-01) built, not yet run live
 - **New:** `evals/diagnosis/` (`cases.json` 45 labelled exchanges, `concepts.json`, `run.ts`, `metrics.ts`, `report.ts`), `docs/EVALUATION.md`, `tests/eval/metrics.mts`. Scripts: `eval:diagnosis`, `eval:diagnosis:dry`, `eval:diagnosis:report`, `test:eval`. Decision D-2026-10-15-2.
@@ -27,7 +39,7 @@ _Last updated: 2026-10-15 (diagnosis-accuracy evaluation harness added; theme se
 - **Evidence of effectiveness:** EV-01/02/03 (diagnosis accuracy, adapted-vs-base, persona adherence) NOT built. No measured result exists.
 - **Privacy/auth:** deployed builds default `DEMO_MODE=true` (no token checks; `GET /api/learners` lists all profiles). Not acceptable for real children's data.
 - **Tests:** `tsc` clean; `tests/live/run.mjs` fails 7 assertions (since 28 Sep); `tests/guided/run.mjs` crashes (stale test); `npm test` is red.
-- **In progress / uncommitted:** guided tutor mode (`src/guided/`, default `guided` since 2026-10-14, toggle hidden, `TUTOR_MODE=standard` or `?tutor=standard` restores standard), tutor-name feature, 25 modified files.
+- **In progress / uncommitted:** see the 2026-10-17 update at the top (the 16 Oct "guided is the only tutor" change was rolled back).
 - **Removed behaviour:** PARK_AND_ESCALATE no longer runs in the live path (D-2026-09-30-9); Parent-Portal escalation card is dead code.
 - **Not built:** T12 confidence capture, T15 spaced review/decay, T19 latency spike, T24–T26 eval harnesses.
 
@@ -878,3 +890,10 @@ Unmeasured: real cost and first-shot yield.
 
 ## Guided lesson library
 30 authored guided lessons (Grade-4 all 15, Grade-8 Maths ch1–2 9, Grade-8 Biology 6) in src/guided/scripts; validator 0 errors; live-voice run pending.
+
+
+## Demo scope (2026-10-16)
+Shown (updated): Grade 8 Maths ch1 (2), Grade 8 Biology ch1 (2), Grade 4 Maths Number (4); all 8 have guided lessons. Rest is in `parked/` (see parked/README.md). Cloud needs `npm run migrate:cloud -- --only curricula --force`.
+
+## Demo content generation (2026-10-16) - not yet run (superseded: the `demo:*` scripts were removed on 2026-10-17, see D-2026-10-17-2)
+Prepared, not executed (needs Gemini credits): `npm run demo:plan` → `demo:backup` → `demo:pictures` → `demo:audit` → `demo:lessons` → `demo:audit`. Baseline audit: 36 failing checks (see DECISIONS D-2026-10-16-7).

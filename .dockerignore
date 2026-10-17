@@ -27,3 +27,4 @@ bun.lock
 .dockerignore
 Dockerfile
 agent-transcripts
+parked
