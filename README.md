@@ -15,7 +15,7 @@ Ananta uses Gemini Live for voice-first tutoring, Bayesian Knowledge Tracing for
 | Innovation | What it means |
 |---|---|
 | **Learns how each child learns** | Every checked answer updates, per type of idea, which ways of explaining work for this child using Beta distributions. The next lesson leads with what worked, avoids what didn't, and watches for the child's own mix-ups. Proof: `npm run test:adaptation` · [how it works](docs/ADAPTIVE_TEACHING.md) |
-| **Catches the "Correct Answer Trap"** | Standard LLMs miss 43% of misconceptions hidden behind lucky guesses. Ananta's diagnostic loop catches 100% of hidden misconceptions (EV-01 benchmark). |
+| **Catches the "Correct Answer Trap"** | Answer-checking alone cannot question a correct answer, so it catches 0% of these. On our 45-case EV-01 set (written by the team) Ananta's assessor flagged 10 of 10 hidden misconceptions (95% CI 72–100%) with no false alarms on sound reasoning. |
 | **Bayesian Knowledge Tracing (BKT)** | Mastery is a probability, not a score. $pKnown \ge 0.80$ *and* $\ge 2$ level-3 demonstrations required — a right answer from guessing never triggers mastery. |
 | **Deterministic plan compiler** | Teaching plans use zero GenAI — reproducible, auditable, mathematically explainable, never hallucinated. |
 | **Evidence-centered mastery gates** | Bare MCQ answers are capped at "recognised" level. The child must explain reasoning to advance. |
@@ -30,14 +30,17 @@ Ananta uses Gemini Live for voice-first tutoring, Bayesian Knowledge Tracing for
 
 ## 📊 Empirical Evaluation (EV-01 Benchmark)
 
-In our standardized EV-01 evaluation across 45 labeled cases over 5 real curriculum concepts:
+EV-01 ran on 2026-10-17 (`gemini-3.6-flash`, the model the live tutor uses) over 45 labelled cases across 5 curriculum concepts. Ten of them are the "right answer, broken method" trap.
 
 | Metric | Answer-Checking Only (Standard Quiz Apps) | Plain Gemini Prompt ("Does child understand?") | Ananta Reasoning Assessor |
 |---|:---:|:---:|:---:|
-| **Catches Hidden Misconceptions behind Correct Answers** | 0% (0/10) | 90% (9/10) | **100% (10/10)** (95% CI 72–100%) |
+| **Catches Hidden Misconceptions behind Correct Answers** | 0% (0/10) | 100% (10/10) | **100% (10/10)** (95% CI 72–100%) |
 | **False Alarms on Sound Student Reasoning** | 0% (0/10) | 0% (0/10) | **0% (0/10)** (95% CI 0–28%) |
-| **Precision of Misconception Flags** | n/a | 82% (9/11) | **91% (10/11)** (95% CI 62–98%) |
-| **Exact 5-Class Categorization** | n/a | 78% (35/45) | **93% (42/45)** (95% CI 82–98%) |
+| **Precision of Misconception Flags** | n/a | 91% (10/11) | **100% (10/10)** (95% CI 72–100%) |
+| **Exact 5-Class Categorization** | n/a | n/a | **96% (43/45)** (95% CI 85–99%) |
+| **Latency per diagnosis** | n/a | n/a | p50 3.2 s · p95 4.8 s · max 5.8 s |
+
+Read it honestly: with 10 trap cases the intervals are wide, and a plain Gemini prompt also found all 10 on this run. The assessor adds fewer false flags and a named catalogue misconception for every hit. An earlier run (2026-10-15, fallback model `gemini-3.1-flash-lite`) gave 10/10, 0/10 false alarms and 93% exact classification. Cases are written by the team and have not yet had a second reviewer.
 
 *Full methodology, confusion matrices, and safety bounds: [docs/EVALUATION.md](docs/EVALUATION.md).*
 
@@ -51,7 +54,7 @@ flowchart TD
     CUR --> PLAN["📋 Deterministic Plan Compiler (Rules R-TARGET ... R-WATCH)"]
     PLAN --> SYS["🧠 Persona Composer → System Instruction"]
 
-    STU["🎤 Student Voice (16kHz PCM)"] -->|"WebSocket /ws/live"| LIVE["⚡ Gemini 3.8 Live<br/>8 function-calling tools"]
+    STU["🎤 Student Voice (16kHz PCM)"] -->|"WebSocket /ws/live"| LIVE["⚡ Gemini 3.8 Live<br/>10 function-calling tools"]
     SYS --> LIVE
 
     LIVE -->|"assess_child_reasoning"| DIAG["🔬 Gemini 3.6 Flash<br/>6.5s diagnostic reasoning budget"]
@@ -73,7 +76,7 @@ flowchart TD
 
 | Service | Specific Usage in Ananta | Architecture Tier |
 |---|---|---|
-| **Gemini 3.8 Live** | Real-time bidirectional voice tutoring with 8 function-calling tools in guided mode (13 in standard), Puck voice, VAD | Frontier Voice API |
+| **Gemini 3.8 Live** | Real-time bidirectional voice tutoring with 10 function-calling tools in guided mode (13 in standard), Puck voice, VAD | Frontier Voice API |
 | **Gemini 3.8 Flash** | Multi-chapter textbook PDF ingestion, structured lesson generation, profiler, parent narrative report, critic reviews | Synthesis & Ingestion |
 | **Gemini 3.6 Flash** | Real-time diagnostic assessment within a strict 6.5s budget during live voice conversation | Fast Diagnostic Loop |
 | **Gemini 3.1 Flash Lite** | High-speed fallback model for diagnostic evaluation and lesson generation | Resilience & Fallback |
@@ -89,7 +92,7 @@ flowchart TD
 
 ## Real-Time Voice Tools
 
-The default **guided chalkboard tutor** gives Gemini Live 8 function-calling tools:
+The default **guided chalkboard tutor** gives Gemini Live 10 function-calling tools:
 
 | Tool | Purpose |
 |---|---|
@@ -98,6 +101,8 @@ The default **guided chalkboard tutor** gives Gemini Live 8 function-calling too
 | `fill_slot` | Write the child's own answer into a blank on the board |
 | `write_aside` | Answer a student interruption on the board as a side note, then resume |
 | `show_picture` | Display a prepared diagram when the child asks to see something |
+| `skip_to_practice` | Jump to the practice questions when the child asks to be quizzed |
+| `teach_skipped` | After a miss on a skipped part, go back and teach the part that was skipped |
 | `resume_lesson` | Return to exactly where the lesson paused after an interruption |
 | `assess_child_reasoning` | Send the child's answer, reasoning, and representation used to the 6.5s diagnostic engine |
 | `record_confusion_signal` | Log student confusion indicators to dynamically modulate pacing |

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { authFetch } from '../firebase/auth';
 import { DEFAULT_TUTOR_NAME, MAX_TUTOR_NAME_LENGTH, sanitiseTutorName } from '../persona/tutorName';
 
@@ -41,9 +41,7 @@ export const TutorNameScreen: React.FC<Props> = ({ studentName, savedName, stude
   return (
     <div className="min-h-app bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-md text-center">
-        <div className="w-14 h-14 mx-auto bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-900/50 mb-3">
-          <Sparkles className="w-8 h-8 text-white" />
-        </div>
+        <img src="/brand/ananta-emblem-192.png" alt="Ananta" className="w-14 h-14 mx-auto rounded-2xl shadow-xl shadow-black/50 ring-1 ring-amber-300/25 mb-3" />
         <h1 className="text-2xl font-bold text-white tracking-tight">Hi {studentName}!</h1>
         <p className="text-slate-300 text-sm mt-2">What would you like to call your tutor?</p>
         <p className="text-slate-500 text-xs mt-1">Keep the name, or type a new one. You can change it every time you log in.</p>

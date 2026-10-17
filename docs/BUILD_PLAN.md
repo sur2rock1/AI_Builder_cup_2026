@@ -212,7 +212,7 @@ and the interruption count across ≥ 10 exchanges per option; the chosen option
 
 | ID | Task | Reqs | Depends | Size | Owner |
 |---|---|---|---|---|---|
-| T24 | **Built 2026-10-15 (first version, not yet run live):** 45 labelled items across 5 concepts, 10 right-answer-wrong-reasoning, runner + HTML report (`evals/diagnosis/`, `docs/EVALUATION.md`). Original scope: diagnosis eval set (≥ 40 items per demo concept, ≥ 10 right-answer-wrong-reasoning) + runner → detection/FP report | EV-01 | T11 | M | build+review (labels reviewed by a human) |
+| T24 | **Built 2026-10-15, run against Gemini on 2026-10-15 and 2026-10-17 (first version; labels not yet human-reviewed):** 45 labelled items across 5 concepts, 10 right-answer-wrong-reasoning, runner + HTML report (`evals/diagnosis/`, `docs/EVALUATION.md`). Original scope: diagnosis eval set (≥ 40 items per demo concept, ≥ 10 right-answer-wrong-reasoning) + runner → detection/FP report | EV-01 | T11 | M | build+review (labels reviewed by a human) |
 | T25 | Simulated-learner harness: Gemini-played students with scripted misconceptions + persona; base plan vs adapted plan via `/api/tutor/turn` → turns-to-resolution report | EV-02 | T08, T20 | L | build+review |
 | T26 | Persona adherence checker: rule checks (P-01, P-03, P-04, P-06, P-08, P-09…) + LLM-judge rubric for quality items | EV-03 | T08 | M | build |
 | T27 | Seeded demo learners (2–3 synthetic histories via the harness, labelled "simulated") + `npm run seed:demo` | FR-26 | T25 | S | build |

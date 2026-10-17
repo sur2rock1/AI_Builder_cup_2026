@@ -6,7 +6,7 @@ _Status: v1.2 · 2026-10-09 (as-built differences added, see below) · v1.1 2026
 
 Stack: React 19 + Vite + Tailwind (client) · Express + `ws` in `server.ts` (API + Gemini Live
 proxy) · `@google/genai` · Firebase (Auth, Firestore, Storage, Hosting, Functions) · Cloud Run
-(`dr-marcus-live`) · esbuild bundle.
+(`dr-marcus-live` at the time of this audit; since 2026-10-04 service `ananta` in project `ananta-ai-0410`, region `asia-southeast1`) · esbuild bundle.
 
 | Area | Finding | Impact on this plan |
 |---|---|---|
@@ -27,7 +27,7 @@ The target architecture in §2–§3 was only partly built. Where this section a
 | `server/session/orchestrator.ts` | Does not exist. Session orchestration, the Live WebSocket proxy and ~70 routes are in `server.ts` (1,888 lines); only `server/routes/tutor.ts` and two middlewares were extracted |
 | `src/adaptive/diagnostician.ts`, `segmenter.ts` | Do not exist. Diagnosis = `reasoningAssessor.ts` (+ `liveObserver.ts` for the live panel) |
 | `src/adaptive/review.ts` (spaced review, decay) | Not built (T15). Nothing writes `review.nextDueAt` |
-| `eval/` (EV-01…03) | Not built |
+| `eval/` (EV-01…03) | EV-01 built as `evals/diagnosis/` and run on 2026-10-15 and 2026-10-17 (`docs/EVALUATION.md`); EV-02 and EV-03 not built |
 | Deploy: Cloud Run + Firebase Hosting + Functions (§9) | Cloud Run only (D-2026-10-04-1); `functions/` is stale; **not deployed yet** |
 | Auth: Firebase ID token on all learner routes | `requireAuth` bypassed when `DEMO_MODE=true` (deploy-script default) |
 | Park-and-escalate | Removed from live path (D-2026-09-30-9) |

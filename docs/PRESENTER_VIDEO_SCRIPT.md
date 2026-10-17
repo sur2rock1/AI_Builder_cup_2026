@@ -31,7 +31,7 @@ Yet when edtech companies build AI tutors today, they almost always build simple
 
 "Under the hood, Ananta is powered by **five tiers** of Google Gemini models.
 
-Real-time bidirectional voice runs on **Gemini 3.8 Live** using eight specialized function-calling tools that drive our interactive chalkboard.
+Real-time bidirectional voice runs on **Gemini 3.8 Live** using ten specialized function-calling tools that drive our interactive chalkboard.
 
 Every student response is evaluated by **Gemini 3.6 Flash** within a strict six-point-five-second diagnostic budget.
 
@@ -101,7 +101,7 @@ There is **no black box**. Every mastery claim is backed by the child's own word
 
 "We proved our architecture with rigorous evaluation.
 
-In our **EV-01 benchmark** across forty-five labeled cases, Ananta caught **one hundred percent** of misconceptions hidden behind correct answers — whereas standard quiz apps scored **zero percent**.
+In our **EV-01 benchmark** across forty-five labeled cases, Ananta caught **ten of ten** misconceptions hidden behind correct answers, with no false alarms on sound reasoning — whereas a quiz that only checks answers catches **none**.
 
 Furthermore, through Google's **Files API**, educators can upload any official textbook PDF. Gemini automatically extracts prerequisite graphs, catalogued misconceptions, and pre-generates quality-reviewed lessons."
 

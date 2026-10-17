@@ -37,7 +37,7 @@
 **Your status:** ⚠️ README mentions these but the **submission description field** (on the portal) hasn't been written yet.
 
 **Action:** Write a dedicated paragraph for the submission description that explicitly names each:
-- **Gemini** — 5 model tiers (3.8 Live, 3.8 Flash, 3.6 Flash, 3.1 Flash Lite, Vision/Image Gen), function calling with 13 tools, structured outputs, thinking budget
+- **Gemini** — 5 model tiers (3.8 Live, 3.8 Flash, 3.6 Flash, 3.1 Flash Lite, Vision/Image Gen), function calling with 10 tools in guided mode (13 in standard mode), structured outputs, thinking budget
 - **Firebase** — Firebase Auth for user authentication, Firebase Hosting (optional)
 - **Firestore** — Learner profiles, evidence events, teaching plans, session data, curricula, pre-generated content
 - **Cloud Run** — Full-stack deployment (REST API + WebSocket proxy + SPA), 3600s timeout for voice sessions, session affinity, scale-to-zero
@@ -164,7 +164,7 @@ This matches her recommended approach and gives you 3:40 total.
 
 **Risk:** LOW — she says there's "no favorable solution" between ADK and direct SDK. But using ADK 2.0 would let you "demonstrate a lot more technical competence." 
 
-**Recommendation:** Do NOT rewrite to use ADK with 3 days left. Instead, in your submission, frame your architecture as an **agentic system by design**: 13 function-calling tools, state management via Firestore, multi-model orchestration, reasoning pipeline. The substance is agentic — the SDK choice doesn't change that.
+**Recommendation:** Do NOT rewrite to use ADK with 3 days left. Instead, in your submission, frame your architecture as an **agentic system by design**: 10 function-calling tools in guided mode (13 in standard mode), state management via Firestore, multi-model orchestration, reasoning pipeline. The substance is agentic — the SDK choice doesn't change that.
 
 ---
 

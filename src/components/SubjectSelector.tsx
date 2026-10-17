@@ -159,6 +159,7 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({
       <div className="flex-shrink-0 px-4 pt-5 pb-4 border-b border-white/5">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <img src="/brand/ananta-emblem-192.png" alt="Ananta" className="w-10 h-10 rounded-xl ring-1 ring-amber-300/25 shrink-0" />
             <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getAvatarColor(student.name)} flex items-center justify-center text-white font-bold text-sm`}>
               {initials(student.name)}
             </div>

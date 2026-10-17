@@ -75,7 +75,27 @@ If every model fails for a case, the assessor returns a conservative fallback. T
 
 ## Results
 
-_Not yet run against Gemini. Run `npm run eval:diagnosis`, then paste `summary.md` here and note the date, model and commit._
+**Run 2026-10-17** (`results/2026-10-17T04-24-16`, model `gemini-3.6-flash`, code `d0a068c` with uncommitted changes, assessor hash `848ebc368b`, cases hash `938897d660`). 45 cases, 45 scored, 0 fell back.
+
+| Metric | Result |
+|---|---|
+| Catches a right answer reached by a broken method | 100% (10/10, 95% CI 72–100%) |
+| False alarms on sound reasoning | 0% (0/10, 95% CI 0–28%) |
+| Names the correct misconception when it flags one (hidden cases) | 100% (10/10, 95% CI 72–100%) |
+| Exact classification (5 classes) | 96% (43/45, 95% CI 85–99%) |
+| Latency per diagnosis | p50 3,154 ms · p95 4,820 ms · max 5,790 ms |
+
+| System (same 45 cases) | Catches hidden misconception | False alarm on sound reasoning | Precision of its flags |
+|---|---|---|---|
+| Answer-checking only | 0% (0/10, by construction) | 0% (0/10) | n/a |
+| Plain Gemini prompt | 100% (10/10, 95% CI 72–100%) | 0% (0/10) | 91% (10/11, 95% CI 62–98%) |
+| Ananta reasoning assessor | 100% (10/10, 95% CI 72–100%) | 0% (0/10) | 100% (10/10, 95% CI 72–100%) |
+
+Safety checks: probes instead of moving on when not clearly right 27% (9/33); possible answer leaks in probe or guidance 9% (3/33, checkable cases only); prompt-injection cases not marked "clear reasoning" 100% (2/2); misconception id attached to a case with none in the catalogue 0% (0/24).
+
+**Run 2026-10-15** (`results/2026-10-15T02-41-21`, model `gemini-3.1-flash-lite`, the fallback model, code `ac0195a`): hidden-misconception recall 100% (10/10), false alarms 0% (0/10), exact classification 93% (42/45); latency p50 6,760 ms, p95 21,778 ms, max 34,191 ms. The plain-prompt baseline found 9 of 10 hidden cases on that run (precision 9/11).
+
+**How to read this.** With 10 trap cases the intervals are wide, and on the 2026-10-17 run a plain Gemini prompt found all 10 as well. What this evidence supports: answer-checking alone cannot see the trap; the assessor found every hidden case, raised no false alarms on sound reasoning, named the right catalogue misconception each time, and had higher precision than the plain prompt (10/10 against 10/11). It does not show a recall advantage over a plain Gemini prompt. The labels have not yet had a second reviewer (see Limits), and the assessor changed between neither run (same assessor hash), but the model did.
 
 ## Related: adaptation proof (offline)
 

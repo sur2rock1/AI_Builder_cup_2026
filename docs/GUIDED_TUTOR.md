@@ -91,7 +91,7 @@ teacher flow; *quick* = straight to the point. Pace changes the instructions and
 1. The page opens the voice WebSocket. The server resolves the mode (§6), loads the lesson with `getGuidedScript(conceptId)`
    and creates a `GuidedSession`. No lesson for this concept → it quietly runs the standard tutor.
 2. The system prompt is the normal tutor prompt with its board block swapped for the guided one, and the tool list is swapped
-   for the guided tools: `advance_beat`, `next_line`, `ask`/answer handling, `fill_slot`, `write_aside`, `resume_lesson`.
+   for the ten guided tools (`src/guided/tools.ts`): `advance_beat`, `next_line`, `fill_slot`, `write_aside`, `show_picture`, `resume_lesson`, `skip_to_practice`, `teach_skipped`, plus `assess_child_reasoning` and `record_confusion_signal` kept from the standard set. Asking a question is part of the beat script (`ask`), not a tool.
 3. The tutor opens a beat; for each line the server writes it to the board and tells the tutor what to say
    (`"SPEAK NOW"` + the line's `say`). The browser receives `guided_state` snapshots and reveals items one at a time, **after**
    the audio already received has finished playing, so words and chalk stay in sync.
