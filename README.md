@@ -8,9 +8,9 @@
 
 Ananta uses Gemini Live for voice-first tutoring, Bayesian Knowledge Tracing for evidence-based mastery, and a deterministic teaching-plan compiler to teach lessons built from uploaded textbooks. Parents see every claim backed by the child's own words.
 
-🔗 **[Live demo on Cloud Run](https://ananta-ivczdbgbja-as.a.run.app/)** · 💡 **[Adaptive teaching proof](docs/ADAPTIVE_TEACHING.md)** · 📊 **[Evaluation (EV-01)](docs/EVALUATION.md)** · 🏗️ **[Architecture](docs/ARCHITECTURE.md)** · 🖼️ **[Diagrams](docs/diagrams/)**
+🔗 **[Live demo on Cloud Run](https://ananta-ivczdbgbja-as.a.run.app/)** · 📊 **[EV-01 results](evals/diagnosis/results/latest/summary.md)** · 🧪 **[Evaluation set](evals/diagnosis/)**
 
-> The submission deck (PDF/PPTX) and the demo video are submitted through the Hack2skill portal and are **not stored in this repository** (see `.gitignore`).
+> The submission deck, demo video and design documents are submitted through the Hack2skill portal and are **not stored in this repository** (see `.gitignore`). This README is the repository's documentation.
 
 ---
 
@@ -18,7 +18,7 @@ Ananta uses Gemini Live for voice-first tutoring, Bayesian Knowledge Tracing for
 
 | Idea | What it means |
 |---|---|
-| **Learns what works for each child** | Every checked answer updates, per type of idea, a Beta(α, β) score for each way of explaining. The next lesson leads with what worked, avoids what repeatedly didn't, and watches for the child's own mix-ups. Proof: `npm run test:adaptation` · [how it works](docs/ADAPTIVE_TEACHING.md) |
+| **Learns what works for each child** | Every checked answer updates, per type of idea, a Beta(α, β) score for each way of explaining. The next lesson leads with what worked, avoids what repeatedly didn't, and watches for the child's own mix-ups. Proof: `npm run test:adaptation` |
 | **Catches the "correct answer trap"** | Answer-checking alone cannot question a correct answer, so it catches none of these. On our 45-case EV-01 set (written by the team) Ananta's assessor flagged 10 of 10 hidden misconceptions (95% CI 72–100%) with no false alarms on sound reasoning. |
 | **Bayesian Knowledge Tracing (BKT)** | Mastery is a probability, not a score: $pKnown \ge 0.80$ *and* level-3 evidence on $\ge 2$ different questions *and* no confirmed mix-up. A lucky right answer never counts as mastery. |
 | **Deterministic plan compiler** | Teaching plans are compiled by named rules (R-TARGET … R-TALK) with no model call, so the same history always gives the same plan, and every choice carries a rule id and a reason. |
@@ -46,7 +46,7 @@ EV-01 ran on 2026-10-17 (`gemini-3.6-flash`, the diagnosis model the live tutor 
 
 Read it honestly: with 10 trap cases the intervals are wide, and a plain Gemini prompt also found all 10 on this run. The assessor raises fewer false flags and names a catalogued misconception for every hit. An earlier run (2026-10-15, fallback model `gemini-3.1-flash-lite`) gave 10/10, 0/10 false alarms and 93% (42/45) exact classification. Cases were written by the team and have not yet had a second reviewer. EV-02 (adapted vs non-adapted teaching) and EV-03 (persona adherence) are not built.
 
-*Method, per-case results and limits: [docs/EVALUATION.md](docs/EVALUATION.md); raw runs in [`evals/diagnosis/results/`](evals/diagnosis/results/).*
+*Cases, runner and scoring: [`evals/diagnosis/`](evals/diagnosis/); recorded runs with per-case results: [`evals/diagnosis/results/`](evals/diagnosis/results/).*
 
 ---
 
@@ -77,7 +77,7 @@ flowchart TD
     VAL --> PARENT["👨‍👩‍👧 Parent View<br/>two-click evidence replay"]
 ```
 
-Rendered diagrams (architecture, deployment, sequence, data model and more) are in [`docs/diagrams/`](docs/diagrams/). The as-built system map is [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Recording evidence, compiling the plan, rendering it into the tutor's instructions and choosing the next move are deterministic code in `src/adaptive/` and `src/plan/`; Gemini is used only where language must be judged or produced.
 
 ---
 
@@ -130,7 +130,7 @@ Answers the tutor does not explicitly assess are still judged by the live observ
 3. **"See why" on every sentence** — opens the child's exact answer, the question and the diagnosis.
 4. **Try this at home** — a short activity for the topic being learned.
 
-An **Under the hood** switch shows the engineering view (mastery, ladder levels, rules). Spec: [docs/PARENT_VIEW.md](docs/PARENT_VIEW.md).
+An **Under the hood** switch shows the engineering view (mastery, ladder levels, rules). Code: `src/parent/`.
 
 ---
 
@@ -230,27 +230,9 @@ Things to try saying:
 | `evals/diagnosis/` | EV-01 cases, runner, metrics and recorded results |
 | `tests/` | Offline test suites |
 | `scripts/` | Deploy, migration, seeding, pre-generation, verification |
-| `docs/` | Design documents, evaluation and diagrams |
 | `functions/` | Legacy Cloud Functions API — **not deployed or used** |
 
-**Not in the repository (gitignored):** `data/` (courses, lessons, learners), `.env*` and service-account keys, `docs/*.pdf` / `docs/*.pptx` (submission decks), videos, internal planning notes (decision log, status log, build plans, audits, pitch and video scripts), `logs/`, `backups/`, `parked/`, build output.
-
----
-
-## Key documentation
-
-| Document | Description |
-|---|---|
-| [ADAPTIVE_TEACHING.md](docs/ADAPTIVE_TEACHING.md) | How Ananta learns each child and changes how it teaches, with proof |
-| [EVALUATION.md](docs/EVALUATION.md) | EV-01 diagnosis-accuracy method, results and limits |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | As-built system map |
-| [GUIDED_TUTOR.md](docs/GUIDED_TUTOR.md) | The default guided chalkboard tutor |
-| [PARENT_VIEW.md](docs/PARENT_VIEW.md) | Parent View design and its evidence gates |
-| [TEACHING_PLAN.md](docs/TEACHING_PLAN.md) | Deterministic plan compiler |
-| [LEARNER_MODEL.md](docs/LEARNER_MODEL.md) | Learner model schema and update rules |
-| [TUTOR_PERSONA.md](docs/TUTOR_PERSONA.md) | The tutor's fixed persona, method and hard rules |
-| [CURRICULUM.md](docs/CURRICULUM.md) | Course library and PDF ingestion |
-| [BOARD_VISUALS.md](docs/BOARD_VISUALS.md) | Board pictures and quality gates |
+**Not in the repository (gitignored):** `data/` (courses, lessons, learners), `.env*` and service-account keys, `docs/` (design documents, diagrams, submission decks, internal notes), `PROJECT_STATE.md` / `DECISIONS.md` (internal logs), videos, `logs/`, `backups/`, `parked/`, build output.
 
 ---
 

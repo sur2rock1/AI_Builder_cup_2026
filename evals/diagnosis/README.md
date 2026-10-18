@@ -1,6 +1,6 @@
 # Diagnosis-accuracy evaluation
 
-Full description: [docs/EVALUATION.md](../../docs/EVALUATION.md).
+Results of the recorded runs are in [`results/`](results/); the headline numbers are in the repository README.
 
 ```
 npm run eval:diagnosis          # real run (needs GEMINI_API_KEY in .env.local)
