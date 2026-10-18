@@ -2,49 +2,51 @@
 
 **A personal, voice-based tutor that adapts to how each child learns.**
 
-> **AI Builder Cup 2026 · Media, Content & Digital Experiences (Category: Education)**
+> **AI Builder Cup 2026 · Theme: Media, Content & Digital Experiences · Category: Education**
 
-**An AI tutor that diagnoses *how* a child reasons — not just *what* they answer — and adapts in real time.**
+**An AI tutor that diagnoses *how* a child reasons — not just *what* they answer — and adapts its teaching for that child.**
 
-Ananta uses Gemini Live for voice-first tutoring, Bayesian Knowledge Tracing for evidence-based mastery, and a deterministic teaching plan compiler to deliver personalised, quality-gated lessons for any curriculum. Parents see every claim backed by the child's own words.
+Ananta uses Gemini Live for voice-first tutoring, Bayesian Knowledge Tracing for evidence-based mastery, and a deterministic teaching-plan compiler to teach lessons built from uploaded textbooks. Parents see every claim backed by the child's own words.
 
-🔗 **[Live Demo on Cloud Run](https://ananta-ivczdbgbja-as.a.run.app/)** · 📑 **[Official Submission Deck (PDF)](docs/Submission_Template_AI_Builder_Cup_Filled.pdf)** · 🎬 **[Demo Video Script & Cues](docs/DEMO_VIDEO_SCRIPT.md)** · 🎙️ **[Presenter Voice Script](docs/PRESENTER_VIDEO_SCRIPT.md)** · 🎯 **[Use Case & Pitch Narrative](docs/USE_CASE_TALK.md)** · 💡 **[Adaptive Teaching Proof](docs/ADAPTIVE_TEACHING.md)** · 📊 **[Empirical Evaluation (EV-01)](docs/EVALUATION.md)** · 🏆 **[Rules Audit & Deliverables](docs/HACKATHON_AUDIT.md)**
+🔗 **[Live demo on Cloud Run](https://ananta-ivczdbgbja-as.a.run.app/)** · 💡 **[Adaptive teaching proof](docs/ADAPTIVE_TEACHING.md)** · 📊 **[Evaluation (EV-01)](docs/EVALUATION.md)** · 🏗️ **[Architecture](docs/ARCHITECTURE.md)** · 🖼️ **[Diagrams](docs/diagrams/)** · 🎬 **[Demo video script](docs/DEMO_VIDEO_SCRIPT.md)** · 🏆 **[Rules audit](docs/HACKATHON_AUDIT.md)**
+
+> The submission deck (PDF/PPTX) and the demo video are submitted through the Hack2skill portal and are **not stored in this repository** (see `.gitignore`).
 
 ---
 
-## Why Ananta is Different
+## Why Ananta is different
 
-| Innovation | What it means |
+| Idea | What it means |
 |---|---|
-| **Learns how each child learns** | Every checked answer updates, per type of idea, which ways of explaining work for this child using Beta distributions. The next lesson leads with what worked, avoids what didn't, and watches for the child's own mix-ups. Proof: `npm run test:adaptation` · [how it works](docs/ADAPTIVE_TEACHING.md) |
-| **Catches the "Correct Answer Trap"** | Answer-checking alone cannot question a correct answer, so it catches 0% of these. On our 45-case EV-01 set (written by the team) Ananta's assessor flagged 10 of 10 hidden misconceptions (95% CI 72–100%) with no false alarms on sound reasoning. |
-| **Bayesian Knowledge Tracing (BKT)** | Mastery is a probability, not a score. $pKnown \ge 0.80$ *and* $\ge 2$ level-3 demonstrations required — a right answer from guessing never triggers mastery. |
-| **Deterministic plan compiler** | Teaching plans use zero GenAI — reproducible, auditable, mathematically explainable, never hallucinated. |
-| **Evidence-centered mastery gates** | Bare MCQ answers are capped at "recognised" level. The child must explain reasoning to advance. |
-| **Anti-hallucination claim validator** | Every profiler claim about a child must pass deterministic validation against real events before reaching a parent. |
-| **Quality-gated content pipeline** | Every generated lesson, diagram, and photo passes an independent Gemini critic review. Failures are quarantined — never served. |
-| **Tutor never gives up** | No "escalate to teacher" cop-out. Ananta always pivots to a worked example, concrete representation, or analogy. |
-| **Two-click evidence replay** | Parents see the exact question asked, the child's exact answer, and the diagnostic reasoning — not just a grade. |
-| **Growth-mindset language** | The tutor never uses deficit labels or fixed-trait stereotypes ("visual learner"). Enforced by deterministic lints. |
-| **PDF → structured curriculum** | Upload any textbook PDF via Google Files API → Gemini extracts chapters, prerequisites, misconceptions, and pre-generates lessons automatically. |
+| **Learns what works for each child** | Every checked answer updates, per type of idea, a Beta(α, β) score for each way of explaining. The next lesson leads with what worked, avoids what repeatedly didn't, and watches for the child's own mix-ups. Proof: `npm run test:adaptation` · [how it works](docs/ADAPTIVE_TEACHING.md) |
+| **Catches the "correct answer trap"** | Answer-checking alone cannot question a correct answer, so it catches none of these. On our 45-case EV-01 set (written by the team) Ananta's assessor flagged 10 of 10 hidden misconceptions (95% CI 72–100%) with no false alarms on sound reasoning. |
+| **Bayesian Knowledge Tracing (BKT)** | Mastery is a probability, not a score: $pKnown \ge 0.80$ *and* level-3 evidence on $\ge 2$ different questions *and* no confirmed mix-up. A lucky right answer never counts as mastery. |
+| **Deterministic plan compiler** | Teaching plans are compiled by named rules (R-TARGET … R-TALK) with no model call, so the same history always gives the same plan, and every choice carries a rule id and a reason. |
+| **Evidence-centred mastery gates** | A multiple-choice answer with no reasoning is capped at "recognised". The child must explain to move up the ladder. |
+| **Claim validator** | Every session-end claim the Profiler proposes about a child must cite real evidence events, and labels such as "visual learner" are rejected, before a parent sees it. |
+| **Quality-gated content** | Generated lessons, board pictures and photos pass deterministic lints and a separate Gemini review call that never saw the drafting prompt. Anything that fails is withheld, never served. |
+| **The tutor never gives up** | No "escalate to teacher". After misses Ananta switches to the next approach in the child's order, or teaches the idea directly. |
+| **Two-click evidence replay** | Parents see the question asked, the child's exact answer and the diagnosis — not just a grade. |
+| **No fixed-trait labels** | The tutor's language is linted for verdict words and labels; "what works" is scoped to a type of idea and fades over time. |
+| **PDF → structured course** | An admin uploads a textbook (and optionally the syllabus) PDF; Gemini, via the Files API, extracts chapters, prerequisites and misconceptions, an AI review re-checks worked examples, and lessons are pre-generated. |
 
 ---
 
-## 📊 Empirical Evaluation (EV-01 Benchmark)
+## 📊 Evaluation (EV-01)
 
-EV-01 ran on 2026-10-17 (`gemini-3.6-flash`, the model the live tutor uses) over 45 labelled cases across 5 curriculum concepts. Ten of them are the "right answer, broken method" trap.
+EV-01 ran on 2026-10-17 (`gemini-3.6-flash`, the diagnosis model the live tutor uses) over 45 labelled cases across 5 curriculum concepts. Ten are the "right answer, broken method" trap.
 
-| Metric | Answer-Checking Only (Standard Quiz Apps) | Plain Gemini Prompt ("Does child understand?") | Ananta Reasoning Assessor |
+| Metric | Answer-checking only | Plain Gemini prompt | Ananta reasoning assessor |
 |---|:---:|:---:|:---:|
-| **Catches Hidden Misconceptions behind Correct Answers** | 0% (0/10) | 100% (10/10) | **100% (10/10)** (95% CI 72–100%) |
-| **False Alarms on Sound Student Reasoning** | 0% (0/10) | 0% (0/10) | **0% (0/10)** (95% CI 0–28%) |
-| **Precision of Misconception Flags** | n/a | 91% (10/11) | **100% (10/10)** (95% CI 72–100%) |
-| **Exact 5-Class Categorization** | n/a | n/a | **96% (43/45)** (95% CI 85–99%) |
+| **Catches hidden misconceptions behind correct answers** | 0% (0/10) | 100% (10/10) | **100% (10/10)** (95% CI 72–100%) |
+| **False alarms on sound reasoning** | 0% (0/10) | 0% (0/10) | **0% (0/10)** (95% CI 0–28%) |
+| **Precision of misconception flags** | n/a | 91% (10/11) | **100% (10/10)** (95% CI 72–100%) |
+| **Exact 5-class classification** | n/a | n/a | **96% (43/45)** (95% CI 85–99%) |
 | **Latency per diagnosis** | n/a | n/a | p50 3.2 s · p95 4.8 s · max 5.8 s |
 
-Read it honestly: with 10 trap cases the intervals are wide, and a plain Gemini prompt also found all 10 on this run. The assessor adds fewer false flags and a named catalogue misconception for every hit. An earlier run (2026-10-15, fallback model `gemini-3.1-flash-lite`) gave 10/10, 0/10 false alarms and 93% exact classification. Cases are written by the team and have not yet had a second reviewer.
+Read it honestly: with 10 trap cases the intervals are wide, and a plain Gemini prompt also found all 10 on this run. The assessor raises fewer false flags and names a catalogued misconception for every hit. An earlier run (2026-10-15, fallback model `gemini-3.1-flash-lite`) gave 10/10, 0/10 false alarms and 93% (42/45) exact classification. Cases were written by the team and have not yet had a second reviewer. EV-02 (adapted vs non-adapted teaching) and EV-03 (persona adherence) are not built.
 
-*Full methodology, confusion matrices, and safety bounds: [docs/EVALUATION.md](docs/EVALUATION.md).*
+*Method, per-case results and limits: [docs/EVALUATION.md](docs/EVALUATION.md); raw runs in [`evals/diagnosis/results/`](evals/diagnosis/results/).*
 
 ---
 
@@ -52,160 +54,211 @@ Read it honestly: with 10 trap cases the intervals are wide, and a plain Gemini 
 
 ```mermaid
 flowchart TD
-    PDF["📄 Textbook PDF"] -->|"pdfIngest (Gemini 3.8 Flash via Files API)"| CUR["📚 Curriculum Store (Firestore)"]
-    CUR --> PLAN["📋 Deterministic Plan Compiler (Rules R-TARGET ... R-WATCH)"]
-    PLAN --> SYS["🧠 Persona Composer → System Instruction"]
+    PDF["📄 Textbook PDF (admin upload)"] -->|"pdfIngest · Gemini 3.8 Flash via Files API"| CUR["📚 Course library (Firestore)"]
+    CUR --> PLAN["📋 Deterministic plan compiler (rules R-TARGET … R-TALK)"]
+    PLAN --> SYS["🧠 Persona composer → system instruction"]
 
-    STU["🎤 Student Voice (16kHz PCM)"] -->|"WebSocket /ws/live"| LIVE["⚡ Gemini 3.8 Live<br/>10 function-calling tools"]
+    STU["🎤 Child's voice (16 kHz PCM)"] -->|"WebSocket /ws/live"| LIVE["⚡ Gemini 3.8 Live<br/>10 tools (guided tutor)"]
     SYS --> LIVE
 
-    LIVE -->|"assess_child_reasoning"| DIAG["🔬 Gemini 3.6 Flash<br/>6.5s diagnostic reasoning budget"]
-    LIVE -->|"next_line / show_picture / write_aside"| BOARD["🖥️ Interactive Chalkboard<br/>Chalk Lines · Diagrams · Pictures"]
+    LIVE -->|"assess_child_reasoning"| DIAG["🔬 Reasoning assessor · Gemini 3.6 Flash<br/>6.5 s budget"]
+    LIVE -->|"transcript"| OBS["👂 Live observer · Gemini 3.6 Flash"]
+    LIVE -->|"next_line / show_picture / write_aside"| BOARD["🖥️ Chalkboard<br/>chalk lines · pictures · photo"]
 
-    DIAG --> BKT["📈 Bayesian Knowledge Tracing (pKnown)"]
-    BKT --> STRAT["📊 Beta(α, β) Strategy Profile Update"]
-    STRAT --> DELTA["Δ Plan Delta → Mid-Session Move"]
+    DIAG --> BKT["📈 BKT mastery · evidence ladder · mix-up ledger"]
+    OBS --> BKT
+    BKT --> STRAT["📊 Beta(α, β) strategy profile"]
+    STRAT --> DELTA["Δ Plan delta → next move in this lesson"]
     DELTA --> LIVE
+    STRAT --> PLAN
 
-    LIVE -->|"Session end"| PROF["📝 Profiler (Gemini 3.8 Flash)"]
-    PROF --> VAL["🛡️ Anti-Hallucination Claim Validator"]
-    VAL --> PARENT["👨‍👩‍👧 Parent Portal<br/>2-Click Evidence Replay"]
+    LIVE -->|"session end"| PROF["📝 Profiler · Gemini 3.8 Flash"]
+    PROF --> VAL["🛡️ Claim validator (deterministic)"]
+    VAL --> PARENT["👨‍👩‍👧 Parent View<br/>two-click evidence replay"]
 ```
 
----
-
-## Google AI & Cloud Services Used
-
-| Service | Specific Usage in Ananta | Architecture Tier |
-|---|---|---|
-| **Gemini 3.8 Live** | Real-time bidirectional voice tutoring with 10 function-calling tools in guided mode (13 in standard), Puck voice, VAD | Frontier Voice API |
-| **Gemini 3.8 Flash** | Multi-chapter textbook PDF ingestion, structured lesson generation, profiler, parent narrative report, critic reviews | Synthesis & Ingestion |
-| **Gemini 3.6 Flash** | Real-time diagnostic assessment within a strict 6.5s budget during live voice conversation | Fast Diagnostic Loop |
-| **Gemini 3.1 Flash Lite** | High-speed fallback model for diagnostic evaluation and lesson generation | Resilience & Fallback |
-| **Gemini Vision** | Critic review engine inspecting generated educational imagery for pedagogical accuracy | Quality Gate |
-| **Gemini Image Generation** | Real-world photo generation customized to student hobbies (football, cooking, space) | Grounding & Analogy |
-| **Google Files API** | Multi-page PDF textbook and syllabus upload processing (60-page chunks, 40MB limit) | Document Intelligence |
-| **Cloud Run** | Full-stack deployment (REST API + WebSocket proxy + Vite SPA), session affinity, 3600s timeout | Compute Infrastructure |
-| **Firestore** | Server-side secure storage for learner models, BKT scores, event logs, and pregen cache | Secure Persistence |
-| **Firebase Auth** | User authentication framework (bypassed in DEMO_MODE for zero-friction judge evaluation) | Identity |
-| **Cloud Storage** | Public CDN bucket for pre-generated educational visuals and verified photos | Object Storage |
+Rendered diagrams (architecture, deployment, sequence, data model and more) are in [`docs/diagrams/`](docs/diagrams/). The as-built system map is [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
-## Real-Time Voice Tools
+## Google AI & Cloud services used
 
-The default **guided chalkboard tutor** gives Gemini Live 10 function-calling tools:
+| Service | How Ananta uses it |
+|---|---|
+| **Gemini 3.8 Live** | Real-time voice tutoring (voice "Puck", automatic voice-activity detection); 10 function-calling tools in the default guided tutor, 13 in the standard tutor |
+| **Gemini 3.8 Flash** (`strong` / `review` roles) | Textbook and syllabus PDF ingestion, curriculum structuring and review, lesson and board-picture generation, session Profiler, parent report, and the separate quality-review call (including image review of generated photos) |
+| **Gemini 3.6 Flash** (`fast` role) | Reasoning assessor during the live lesson (6.5 s budget), live observer, photo scene planning |
+| **Gemini 3.1 Flash Lite** | Fallback model when a primary model fails or times out |
+| **Gemini 3.1 Flash Image** | One lesson-specific photo per concept, planned from the concept's key facts, shown only after the review call verifies it, labelled "AI-generated illustration" |
+| **Gemini Files API** | Uploading textbook / syllabus PDFs in chunks of up to 60 pages / 40 MB |
+| **Cloud Run** | One service (`ananta`, `asia-southeast1`) serving the web app, REST API and the voice WebSocket; session affinity, 3600 s timeout |
+| **Cloud Build + Artifact Registry** | Builds the container from the `Dockerfile` on `npm run deploy:live` |
+| **Firestore** | Courses, pre-generated lessons, learner models, evidence events, plans and session summaries |
+| **Cloud Storage** | Pre-generated lesson photos (public read on `pregen-images/` only) |
+| **Secret Manager** | `GEMINI_API_KEY` and `ADMIN_TOKEN` for the Cloud Run service |
+| **Firebase Auth** | Client SDK is included, but learner sign-in is **not wired yet**: the demo runs with `DEMO_MODE=true` (no token checks) |
+
+Model IDs are resolved at startup by `src/ai/gateway.ts` and can be overridden with `MODEL_FAST`, `MODEL_STRONG`, `MODEL_REVIEW`, `MODEL_LIVE`, `MODEL_IMAGE`. Check which ones your key can use with `npm run verify:models`.
+
+---
+
+## Real-time voice tools
+
+The default **guided chalkboard tutor** gives Gemini Live 10 tools:
 
 | Tool | Purpose |
 |---|---|
 | `advance_beat` | Start the next part of the prepared lesson |
 | `next_line` | Write the next chalk line (holds back answers until the child replies) |
 | `fill_slot` | Write the child's own answer into a blank on the board |
-| `write_aside` | Answer a student interruption on the board as a side note, then resume |
-| `show_picture` | Display a prepared diagram when the child asks to see something |
+| `write_aside` | Answer an interruption on the board as a side note, then resume |
+| `show_picture` | Show a prepared picture when the child asks to see something |
 | `skip_to_practice` | Jump to the practice questions when the child asks to be quizzed |
-| `teach_skipped` | After a miss on a skipped part, go back and teach the part that was skipped |
-| `resume_lesson` | Return to exactly where the lesson paused after an interruption |
-| `assess_child_reasoning` | Send the child's answer, reasoning, and representation used to the 6.5s diagnostic engine |
-| `record_confusion_signal` | Log student confusion indicators to dynamically modulate pacing |
+| `teach_skipped` | After a miss on a skipped part, go back and teach it |
+| `resume_lesson` | Return to where the lesson paused |
+| `assess_child_reasoning` | Send the child's answer, reasoning and the approach used to the reasoning assessor |
+| `record_confusion_signal` | Log "I don't get it" signals, which change pacing |
+
+Answers the tutor does not explicitly assess are still judged by the live observer and recorded as evidence (a mix-up is confirmed only after a second, later observation). Set `OBSERVER_EVIDENCE=off` to disable this.
 
 ---
 
-## Parent Portal & Two-Click Evidence Replay
+## Parent View
 
-Parents receive complete pedagogical transparency:
-1. **Ananta's Plan for Next Lesson:** Placed prominently at the top, showing which strategy will be led with, what will be avoided, and which misconceptions will be probed.
-2. **Misconception Ledger:** Tracks wrong beliefs across sessions (`suspected` → `confirmed` → `fixed`).
-3. **Two-Click Evidence Replay:** Every statement in the progress report includes a *"See why"* link opening the child's exact spoken words, the question asked, and the AI's diagnostic reasoning.
-4. **Actionable Home Tips:** Short 5-minute parent-child activities tailored to the child's active concepts.
+1. **Ananta's plan for the next lesson** — at the top: which approach it will lead with, what it will avoid, which mix-ups it will check.
+2. **How Ananta figured the child out** — each mix-up from "noticed" to "seen again" to "changed how it teaches" to "fixed".
+3. **"See why" on every sentence** — opens the child's exact answer, the question and the diagnosis.
+4. **Try this at home** — a short activity for the topic being learned.
+
+An **Under the hood** switch shows the engineering view (mastery, ladder levels, rules). Spec: [docs/PARENT_VIEW.md](docs/PARENT_VIEW.md).
 
 ---
 
-## 👩‍🏫 Live Demo Comparison: Maya vs. Leo (Grade 4)
+## 👩‍🏫 Same lesson, two learners: Maya vs Leo (Grade 4, simulated)
 
-Ananta demonstrates how teaching plans diverge for two students studying the **exact same lesson** (*Money and decimal place value*):
+Two **simulated** learners (scripted answers run through the real pipeline, created by `npm run seed:g4`) open the same lesson, *Money and decimal place value*:
 
-| Dimension | Maya (Simulated) | Leo (Simulated) |
+| | Maya (Simulated) | Leo (Simulated) |
 |---|---|---|
-| **Learning History** | Spoken words failed; visual diagrams (place-value charts, number lines) succeeded. | Visual diagrams caused confusion; worked examples and written steps succeeded. Mix-up open: believes "$-5 > -1$". |
-| **Strategy Scores** (`place-value-and-number-systems`) | Visual diagram: **0.91** (10 gains, 1 miss) · Spoken words: 0.33 | Worked example: **0.80** (4 gains, 1 miss) · Visual diagram: **0.17** (1 gain, 5 misses) |
-| **Tutor System Prompt** | Lead with: **Visual Diagram** · Examples themed on drawing/football · Opener: *"Last time, visual diagram really helped you..."* | Lead with: **Worked Example** · **AVOID: Visual Diagram** · Watch for: *"$-5 > -1$"* · Examples themed on cooking/Lego |
-| **Parent Plan Card** | *"Begin by drawing it out."* | *"Begin by working through an example together. Avoid a picture or diagram."* |
+| **History** | Plain spoken explanation did not land; pictures (place-value chart, number line) did. | Pictures left him unsure; worked examples and written steps did. Still believes "−5 is greater than −1". |
+| **Strategy scores** (`place-value-and-number-systems`, Beta(1,1) start) | Picture **0.91** (9 gains, 0 misses) · plain explanation 0.33 (1 gain, 3 misses) | Worked example **0.80** (3 gains, 0 misses) · picture **0.17** (0 gains, 4 misses) |
+| **Tutor is told** | Lead with a visual diagram · examples themed on football, drawing · *"Last time, visual diagram really helped you…"* | Lead with a worked example · **avoid visual diagram** · watch for "−5 is greater than −1" · examples themed on cooking, Lego |
+| **Parent plan card** | *"Begin by drawing it out."* | *"Begin by working through an example together." "Avoid a picture or diagram…"* |
+
+The board lines are identical for both; how they are taught is not.
 
 ---
 
-## Quickstart
+## Run it locally
+
+Requires **Node 22** and a Gemini API key from Google AI Studio (Gemini Live needs AI Studio credits).
 
 ```bash
-# 1. Install dependencies
 npm install
-
-# 2. Set Gemini API Key
-echo "GEMINI_API_KEY=your-gemini-api-key" > .env.local
-
-# 3. Start local development
-npm run dev                    # opens http://localhost:5173
+cp .env.example .env          # then set GEMINI_API_KEY (the server reads .env)
+npm run dev                   # http://localhost:3000
 ```
 
-### Seed Demo Learners
+**Course data is not in the repository.** `data/` (courses, pre-generated lessons, learners) is gitignored. A fresh clone therefore starts with an empty library. Either:
+
+- **use the Firestore project:** set `GOOGLE_CLOUD_PROJECT` and `FIREBASE_STORAGE_BUCKET` in `.env` and sign in with `gcloud auth application-default login` (needs access to the project), or
+- **build your own library:** open *Content library (admin)* on the login screen and upload a textbook PDF (allowed from `localhost` without `ADMIN_TOKEN`; uses many Gemini calls).
+
+The hand-written guided lessons in `src/guided/` are in the repository.
+
+`npm run seed:g4 -- --reset` creates Maya and Leo, but it needs the Cambridge Grade 4 Mathematics course (`cambridge-lower-secondary--g4--mathematics`) in the library first.
+
+### Tests
+
+These run offline with no API key:
 
 ```bash
-npm run seed:g4 -- --reset     # creates Maya and Leo with empirical learning histories
+npm run lint                  # TypeScript check
+npm run test:adaptation       # the child's answers change the next plan (10 checks)
+npm run test:parent           # Parent View built only from real answers, no jargon (25 checks)
+npm run test:cloud            # Firestore payloads + two-lesson adaptation on the built server
+npm run test:gates            # content quality gates, board pictures, curriculum ingest
+npm run test:eval             # EV-01 scoring code
 ```
 
-### Run Validation & Verification Suite
+`npm run eval:diagnosis` re-runs EV-01 against the real model (needs `GEMINI_API_KEY`). `npm test` includes `tests/live/run.mjs`, which has **7 known failing assertions** against an older snapshot of the voice path (logged in `PROJECT_STATE.md`).
+
+### Deploy
 
 ```bash
-npm run test:adaptation         # automated proof: child's answers adapt the plan (10 checks)
-npm run test:parent             # parent report evidence gates & zero jargon leak (25 checks)
-npm run eval:diagnosis          # EV-01 45-case diagnostic benchmark report
-npm run test:quality            # quality gates, lesson gen, quiz evidence, ladder
-npm test                        # core assessor + plan delta tests
+export PROJECT_ID=... REGION=asia-southeast1 BUCKET=...
+npm run deploy:live           # Cloud Build → Cloud Run, then Firestore rules/indexes and a health check
 ```
+
+Required variables and steps are documented at the top of `scripts/deploy-cloudrun.sh`. Secrets come from Secret Manager; never commit `.env` or service-account files.
 
 ---
 
-## For Evaluators / Judges
+## For evaluators
 
-### Quick Start (No Account Required)
+1. Open **[https://ananta-ivczdbgbja-as.a.run.app/](https://ananta-ivczdbgbja-as.a.run.app/)** — no account needed (`DEMO_MODE=true`).
+2. Pick **Maya (Simulated)** or **Leo (Simulated)**.
+3. Choose **Mathematics → Money and decimal place value** and start the lesson.
+4. Compare the openings: Maya is shown a place-value picture first; Leo starts with a worked example and no picture.
+5. Allow the microphone and talk to the tutor.
 
-1. Open **[https://ananta-ivczdbgbja-as.a.run.app/](https://ananta-ivczdbgbja-as.a.run.app/)**
-2. Click **"Maya (Simulated)"** or **"Leo (Simulated)"** — two Grade 4 learners with contrasting learning histories.
-3. Select **Mathematics** → **Money and decimal place value** → **Start Lesson**.
-4. Notice how Ananta opens differently for each child:
-   - For **Maya**: Ananta draws out a place-value diagram.
-   - For **Leo**: Ananta leads with a worked example and avoids diagrams.
-5. Allow microphone access → speak naturally to test the live voice tutor.
+Things to try saying:
 
-> No credentials required. `DEMO_MODE=true` is enabled for instant evaluator access.
+- *"Why is minus five smaller than minus one?"* — as Leo, his plan watches for this mix-up.
+- *"Can you show me a picture?"* — `show_picture`.
+- *"Wait, can you explain that again?"* — the tutor answers on the board with `write_aside`, then resumes.
+- *"I don't understand this."* — a confusion signal; pacing and approach change.
+- *"Ten coins, because ten times ten cents is one hundred cents."* — sound reasoning is recognised and recorded.
 
-### Sample Questions to Ask the Tutor
-
-- *"Why is minus five smaller than minus one?"* (As Leo: his plan explicitly watches for this mix-up).
-- *"Can you show me a picture on the board?"* (Triggers `show_picture` tool).
-- *"Wait, can you explain that again?"* (Tutor pauses, writes a side note via `write_aside`, then resumes).
-- *"I don't understand this"* (Triggers confusion signal and mid-session strategy adaptation).
-- *"Ten coins, because ten times ten cents is one hundred cents"* (Diagnostic assessor recognizes sound reasoning and updates BKT).
+**Known limits:** spaced review is not scheduled for live learners yet (mastery reaches "provisional", not "durable"); `DEMO_MODE` lets anyone with the link see every learner, so the deployment must hold demo data only; Maya and Leo are simulated, not real children.
 
 ---
 
-## Key Documentation
+## Repository layout
+
+| Path | What it is |
+|---|---|
+| `server.ts`, `server/` | Express API, Gemini Live WebSocket relay, auth/admin middleware, text-tutor route |
+| `src/adaptive/` | Learner model: reasoning assessor, live observer, BKT, ladder, strategy profile, Profiler, claim validator, repositories (file / Firestore) |
+| `src/plan/` | Deterministic plan compiler, in-lesson plan delta, prompt rendering |
+| `src/persona/` | The single tutor persona, composed into the system instruction |
+| `src/guided/` | Guided chalkboard tutor and its hand-written lessons |
+| `src/curriculum/` | PDF ingestion, course structure, lesson / photo generation, pre-generation store |
+| `src/visual/`, `src/quality/` | Board-picture vocabulary and renderer; quality lints and the review call |
+| `src/parent/` | Parent View report |
+| `src/ai/gateway.ts` | Single model gateway: model resolution, timeouts, fallback, logging |
+| `evals/diagnosis/` | EV-01 cases, runner, metrics and recorded results |
+| `tests/` | Offline test suites |
+| `scripts/` | Deploy, migration, seeding, pre-generation, verification |
+| `docs/` | Specifications, evaluation, scripts and diagrams |
+| `functions/` | Legacy Cloud Functions API — **not deployed or used** |
+
+**Not in the repository (gitignored):** `data/` (courses, lessons, learners), `.env*` and service-account keys, `docs/*.pdf` / `docs/*.pptx` (submission decks), videos, `logs/`, `backups/`, `parked/`, build output.
+
+Decisions are logged in [`DECISIONS.md`](DECISIONS.md); current status is in [`PROJECT_STATE.md`](PROJECT_STATE.md).
+
+---
+
+## Key documentation
 
 | Document | Description |
 |---|---|
-| [Submission_Template_AI_Builder_Cup_Filled.pdf](docs/Submission_Template_AI_Builder_Cup_Filled.pdf) | Official AI Builder Cup presentation deck (PDF, created from official template) |
-| [Submission_Template_AI_Builder_Cup_Filled.pptx](docs/Submission_Template_AI_Builder_Cup_Filled.pptx) | Official AI Builder Cup presentation deck (editable PPTX template) |
-| [DEMO_VIDEO_SCRIPT.md](docs/DEMO_VIDEO_SCRIPT.md) | Timed 3:35 demo video script with visual cue sheet and production guidelines |
-| [PRESENTER_VIDEO_SCRIPT.md](docs/PRESENTER_VIDEO_SCRIPT.md) | Word-for-word voiceover teleprompter script with vocal direction |
-| [USE_CASE_TALK.md](docs/USE_CASE_TALK.md) | Comprehensive use case narrative, Bloom's 2-Sigma problem, and executive pitch |
-| [HACKATHON_AUDIT.md](docs/HACKATHON_AUDIT.md) | Full audit and compliance remapping against AI Builder Cup judging criteria |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Complete technical system architecture map |
-| [EVALUATION.md](docs/EVALUATION.md) | EV-01 diagnosis accuracy evaluation methodology and limits |
-| [PARENT_VIEW.md](docs/PARENT_VIEW.md) | Parent portal design and evidence-backed narratives |
-| [TEACHING_PLAN.md](docs/TEACHING_PLAN.md) | Deterministic plan compiler design |
+| [ADAPTIVE_TEACHING.md](docs/ADAPTIVE_TEACHING.md) | How Ananta learns each child and changes how it teaches, with proof |
+| [EVALUATION.md](docs/EVALUATION.md) | EV-01 diagnosis-accuracy method, results and limits |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | As-built system map |
+| [GUIDED_TUTOR.md](docs/GUIDED_TUTOR.md) | The default guided chalkboard tutor |
+| [PARENT_VIEW.md](docs/PARENT_VIEW.md) | Parent View design and its evidence gates |
+| [TEACHING_PLAN.md](docs/TEACHING_PLAN.md) | Deterministic plan compiler |
+| [LEARNER_MODEL.md](docs/LEARNER_MODEL.md) | Learner model schema and update rules |
+| [TUTOR_PERSONA.md](docs/TUTOR_PERSONA.md) | The tutor's fixed persona, method and hard rules |
+| [CURRICULUM.md](docs/CURRICULUM.md) | Course library and PDF ingestion |
+| [BOARD_VISUALS.md](docs/BOARD_VISUALS.md) | Board pictures and quality gates |
+| [DEMO_VIDEO_SCRIPT.md](docs/DEMO_VIDEO_SCRIPT.md) · [PRESENTER_VIDEO_SCRIPT.md](docs/PRESENTER_VIDEO_SCRIPT.md) | Demo video script and voiceover |
+| [USE_CASE_TALK.md](docs/USE_CASE_TALK.md) | Use-case narrative and pitch talk track |
+| [HACKATHON_AUDIT.md](docs/HACKATHON_AUDIT.md) | Compliance against the AI Builder Cup rules and judging criteria |
 
 ---
 
 ## License
 
-Built for the [Google Cloud AI Builder Cup 2026](https://aibuildercup.com/).
+No open-source licence has been granted; all rights reserved. Built for the [Google Cloud AI Builder Cup 2026](https://aibuildercup.com/).
