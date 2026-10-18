@@ -66,3 +66,23 @@ docs/diagrams/*.pdf
 Thumbs.db
 *.tsbuildinfo
 .env.local
+
+# internal working docs — kept locally, not published (judge-facing docs stay tracked)
+/PROJECT_STATE.md
+/DECISIONS.md
+docs/AGENT_GUIDE.md
+docs/ASK_EXPERT_GAP_ANALYSIS.md
+docs/AUDIT_*.md
+docs/BUILD_PLAN.md
+docs/CH1_*.md
+docs/CODE_DOC_MAP.json
+docs/TRACEABILITY.md
+docs/FUNCTIONAL_SPEC.md
+docs/TECHNICAL_SPEC.md
+docs/HACKATHON_AUDIT.md
+docs/PITCH_DECK_OUTLINE.md
+docs/DEMO_VIDEO_SCRIPT.md
+docs/PRESENTER_VIDEO_SCRIPT.md
+docs/USE_CASE_TALK.md
+docs/SUBMISSION_DESCRIPTION.md
+docs/assets/

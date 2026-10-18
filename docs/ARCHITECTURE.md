@@ -135,10 +135,9 @@ Gemini Live tool calls dispatched in `server.ts`'s switch:
 guidance, `encourageReset`'s pacing guidance, representation-switch instructions)
 is queued in a `pendingPlanGuidance` closure variable and merged into the
 `instruction` field of whichever tool response fires NEXT via the shared
-`sendToolResponse()` function — not sent through a new Live API call. See
-AGENT_GUIDE.md landmine #4 and DECISIONS.md D-2026-09-26-4 for why (this
-sandbox cannot reach Gemini Live to test a new injection mechanism) and its
-known latency trade-off (`[T19 latency]` console log captures real numbers
+`sendToolResponse()` function — not sent through a new Live API call (decision
+D-2026-09-26-4: a new injection mechanism could not be tested against Gemini Live
+at the time). Known latency trade-off (`[T19 latency]` console log captures real numbers
 on a machine with Gemini Live access).
 
 ### 6.2 Session-end Profiler (T14, 2026-09-26)
@@ -161,7 +160,7 @@ That plan is rendered to text by `renderPlanForPrompt()` (`src/plan/render.ts`) 
 
 **This is the only live path.** `src/live/liveConfig.ts` still contains two older system-instruction builders (`classicSystemInstruction`, `adaptiveSystemInstruction`) and `server.ts` has a third, inline fallback string gated behind `process.env.PERSONA === 'legacy'`. None of these three are used by default — only `persona/compose.ts` is. Do not edit `liveConfig.ts`'s instruction builders expecting it to change live tutor behavior.
 
-**Key architectural decision (see AGENT_GUIDE.md and DECISIONS.md):** the persona's identity/voice/character/safety rules are DELIBERATELY fixed across every learner. Personalization happens entirely in the Teaching Plan layer (representation order, avoid-list, difficulty, pace), not in the persona's voice. Do not build a mechanism that mutates the persona's core identity per child — that was considered and rejected; see the product discussion in this project's chat history / DECISIONS.md if a "make the persona itself adapt" request comes up again.
+**Key architectural decision:** the persona's identity/voice/character/safety rules are DELIBERATELY fixed across every learner. Personalization happens entirely in the Teaching Plan layer (representation order, avoid-list, difficulty, pace), not in the persona's voice. Do not build a mechanism that mutates the persona's core identity per child — that was considered and rejected; see the product discussion in this project's chat history / DECISIONS.md if a "make the persona itself adapt" request comes up again.
 
 ## 8. Frontend (`src/components/`, orchestrated by root `App.tsx`)
 

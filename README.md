@@ -8,7 +8,7 @@
 
 Ananta uses Gemini Live for voice-first tutoring, Bayesian Knowledge Tracing for evidence-based mastery, and a deterministic teaching-plan compiler to teach lessons built from uploaded textbooks. Parents see every claim backed by the child's own words.
 
-🔗 **[Live demo on Cloud Run](https://ananta-ivczdbgbja-as.a.run.app/)** · 💡 **[Adaptive teaching proof](docs/ADAPTIVE_TEACHING.md)** · 📊 **[Evaluation (EV-01)](docs/EVALUATION.md)** · 🏗️ **[Architecture](docs/ARCHITECTURE.md)** · 🖼️ **[Diagrams](docs/diagrams/)** · 🎬 **[Demo video script](docs/DEMO_VIDEO_SCRIPT.md)** · 🏆 **[Rules audit](docs/HACKATHON_AUDIT.md)**
+🔗 **[Live demo on Cloud Run](https://ananta-ivczdbgbja-as.a.run.app/)** · 💡 **[Adaptive teaching proof](docs/ADAPTIVE_TEACHING.md)** · 📊 **[Evaluation (EV-01)](docs/EVALUATION.md)** · 🏗️ **[Architecture](docs/ARCHITECTURE.md)** · 🖼️ **[Diagrams](docs/diagrams/)**
 
 > The submission deck (PDF/PPTX) and the demo video are submitted through the Hack2skill portal and are **not stored in this repository** (see `.gitignore`).
 
@@ -181,7 +181,7 @@ npm run test:gates            # content quality gates, board pictures, curriculu
 npm run test:eval             # EV-01 scoring code
 ```
 
-`npm run eval:diagnosis` re-runs EV-01 against the real model (needs `GEMINI_API_KEY`). `npm test` includes `tests/live/run.mjs`, which has **7 known failing assertions** against an older snapshot of the voice path (logged in `PROJECT_STATE.md`).
+`npm run eval:diagnosis` re-runs EV-01 against the real model (needs `GEMINI_API_KEY`). `npm test` includes `tests/live/run.mjs`, which has **7 known failing assertions** against an older snapshot of the voice path.
 
 ### Deploy
 
@@ -230,12 +230,10 @@ Things to try saying:
 | `evals/diagnosis/` | EV-01 cases, runner, metrics and recorded results |
 | `tests/` | Offline test suites |
 | `scripts/` | Deploy, migration, seeding, pre-generation, verification |
-| `docs/` | Specifications, evaluation, scripts and diagrams |
+| `docs/` | Design documents, evaluation and diagrams |
 | `functions/` | Legacy Cloud Functions API — **not deployed or used** |
 
-**Not in the repository (gitignored):** `data/` (courses, lessons, learners), `.env*` and service-account keys, `docs/*.pdf` / `docs/*.pptx` (submission decks), videos, `logs/`, `backups/`, `parked/`, build output.
-
-Decisions are logged in [`DECISIONS.md`](DECISIONS.md); current status is in [`PROJECT_STATE.md`](PROJECT_STATE.md).
+**Not in the repository (gitignored):** `data/` (courses, lessons, learners), `.env*` and service-account keys, `docs/*.pdf` / `docs/*.pptx` (submission decks), videos, internal planning notes (decision log, status log, build plans, audits, pitch and video scripts), `logs/`, `backups/`, `parked/`, build output.
 
 ---
 
@@ -253,9 +251,6 @@ Decisions are logged in [`DECISIONS.md`](DECISIONS.md); current status is in [`P
 | [TUTOR_PERSONA.md](docs/TUTOR_PERSONA.md) | The tutor's fixed persona, method and hard rules |
 | [CURRICULUM.md](docs/CURRICULUM.md) | Course library and PDF ingestion |
 | [BOARD_VISUALS.md](docs/BOARD_VISUALS.md) | Board pictures and quality gates |
-| [DEMO_VIDEO_SCRIPT.md](docs/DEMO_VIDEO_SCRIPT.md) · [PRESENTER_VIDEO_SCRIPT.md](docs/PRESENTER_VIDEO_SCRIPT.md) | Demo video script and voiceover |
-| [USE_CASE_TALK.md](docs/USE_CASE_TALK.md) | Use-case narrative and pitch talk track |
-| [HACKATHON_AUDIT.md](docs/HACKATHON_AUDIT.md) | Compliance against the AI Builder Cup rules and judging criteria |
 
 ---
 
