@@ -231,7 +231,15 @@ export const ParentReport: React.FC<Props> = ({ onBack, initialStudentId, onUnde
             )}
           </section>
 
-          {report.stats.answersChecked === 0 && (
+          {report.stats.answersChecked === 0 && (report.stats.lessons > 0 || report.stats.minutes > 0) && (
+            <section className={`${CARD} p-6 text-center`} data-testid="lessons-no-answers">
+              <BookOpen className={`w-8 h-8 mx-auto mb-2 ${MUTED}`} />
+              <p className={`${INK} font-medium`}>{child} has had {report.stats.lessons} {report.stats.lessons === 1 ? 'lesson' : 'lessons'} ({report.stats.minutes} min) in {report.subjectLabel}.</p>
+              <p className={`text-sm ${MUTED} mt-1`}>No quiz answers have been checked yet, so there is nothing to show about understanding. This fills in as {child} answers questions.</p>
+            </section>
+          )}
+
+          {report.stats.answersChecked === 0 && !(report.stats.lessons > 0 || report.stats.minutes > 0) && (
             <section className={`${CARD} p-8 text-center`} data-testid="no-lessons">
               <BookOpen className={`w-8 h-8 mx-auto mb-2 ${MUTED}`} />
               <p className={`${INK} font-medium`}>No lessons in {report.subjectLabel} yet.</p>

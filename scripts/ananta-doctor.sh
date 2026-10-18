@@ -33,6 +33,7 @@ if [ "$STAGE" = deployed ]; then
 URL=$(gcloud run services describe ananta --region "$REGION" --format='value(status.url)' 2>/dev/null); echo "  URL: ${URL:-none}"
 chk "service deployed" "[ -n \"$URL\" ]" "run npm run deploy:live"
 chk "health OK" "curl -fsS $URL/api/health" "open Cloud Run logs"
+chk "latest build is live (mastery fix)" "curl -fsS $URL/api/health | grep -q mastery-fix-2026-10-18" "redeploy: npm run deploy:live"
 chk "learners API returns 200" "[ \"\$(curl -s -o /dev/null -w %{http_code} $URL/api/learners)\" = 200 ]" "DEMO_MODE not applied"
 chk "admin blocked without token" "[ \"\$(curl -s -o /dev/null -w %{http_code} $URL/api/admin/courses)\" = 401 ]" "admin route open!"
 chk "min-instances is 0 (no idle bill)" "[ \"\$(gcloud run services describe ananta --region $REGION --format='value(spec.template.metadata.annotations.\"autoscaling.knative.dev/minScale\")')\" != 1 ]" "set back to 0 after demo"

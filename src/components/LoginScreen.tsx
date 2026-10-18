@@ -137,6 +137,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
     setCreating(true);
     setError('');
     try {
+      // Reuse an existing profile with the same name, board and grade instead of creating a duplicate.
+      const same = profiles.find(p =>
+        (p.name || '').trim().toLowerCase() === newName.trim().toLowerCase() &&
+        (p.board || '') === newBoard && p.grade === `Grade ${newGradeLevel}`);
+      if (same) { onLogin(same); return; }
       const studentId = `student_${newName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
       const res = await authFetch('/api/learners', {
         method: 'POST',
@@ -176,7 +181,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onParentPorta
           className="w-52 h-52 sm:w-64 sm:h-64 mx-auto rounded-3xl object-cover shadow-2xl shadow-black/60 ring-1 ring-amber-300/20 mb-4"
         />
         <h1 className="sr-only">Ananta</h1>
-        <p className="text-indigo-300 text-sm font-medium mb-3">Where Every Question Opens Infinity</p>
+        <p className="text-white text-xl sm:text-2xl font-bold tracking-tight leading-snug">
+          A personal, voice-based tutor
+        </p>
+        <p className="text-indigo-300 text-sm sm:text-base font-medium mt-1 mb-3">
+          that adapts to how each child learns
+        </p>
         <p className="text-slate-400 text-sm max-w-xs mx-auto">
           A judgment-free space to ask any question, at any pace, as many times as you need.
         </p>

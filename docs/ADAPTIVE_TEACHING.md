@@ -3,6 +3,15 @@
 _Updated 2026-10-17. Every statement below was checked against the code; file and function names are given so it can be
 verified. To see it work: `npm run test:adaptation` (offline, no API key, about 10 seconds)._
 
+> **2026-10-18 update (D-2026-10-17-7, D-2026-10-17-8):** live lessons no longer depend only on `assess_child_reasoning`.
+> The live observer's judgement of each child answer is also recorded as evidence (`src/adaptive/observerEvidence.ts`;
+> a mix-up is confirmed only after a second, later observation), and can trigger in-lesson re-teaching. The approach
+> credited is the one actually used: the tutor's `representationUsed`, else the board action, else the guided beat's kind;
+> evidence with no known approach credits none. Firestore writes on Cloud Run were failing before this fix (`undefined`
+> fields). Proof: `npm run test:cloud` (4 offline tests, incl. `tests/cloud/two-lesson-adaptation.cjs`: lesson 2's plan
+> changes from "visual diagram first" to "worked example first, avoid visual diagram"). Limit 1 below is reduced
+> accordingly; a live run on the redeployed Cloud Run build is still the check.
+
 ## In one paragraph
 
 Ananta does not label a child as a "visual learner". After every answer the tutor checks, it records **how the idea had been

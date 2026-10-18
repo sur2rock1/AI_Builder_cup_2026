@@ -60,7 +60,9 @@
     "check:pictures": "tsx scripts/check-picture-numbers.ts",
     "check:scripts": "tsx scripts/check-guided-scripts.ts",
     "test:skip": "tsx tests/guided/skip-practice.mjs",
-    "test:latest-lesson": "tsx tests/parent/latest-lesson.mjs"
+    "repair:mastery": "npx --yes tsx scripts/repair-mastery.ts",
+    "test:latest-lesson": "tsx tests/parent/latest-lesson.mjs",
+    "test:cloud": "npx --yes tsx tests/cloud/firestore-payloads.mjs && npx --yes tsx tests/cloud/mastery-recovery.mjs && npx --yes tsx tests/cloud/live-learning-journey.mjs && npm run -s build && node tests/cloud/server-live-lesson.cjs && node tests/cloud/two-lesson-adaptation.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

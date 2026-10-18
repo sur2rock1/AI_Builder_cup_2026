@@ -3,7 +3,8 @@ import http from 'http';
 import path from 'path';
 import dotenv from 'dotenv';
 import { WebSocketServer, WebSocket } from 'ws';
-import { LiveObserver } from './src/adaptive/liveObserver';
+import { LiveObserver, type LearnerSnapshot } from './src/adaptive/liveObserver';
+import { evidenceFromSnapshot, newObserverMemory, rememberRecorded } from './src/adaptive/observerEvidence';
 import { GoogleGenAI, Modality, Type, LiveServerMessage } from '@google/genai';
 import { createDynamicLesson } from './src/utils/lessonGenerator';
 import multer from 'multer';
@@ -12,7 +13,7 @@ import {
   ensureConceptState, getConceptState, recordAttempt, addGlobalInsight,
   incrementSessionCount, startSession, getSession, updateSession, endSession,
   recordReasoningEvidence, getEvidenceLog, disputeMisconception, recordConfusionSignal,
-  resolveEscalation,
+  resolveEscalation, withLearnerLock,
 } from './src/adaptive/learnerStore';
 import { getRepo } from './src/adaptive/repo';
 import { runProfiler } from './src/adaptive/profiler';
@@ -236,6 +237,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     hasApiKey: Boolean(process.env.GEMINI_API_KEY),
+    build: 'mastery-fix-2026-10-18',   // bump when a deploy must be recognisable from outside
+    learnerStore: process.env.USE_FIRESTORE_LEARNERS === 'true' || process.env.K_SERVICE ? 'firestore' : 'file',
     time: new Date().toISOString(),
   });
 });
@@ -865,6 +868,15 @@ app.get('/api/learners/:studentId/events', requireAuth, requireOwnership, async 
 // Parent view (docs/PARENT_VIEW.md). GET is instant (deterministic facts + cached or offline-template
 // letter, never calls a model). POST asks Gemini to write the letter/tip, validates every sentence
 // against the child's real answers, caches the result, and returns the full report.
+app.get('/api/learners/:studentId/transcripts', requireAuth, requireOwnership, async (req, res) => {
+  try {
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+    res.json({ transcripts: await getRepo().listTranscripts(String(req.params.studentId), limit) });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to load transcripts' });
+  }
+});
+
 app.get('/api/learners/:studentId/parent-report', requireAuth, requireOwnership, async (req, res) => {
   try {
     const report = await getParentReport(req.params.studentId, req.query.subjectId ? String(req.query.subjectId) : undefined);
@@ -1203,6 +1215,9 @@ function observeMessage(message: LiveServerMessage, observer: LiveObserver | nul
   if (sc?.turnComplete) observer.exchangeDone();
 }
 
+// Lessons already counted (a reconnect keeps the same sessionId and must not add a second lesson).
+const countedLessonIds = new Set<string>();
+
 wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   // Parse query parameters. (T04) sessionId is the primary key: the server
   // resolves studentId/subjectId/conceptId/plan from the session it started
@@ -1213,7 +1228,28 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const sessionIdParam = url.searchParams.get('sessionId') || '';
   const isGuest = url.searchParams.get('guest') === '1';
-  const activeSession = sessionIdParam ? getSession(sessionIdParam) : undefined;
+  let activeSession = sessionIdParam ? getSession(sessionIdParam) : undefined;
+  // The session table is in memory. If this instance restarted (or another one served /api/session/start), rebuild the
+  // session from its id (session_<time>_<studentId>) so the lesson is still recorded against the right learner.
+  if (sessionIdParam && !activeSession && !isGuest) {
+    const m = /^session_(\d+)_(.+)$/.exec(sessionIdParam);
+    const qSubject = url.searchParams.get('subjectId') || '';
+    const qConcept = url.searchParams.get('conceptId') || '';
+    if (m && qSubject && qConcept) {
+      try {
+        const learner = await getLearner(m[2]);
+        if (learner?.subjects?.[qSubject] && getCurriculum(qSubject)?.concepts.some((c) => c.id === qConcept)) {
+          const rebuilt: AdaptiveSessionState = {
+            sessionId: sessionIdParam, studentId: m[2], subjectId: qSubject, currentConceptId: qConcept,
+            currentStrategy: 'direct_explanation', sessionStarted: Number(m[1]) || wsConnectedAt, interactionCount: 0, recentAttempts: [],
+          };
+          startSession(rebuilt);
+          activeSession = rebuilt;
+          console.warn(`[WebSocket] session ${sessionIdParam} was not in memory (instance restarted?) - rebuilt it for ${m[2]}`);
+        }
+      } catch (e: any) { console.warn('[WebSocket] could not rebuild session:', e?.message); }
+    }
+  }
 
   let topic = url.searchParams.get('topic') || 'the requested subject';
   let grade = url.searchParams.get('grade') || 'the student level';
@@ -1290,6 +1326,121 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
   let liveSession: any = null;
   let observer: LiveObserver | null = null;
   const transcriptLog = new TranscriptLog();
+  // Live observer → learner model (src/adaptive/observerEvidence.ts).
+  let observerMemory = newObserverMemory();
+  let assessRecordedThisExchange = false;
+  let liveEvidenceSaved = 0;     // evidence records written this lesson (assess + observer), for the session-end log
+  // How the latest explanation was given: the tutor's own report (assess_child_reasoning.representationUsed), a board action
+  // (picture, side working), or the guided beat's kind. null = not known: the answer is recorded but no approach is credited,
+  // so the strategy profile (which decides how the NEXT lesson teaches) only learns from approaches we actually know were used.
+  let taughtRep: TeachingStrategy | null = null;
+  const BEAT_KIND_REP: Record<string, TeachingStrategy> = {
+    orient: 'direct_explanation', define: 'direct_explanation', rule: 'direct_explanation', exception: 'direct_explanation',
+    show: 'step_by_step', method: 'worked_example', analogy: 'real_world_analogy', contrast: 'peer_comparison',
+  };   // apply / check: the child is answering - keep the approach of the explanation before it
+  const noteTeachingAction = (name: string, args: any) => {
+    if (name === 'show_picture' || name === 'update_diagram' || (name === 'switch_board_view' && ['2d', '3d'].includes(String(args?.tab)))) taughtRep = 'visual_diagram';
+    else if (name === 'write_aside' || name === 'update_chalkboard_notes') taughtRep = 'step_by_step';
+    else if (name === 'generate_photo_visual' || (name === 'switch_board_view' && args?.tab === 'photo')) taughtRep = 'real_world_analogy';
+    else if (guidedSession && (name === 'advance_beat' || name === 'teach_skipped' || name === 'next_line')) {
+      const beat = guidedSession.script.beats[guidedSession.beatIndex];
+      const pictured = beat?.board?.some((b: any) => b?.type === 'picture');
+      const rep = beat ? (beat.kind === 'show' && pictured ? 'visual_diagram' : BEAT_KIND_REP[beat.kind]) : undefined;
+      if (rep && name !== 'next_line') taughtRep = rep;
+      else if (rep && !taughtRep) taughtRep = rep;
+    }
+  };
+  let tutorSpoke = false;        // the voice model actually produced audio: a real lesson, not a failed connection
+
+  /** recordReasoningEvidence, creating the concept state first if this learner has none for the concept yet. */
+  const recordEvidenceEnsured = async (input: Parameters<typeof recordReasoningEvidence>[0]) => {
+    let res = await recordReasoningEvidence(input);
+    if (!res && studentId && subjectId && conceptId) {
+      const def = getCurriculum(subjectId)?.concepts.find((c) => c.id === conceptId);
+      if (def) {
+        await withLearnerLock(studentId, () => ensureConceptState(studentId, subjectId, conceptId, def.label, 'direct_explanation', conceptTypeFor(def)));
+        res = await recordReasoningEvidence(input);
+      }
+    }
+    if (res) liveEvidenceSaved++;
+    return res;
+  };
+
+  const persistObservation = (snap: LearnerSnapshot) => {
+    if (!studentId || !subjectId || !conceptId || isGuest) return;
+    // OBSERVER_EVIDENCE=off restores D-2026-10-17-5 (only tutor-requested checks count); see D-2026-10-17-7.
+    if (process.env.OBSERVER_EVIDENCE === 'off') return;
+    if (assessRecordedThisExchange) {
+      // assess_child_reasoning already recorded this exchange (a fuller diagnosis); do not count the answer twice.
+      assessRecordedThisExchange = false;
+      observerMemory = rememberRecorded(observerMemory, snap);
+      return;
+    }
+    const ev = evidenceFromSnapshot(snap, observerMemory, observer?.lastExchange() ?? { tutor: '', child: '' });
+    if (!ev) return;
+    observerMemory = rememberRecorded(observerMemory, snap);
+    const def = getCurriculum(subjectId)?.concepts.find((c) => c.id === conceptId);
+    recordEvidenceEnsured({
+      studentId, subjectId, conceptId,
+      conceptType: def ? conceptTypeFor(def) : 'general',
+      difficultyLevel: def?.difficultyLevel || 2,
+      promptType: ev.promptType,
+      questionAsked: ev.questionAsked,
+      childAnswer: ev.childAnswer,
+      childReasoning: ev.childReasoning,
+      classification: ev.classification,
+      understandingDepth: ev.understandingDepth,
+      candidateMisconceptions: ev.candidateMisconceptions,
+      confidence: ev.confidence,
+      strategyInUse: taughtRep || 'direct_explanation',
+      creditStrategy: taughtRep !== null,
+      moveUsed: 'OBSERVED_EXCHANGE',
+      sessionId: sessionIdParam || `adhoc_${studentId}_${wsConnectedAt}`,
+      planVersion: resolvedPlan?.planVersion,
+      diagnosticianModel: 'liveObserver',
+      source: 'voice',
+    }).then((res) => {
+      if (!res) { console.warn(`[ObserverEvidence] not recorded for ${studentId}/${conceptId} (no concept state)`); return; }
+      console.log(`[ObserverEvidence] saved ${res.eventId} ${ev.understandingDepth}/${ev.classification} via ${taughtRep || 'unknown approach'} mastery ${res.masteryBefore}->${res.masteryAfter}${ev.candidateMisconceptions.length ? ` mix-ups: ${ev.candidateMisconceptions.map((m) => m.id).join(',')}` : ''}`);
+      // In-lesson re-teaching from the observer too (the tutor calls assess_child_reasoning for only some answers).
+      // The observer reports a few seconds after the answer, so only forward-looking changes are passed on - switch
+      // approach and teach after repeated misses, or a contrast case for a confirmed mix-up - never "ask how they got it"
+      // or "probe now", which would be stale by the time they arrive.
+      if (resolvedPlan) {
+        const outcome = deriveOutcome({
+          classification: ev.classification as any,
+          candidateMisconceptionsCount: ev.candidateMisconceptions.length,
+          newlyConfirmedCount: res.newlyConfirmed.length,
+        });
+        const delta = compilePlanDelta(resolvedPlan, deltaState, {
+          conceptId, outcome, representationUsed: taughtRep || 'direct_explanation',
+          questionKey: ev.questionAsked || conceptId, hasReasoning: ev.childReasoning.length > 3,
+        });
+        deltaState = delta.state;
+        if (delta.teachDirectly || outcome === 'misconception_confirmed') {
+          pendingPlanGuidance = `(From watching the last few answers) ${delta.instruction}`;
+          pendingPlanGuidanceQueuedAt = Date.now();
+          console.log(`[ObserverEvidence] re-teach queued (${outcome}${delta.nextRepresentation ? ` -> ${delta.nextRepresentation}` : ''})`);
+          if (clientWs.readyState === WebSocket.OPEN) {
+            clientWs.send(JSON.stringify({ type: 'plan_update', instruction: delta.instruction, nextRepresentation: delta.nextRepresentation, outcome, moveUsed: 'OBSERVED_EXCHANGE' }));
+          }
+        }
+      }
+      if (clientWs.readyState === WebSocket.OPEN) {
+        clientWs.send(JSON.stringify({
+          type: 'learner_update_v2',
+          fromObserver: true,
+          evidence: res,
+          diagnosis: {
+            classification: ev.classification, understandingDepth: ev.understandingDepth, confidence: ev.confidence,
+            shouldProbe: false, tutorGuidance: snap.nextStep || ev.noticed, moveUsed: 'OBSERVED_EXCHANGE',
+            questionAsked: ev.questionAsked, childAnswer: ev.childAnswer, childReasoning: ev.childReasoning,
+            candidateMisconceptions: ev.candidateMisconceptions, diagnosisLatencyMs: 0,
+          },
+        }));
+      }
+    }).catch((err) => console.error('[ObserverEvidence] save FAILED:', err?.message || err));
+  };
   // Guided: how long the voice stays silent after a guided tool call (the cost of writing line by line).
   let guidedVoiceClock: { at: number; tool: string } | null = null;
   // Stall watchdog (guided only). After a tool result the tutor must speak. If the live model goes silent instead
@@ -1391,9 +1542,11 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
     // recorded on this concept. This is what the strategy profile credits, so the plan can learn what works for this child.
     const REPRESENTATIONS: TeachingStrategy[] = ['direct_explanation', 'worked_example', 'visual_diagram', 'real_world_analogy', 'socratic_questioning',
       'step_by_step', 'story_context', 'interactive_simulation', 'peer_comparison', 'prerequisite_review'];
-    const representationUsed: TeachingStrategy = REPRESENTATIONS.includes(args.representationUsed)
+    const reported = REPRESENTATIONS.includes(args.representationUsed);
+    const representationUsed: TeachingStrategy = reported
       ? args.representationUsed as TeachingStrategy
-      : (conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy;
+      : (taughtRep || conceptStateHere?.strategiesUsed?.[conceptStateHere.strategiesUsed.length - 1] || 'direct_explanation') as TeachingStrategy;
+    if (reported) taughtRep = representationUsed;
 
     const deadlineResult = await assessReasoningWithDeadline({
       concept: conceptDef,
@@ -1432,7 +1585,7 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
 
     const promptType = ['teach', 'check', 'probe', 'transfer'].includes(args.promptType) ? args.promptType : 'check';
 
-    const evidenceResult = await recordReasoningEvidence({
+    const evidenceResult = await recordEvidenceEnsured({
       studentId, subjectId, conceptId,
       conceptType: conceptTypeFor(conceptDef, conceptStateHere),
       difficultyLevel: conceptDef.difficultyLevel || 2,
@@ -1451,9 +1604,13 @@ wss.on('connection', async (clientWs: WebSocket, req: http.IncomingMessage) => {
       diagnosticianModel: 'gemini (reasoningAssessor)',
       source: 'voice',
     }).catch((err) => {
-      console.error('[assess] recordReasoningEvidence failed; answering the tutor anyway', err);
+      console.error('[assess] recordReasoningEvidence FAILED; answering the tutor anyway', err?.message || err);
       return null;
     });
+    if (evidenceResult) {
+      assessRecordedThisExchange = true;
+      console.log(`[assess] saved ${evidenceResult.eventId} ${assessment.understandingDepth}/${assessment.classification} mastery ${evidenceResult.masteryBefore}->${evidenceResult.masteryAfter}`);
+    }
 
     const moveUsed = assessment.shouldProbe ? 'DISCRIMINATING_PROBE' : 'ELICIT_REASONING';
 
@@ -1671,8 +1828,8 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
     // ── Learner panel side-channel (additive; never touches the voice session) ──
     observer = new LiveObserver(topic, grade, apiKey, (snap) => {
       if (clientWs.readyState === WebSocket.OPEN) clientWs.send(JSON.stringify({ type: 'learner_update', snapshot: snap }));
+      try { persistObservation(snap); } catch (e: any) { console.error('[ObserverEvidence] failed:', e?.message || e); }
     });
-    clientWs.on('close', () => observer?.close());
 
     const liveModel = process.env.LIVE_MODEL || 'gemini-3.8-live';
     liveSession = await ai.live.connect({
@@ -1704,6 +1861,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
           if (modelParts && Array.isArray(modelParts)) {
             for (const part of modelParts) {
               if (part.inlineData?.data) {
+                tutorSpoke = true;
                 if (guidedVoiceClock) {
                   console.log(`[guided] voice resumed ${Date.now() - guidedVoiceClock.at}ms after ${guidedVoiceClock.tool}`);
                   guidedVoiceClock = null;
@@ -1777,6 +1935,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
                 // The server holds the board (src/guided/session.ts); the browser gets a snapshot
                 // and shows it in step with the voice.
                 const reply = guidedSession.handle(call.name, (call.args || {}) as Record<string, any>, guidedBudget);
+                noteTeachingAction(call.name, call.args || {});
                 console.log(`[guided] ${reply.log}`);
                 sendToolResponse(call, reply.response);
                 if (reply.changed) clientWs.send(JSON.stringify({ type: 'guided_state', state: guidedSession.state }));
@@ -1809,6 +1968,7 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
                 continue;
               }
 
+              noteTeachingAction(call.name, call.args || {});
               if (call.name === 'update_diagram') {
                 // Answers with the picture's step names when it is a prepared one
                 // (bounded store read, see handleUpdateDiagramTool above).
@@ -1953,22 +2113,47 @@ ${curriculumCtx ? '\n\n' + curriculumCtx.systemPromptBlock : ''}`.trimEnd()
     // learner (has studentId+subjectId, i.e. not a guest session) with a
     // real API key is required; guests and misconfigured servers skip
     // silently rather than erroring into an empty console.
-    if (studentId && subjectId) {
-      const sessionStartedAt = activeSession?.sessionStarted || wsConnectedAt;
+    if (!(studentId && subjectId && tutorSpoke)) observer?.close();
+    if (studentId && subjectId && !tutorSpoke) {
+      // The voice model never spoke (credits, quota, network, closed at once): not a lesson. Counting these used to
+      // add a "lesson" and a minute for every reconnect attempt.
+      console.log(`[Session] ${sessionIdParam || studentId}: the tutor never spoke - not counted as a lesson`);
+    }
+    if (studentId && subjectId && tutorSpoke) {
+      // Minutes this connection was open (a reconnect continues the same sessionId; each connection adds its own time).
+      const sessionStartedAt = wsConnectedAt;
       const minutes = Math.max(1, Math.round((Date.now() - sessionStartedAt) / 60000));
-      const liveNotes = observer?.notes() ?? [];
       // One after the other: both read-modify-write the same profile.
       (async () => {
+        // The observer may still be judging the last answer: let it finish (its evidence is queued before the count).
+        try { await observer?.drain(10000); } catch { /* observation is best-effort */ }
+        const liveNotes = observer?.notes() ?? [];
         // Lessons and minutes on the subject (shown in the Parent View and Under the hood; this was never counted before).
-        try { await incrementSessionCount(studentId, subjectId, minutes); } catch (err) { console.error('[Session] could not count the lesson:', err); }
+        const lessonKey = sessionIdParam || `adhoc_${studentId}_${wsConnectedAt}`;
+        const firstConnection = !countedLessonIds.has(lessonKey);
+        countedLessonIds.add(lessonKey);
+        try { await incrementSessionCount(studentId, subjectId, minutes, firstConnection); } catch (err) { console.error('[Session] could not count the lesson:', err); }
+        console.log(`[Session] ${sessionIdParam || studentId}: ${minutes} min, ${liveEvidenceSaved} evidence record(s) saved this lesson`);
+        // Save what was actually said, so the conversation survives the session (Firestore learners/{id}/transcripts/{sessionId}).
+        try {
+          const turns = transcriptLog.getTurns();
+          if (turns.length) {
+            const tid = sessionIdParam || `adhoc_${studentId}_${wsConnectedAt}`;
+            await getRepo().saveTranscript(studentId, tid, { sessionId: tid, studentId, subjectId, startedAt: sessionStartedAt, endedAt: Date.now(), turns });
+            console.log(`[Session] saved transcript ${tid} (${turns.length} turns)`);
+          } else {
+            console.log('[Session] no transcript turns to save');
+          }
+        } catch (err) { console.error('[Session] could not save the transcript:', err); }
         if (apiKey) {
-          await runProfiler({
+          const res = await withLearnerLock(studentId, () => runProfiler({
             studentId, subjectId,
             sessionId: sessionIdParam || `adhoc_${studentId}_${wsConnectedAt}`,
             sessionStartedAt,
             apiKey,
             liveNotes,
-          });
+          }));
+          console.log(`[Profiler] ${sessionIdParam || studentId}: ${res ? `summary saved, claims accepted=${res.claimsAccepted} rejected=${res.claimsRejected}` : 'no summary (no evidence this lesson)'}`);
         }
       })().catch((err) => console.error('[Profiler] runProfiler threw:', err));
     }

@@ -37,4 +37,8 @@ export interface LearnerRepository {
   getLatestPlan(studentId: string, subjectId: string): Promise<{ planVersion: string; plan: unknown } | null>;
 
   saveSessionSummary(studentId: string, sessionId: string, summary: unknown): Promise<void>;
+
+  /** The conversation of one lesson (what the child and tutor said). Stored under learners/{id}/transcripts/{sessionId}. */
+  saveTranscript(studentId: string, sessionId: string, transcript: unknown): Promise<void>;
+  listTranscripts(studentId: string, limit?: number): Promise<unknown[]>;
 }

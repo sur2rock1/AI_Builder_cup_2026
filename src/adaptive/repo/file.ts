@@ -127,6 +127,19 @@ export class FileLearnerRepository implements LearnerRepository {
     return { planVersion, plan: plans[planVersion] };
   }
 
+  async saveTranscript(studentId: string, sessionId: string, transcript: unknown): Promise<void> {
+    const file = sessionsFile(studentId).replace(/\.json$/, '.transcripts.json');
+    const all = readJson<Record<string, unknown>>(file, {});
+    all[sessionId] = transcript;
+    writeJson(file, all);
+  }
+
+  async listTranscripts(studentId: string, limit = 20): Promise<unknown[]> {
+    const file = sessionsFile(studentId).replace(/\.json$/, '.transcripts.json');
+    const all = readJson<Record<string, any>>(file, {});
+    return Object.values(all).sort((a: any, b: any) => (b.endedAt || 0) - (a.endedAt || 0)).slice(0, limit);
+  }
+
   async saveSessionSummary(studentId: string, sessionId: string, summary: unknown): Promise<void> {
     const sessions = readJson<Record<string, unknown>>(sessionsFile(studentId), {});
     sessions[sessionId] = summary;

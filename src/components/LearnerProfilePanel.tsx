@@ -20,7 +20,7 @@ const MASTERY_COLOR: Record<string, string> = {
 };
 const MASTERY_LABEL: Record<string, string> = {
   not_started: 'Not Started',
-  exposed:     'Exposed',
+  exposed:     'In progress',
   partial:     'Partial',
   developing:  'Developing',
   proficient:  'Proficient',
@@ -149,7 +149,7 @@ const ConceptCard: React.FC<ConceptCardProps> = ({ cs, studentId, subjectId }) =
           <ChevronRight size={14} color="#6b7280" style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: '0.2s' }} />
         </div>
         <div style={{ marginTop: 6 }}>
-          <MasteryBar score={cs.masteryScore} level={cs.masteryLevel} />
+          <MasteryBar score={cs.masteryScore} level={cs.masteryLevel === 'not_started' && (cs.attemptCount || 0) > 0 ? 'exposed' : cs.masteryLevel} />
         </div>
         {(cs.ladder || cs.masteryStatus) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>

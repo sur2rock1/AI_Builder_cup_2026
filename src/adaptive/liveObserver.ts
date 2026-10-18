@@ -190,6 +190,7 @@ export class LiveObserver {
   private childTurns = 0;
   private childSinceLast = false;
   private newTurn = false;
+  private running: Promise<void> | null = null;
   /** Every distinct "what I noticed" line, kept so the session summary can store them (they used to reach the screen only). */
   private history: Array<{ at: number; concept: string; understanding: number; level: Level; noticed: string; evidence: string }> = [];
 
@@ -241,10 +242,34 @@ export class LiveObserver {
     if (!this.childHasSaidSomething()) return;
     this.childSinceLast = false;
     if (this.inFlight) { this.rerun = true; return; }
-    void this.run();
+    this.running = this.run();
   }
 
   close() { this.closed = true; }
+
+  /**
+   * End of lesson: let an observation already in progress finish (it is often the child's last, most telling answer),
+   * judge a final child turn that never got a turn-complete, then close. Bounded by `ms`.
+   */
+  async drain(ms = 10000): Promise<void> {
+    if (this.closed) return;
+    if (!this.inFlight && this.childSinceLast && this.childHasSaidSomething()) {
+      this.childSinceLast = false;
+      this.running = this.run();
+    }
+    if (this.running) await Promise.race([this.running, new Promise((r) => setTimeout(r, ms))]);
+    this.closed = true;
+  }
+  /** The latest child turn and the tutor turn just before it (what the child was answering). */
+  lastExchange(): { tutor: string; child: string } {
+    let child = '', tutor = '';
+    for (let i = this.turns.length - 1; i >= 0; i--) {
+      const t = this.turns[i];
+      if (!child) { if (t.role === 'child' && t.text.trim()) child = t.text.trim(); continue; }
+      if (t.role === 'tutor' && t.text.trim()) { tutor = t.text.trim(); break; }
+    }
+    return { tutor, child };
+  }
   /** The notes made during this lesson, oldest first. */
   notes() { return [...this.history]; }
   get current() { return this.snapshot; }

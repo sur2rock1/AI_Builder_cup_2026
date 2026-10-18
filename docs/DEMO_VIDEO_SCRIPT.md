@@ -118,7 +118,7 @@
 
 - **On Screen:**
   - Closing Title Card:
-    - **Ananta — Adaptive AI Tutor**
+    - **Ananta — A personal, voice-based tutor that adapts to how each child learns**
     - Live URL: `https://ananta-ivczdbgbja-as.a.run.app/`
     - GitHub: `github.com/sur2rock1/AI_Builder_cup_2026`
     - Google Cloud Stack: Gemini 3.8 Live · Gemini 3.6 Flash · Gemini 3.8 Flash · Cloud Run · Firestore · Cloud Storage · Google Files API

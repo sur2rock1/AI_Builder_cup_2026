@@ -6,11 +6,20 @@
 export class TranscriptLog {
   private tutor = '';
   private child = '';
+  /** Every finished turn, kept so the server can save the conversation when the lesson ends. */
+  private readonly turns: { role: 'child' | 'tutor'; text: string; at: number }[] = [];
   constructor(private readonly out: (line: string) => void = (l) => console.log(l)) {}
 
+  /** Finished turns so far (capped, text trimmed), safe to store. */
+  getTurns(maxTurns = 400, maxChars = 1000) {
+    return this.turns.slice(-maxTurns).map(t => ({ ...t, text: t.text.slice(0, maxChars) }));
+  }
+
   private flush(): void {
-    if (this.child.trim()) this.out(`[transcript] child: ${this.child.trim()}`);
-    if (this.tutor.trim()) this.out(`[transcript] tutor: ${this.tutor.trim()}`);
+    const now = Date.now();
+    if (this.child.trim()) { this.turns.push({ role: 'child', text: this.child.trim(), at: now }); this.out(`[transcript] child: ${this.child.trim()}`); }
+    if (this.tutor.trim()) { this.turns.push({ role: 'tutor', text: this.tutor.trim(), at: now }); this.out(`[transcript] tutor: ${this.tutor.trim()}`); }
+    if (this.turns.length > 1000) this.turns.splice(0, this.turns.length - 1000);
     this.child = '';
     this.tutor = '';
   }

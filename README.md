@@ -1,5 +1,7 @@
 # Ananta — Adaptive AI Tutor
 
+**A personal, voice-based tutor that adapts to how each child learns.**
+
 > **AI Builder Cup 2026 · Media, Content & Digital Experiences (Category: Education)**
 
 **An AI tutor that diagnoses *how* a child reasons — not just *what* they answer — and adapts in real time.**

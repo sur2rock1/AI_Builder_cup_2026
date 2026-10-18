@@ -372,8 +372,10 @@ export interface MisconceptionRecord {
   observations: number;
   firstSeen: number;
   lastSeen: number;
-  /** Set when a later transfer item was answered soundly. */
+  /** Set when a later transfer item was answered soundly, or after RESOLVE_AFTER_CLEAN_APPLICATIONS clean applications. */
   resolvedAt?: number;
+  /** Sound "applied"/"transferred" answers on this concept, with no sign of this mix-up, since it was last seen. */
+  cleanApplications?: number;
   /** Set when the learner (via the learner card, FR-22) disputes this entry.
    * A disputed entry is excluded from the plan's watch-list until new evidence
    * arrives (docs/FUNCTIONAL_SPEC.md J3) — it is not deleted, so the evidence

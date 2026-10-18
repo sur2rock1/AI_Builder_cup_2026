@@ -15,6 +15,10 @@ WITH_HOSTING="${WITH_HOSTING:-no}"
 # Fine for simulated demo learners only: any caller who knows a studentId can read it, and GET /api/learners
 # lists every profile. Use DEMO_MODE=false only once real sign-in is wired up.
 DEMO_MODE="${DEMO_MODE:-true}"
+# One instance by default: live-lesson state (sessions, the per-learner write lock, the curricula cache) is in memory,
+# so a second instance would split a lesson. MIN_INSTANCES=1 keeps it warm for judging (billed while idle).
+MIN_INSTANCES="${MIN_INSTANCES:-0}"
+MAX_INSTANCES="${MAX_INSTANCES:-1}"
 RUNTIME_SA="ananta-run@${PROJECT_ID}.iam.gserviceaccount.com"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -50,8 +54,8 @@ gcloud run deploy "$SERVICE" \
   --session-affinity \
   --timeout=3600 \
   --concurrency=80 \
-  --min-instances=0 \
-  --max-instances=3 \
+  --min-instances="${MIN_INSTANCES:-0}" \
+  --max-instances="${MAX_INSTANCES:-1}" \
   --memory=1Gi \
   --cpu=1 \
   --no-cpu-throttling \

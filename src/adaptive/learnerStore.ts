@@ -15,8 +15,23 @@ import { updateMastery, BKTObservation, MASTERY_THRESHOLD } from './bkt';
 import { ladderLevelForDepth, updateLadder, computeMasteryStatus } from './ladder';
 import { recordStrategyOutcome } from './strategyProfile';
 
-function scoreToLevel(score: number): MasteryLevel {
-  if (score === 0)  return 'not_started';
+// ── Per-learner write lock ───────────────────────────────────────
+// Every mutating call below is read-profile → change → write-profile. In a live lesson several of them run close
+// together (an assessment, the live observer's evidence, a confusion signal, the session-end count and profiler);
+// without serialising them the later write silently overwrites the earlier one. One chain per learner, in process
+// (Cloud Run runs a single instance for this app: scripts/deploy-cloudrun.sh MAX_INSTANCES).
+const learnerLocks = new Map<string, Promise<unknown>>();
+export function withLearnerLock<T>(studentId: string, fn: () => Promise<T>): Promise<T> {
+  const prev = learnerLocks.get(studentId) || Promise.resolve();
+  const run = prev.catch(() => undefined).then(fn);
+  const tail = run.catch(() => undefined);
+  learnerLocks.set(studentId, tail);
+  void tail.then(() => { if (learnerLocks.get(studentId) === tail) learnerLocks.delete(studentId); });
+  return run;
+}
+
+function scoreToLevel(score: number, attempts = 0): MasteryLevel {
+  if (score === 0)  return attempts > 0 ? 'exposed' : 'not_started';   // answered, but nothing secure yet - not "not started"
   if (score < 20)   return 'exposed';
   if (score < 40)   return 'partial';
   if (score < 60)   return 'developing';
@@ -114,7 +129,7 @@ export async function recordAttempt(
   cs.lastVisited = Date.now();
 
   cs.masteryScore = Math.max(0, Math.min(100, cs.masteryScore + assessment.masteryDelta));
-  cs.masteryLevel = scoreToLevel(cs.masteryScore);
+  cs.masteryLevel = scoreToLevel(cs.masteryScore, cs.attemptCount);
 
   if (assessment.misconceptionDetected && assessment.misconceptionDescription) {
     const desc = assessment.misconceptionDescription;
@@ -176,7 +191,11 @@ export interface RecordConfusionSignalResult {
   notedOnConcept: boolean;
 }
 
-export async function recordConfusionSignal(
+export function recordConfusionSignal(input: RecordConfusionSignalInput): Promise<RecordConfusionSignalResult | null> {
+  return withLearnerLock(input.studentId, () => recordConfusionSignalUnlocked(input));
+}
+
+async function recordConfusionSignalUnlocked(
   input: RecordConfusionSignalInput
 ): Promise<RecordConfusionSignalResult | null> {
   const repo = getRepo();
@@ -302,11 +321,16 @@ export async function disputeMisconception(
   return rec;
 }
 
-export async function incrementSessionCount(studentId: string, subjectId: string, mins: number): Promise<void> {
+/** Adds the minutes; counts a lesson unless `countLesson` is false (a reconnect within the same lesson). */
+export function incrementSessionCount(studentId: string, subjectId: string, mins: number, countLesson = true): Promise<void> {
+  return withLearnerLock(studentId, () => incrementSessionCountUnlocked(studentId, subjectId, mins, countLesson));
+}
+
+async function incrementSessionCountUnlocked(studentId: string, subjectId: string, mins: number, countLesson: boolean): Promise<void> {
   const repo = getRepo();
   const learner = await repo.getProfile(studentId);
   if (!learner?.subjects?.[subjectId]) return;
-  learner.subjects[subjectId].sessionCount += 1;
+  if (countLesson) learner.subjects[subjectId].sessionCount += 1;
   learner.subjects[subjectId].totalMinutes += mins;
   learner.subjects[subjectId].lastSession = Date.now();
   learner.updatedAt = Date.now();
@@ -366,6 +390,8 @@ export interface RecordEvidenceInput {
   planVersion?: string;
   diagnosticianModel?: string;
   source?: EvidenceEvent['source'];
+  /** false = record the answer, but do not credit or blame a teaching approach (the approach in use is not known). */
+  creditStrategy?: boolean;
 }
 
 export interface RecordEvidenceResult {
@@ -380,11 +406,75 @@ export interface RecordEvidenceResult {
   masteryStatus: string;
 }
 
+/** The profile keeps only the latest evidence per concept (Firestore documents are capped at 1 MiB); every event is
+ *  also stored in learners/{id}/events, which is what the parent view and the profiler read. */
+const EVIDENCE_MIRROR_CAP = 60;
+const clip = (v: string | undefined, n: number) => (typeof v === 'string' && v.length > n ? v.slice(0, n) : v);
+
 function makeEventId(): string {
   return `ev_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export async function recordReasoningEvidence(input: RecordEvidenceInput): Promise<RecordEvidenceResult | null> {
+/** A standing mix-up counts as fixed after this many sound applications of the idea with no sign of it. */
+export const RESOLVE_AFTER_CLEAN_APPLICATIONS = 2;
+
+/**
+ * Misconception ledger rules for one evidence event. Mutates `ledger`; returns the entries newly confirmed.
+ *  - One observation only ever yields "suspected"; confirmation needs a second, independent one (probe/transfer).
+ *  - Resolution: a sound transfer answer with no mix-up clears every standing entry (original rule), OR an entry is
+ *    cleared after RESOLVE_AFTER_CLEAN_APPLICATIONS sound "applied"/"transferred" answers with no sign of it since it
+ *    was last seen ("counts a mix-up as fixed when the child uses the idea in a question they have not seen before").
+ *    Without the second route a confirmed mix-up could only clear on an item the tutor had tagged "transfer", which it
+ *    rarely does - mastery then stayed at 0% however many correct answers followed (seen live, 2026-10-18).
+ */
+export function applyLedgerEvidence(
+  ledger: MisconceptionRecord[],
+  input: Pick<RecordEvidenceInput, 'candidateMisconceptions' | 'promptType' | 'understandingDepth'>,
+  now: number,
+): MisconceptionRecord[] {
+  const newlyConfirmed: MisconceptionRecord[] = [];
+  const seen = new Set(input.candidateMisconceptions.map(c => c.id));
+  for (const cand of input.candidateMisconceptions) {
+    let rec = ledger.find(m => m.id === cand.id);
+    if (!rec) {
+      rec = { id: cand.id, text: cand.text, status: 'suspected', observations: 0, firstSeen: now, lastSeen: now };
+      ledger.push(rec);
+    }
+    // Only a probe or a transfer item counts as an INDEPENDENT observation.
+    // A repeat of the same question is the same evidence twice over.
+    const isIndependent = input.promptType === 'probe' || input.promptType === 'transfer';
+    if (isIndependent || rec.observations === 0) rec.observations += 1;
+    rec.lastSeen = now;
+    rec.resolvedAt = undefined;
+    rec.cleanApplications = 0;
+    if (rec.status === 'resolved') rec.status = rec.observations >= 2 ? 'confirmed' : 'suspected';
+    if (rec.observations >= 2 && rec.status !== 'confirmed') {
+      rec.status = 'confirmed';
+      newlyConfirmed.push(rec);
+    }
+  }
+
+  const soundApplication = ['applied', 'transferred'].includes(input.understandingDepth) && input.candidateMisconceptions.length === 0;
+  const soundTransfer =
+    input.promptType === 'transfer' &&
+    ['applied', 'transferred', 'understood'].includes(input.understandingDepth) &&
+    input.candidateMisconceptions.length === 0;
+  for (const rec of ledger) {
+    if (rec.status === 'resolved' || rec.status === 'disputed' || seen.has(rec.id)) continue;
+    if (soundApplication) rec.cleanApplications = (rec.cleanApplications || 0) + 1;
+    if (soundTransfer || (rec.cleanApplications || 0) >= RESOLVE_AFTER_CLEAN_APPLICATIONS) {
+      rec.status = 'resolved';
+      rec.resolvedAt = now;
+    }
+  }
+  return newlyConfirmed;
+}
+
+export function recordReasoningEvidence(input: RecordEvidenceInput): Promise<RecordEvidenceResult | null> {
+  return withLearnerLock(input.studentId, () => recordReasoningEvidenceUnlocked(input));
+}
+
+async function recordReasoningEvidenceUnlocked(input: RecordEvidenceInput): Promise<RecordEvidenceResult | null> {
   const repo = getRepo();
   const learner = await repo.getProfile(input.studentId);
   const cs = learner?.subjects?.[input.subjectId]?.conceptStates?.[input.conceptId];
@@ -398,39 +488,8 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
   const masteryBefore = cs.masteryScore;
   const now = Date.now();
 
-  // ── 1. Ledger update. One observation only ever yields "suspected".
-  const newlyConfirmed: MisconceptionRecord[] = [];
-  for (const cand of input.candidateMisconceptions) {
-    let rec = cs.misconceptionLedger.find(m => m.id === cand.id);
-    if (!rec) {
-      rec = {
-        id: cand.id, text: cand.text, status: 'suspected',
-        observations: 0, firstSeen: now, lastSeen: now,
-      };
-      cs.misconceptionLedger.push(rec);
-    }
-    // Only a probe or a transfer item counts as an INDEPENDENT observation.
-    // A repeat of the same question is the same evidence twice over.
-    const isIndependent = input.promptType === 'probe' || input.promptType === 'transfer';
-    if (isIndependent || rec.observations === 0) rec.observations += 1;
-    rec.lastSeen = now;
-    rec.resolvedAt = undefined;
-    if (rec.observations >= 2 && rec.status !== 'confirmed') {
-      rec.status = 'confirmed';
-      newlyConfirmed.push(rec);
-    }
-  }
-
-  // ── 2. Resolution. A sound transfer answer clears standing misconceptions.
-  const soundTransfer =
-    input.promptType === 'transfer' &&
-    ['applied', 'transferred', 'understood'].includes(input.understandingDepth) &&
-    input.candidateMisconceptions.length === 0;
-  if (soundTransfer) {
-    for (const rec of cs.misconceptionLedger) {
-      if (rec.status !== 'resolved') { rec.status = 'resolved'; rec.resolvedAt = now; }
-    }
-  }
+  // ── 1–2. Ledger update + resolution (pure, shared with scripts/repair-mastery.ts).
+  const newlyConfirmed = applyLedgerEvidence(cs.misconceptionLedger, input, now);
 
   const anyConfirmedStanding = cs.misconceptionLedger.some(m => m.status === 'confirmed');
 
@@ -444,7 +503,7 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
 
   cs.masteryScore = bkt.masteryScore;
   cs.pKnown = bkt.pKnown;
-  cs.masteryLevel = scoreToLevel(bkt.masteryScore);
+  cs.masteryLevel = scoreToLevel(bkt.masteryScore, cs.attemptCount + 1);
   cs.attemptCount += 1;
   cs.lastVisited = now;
   if (['understood', 'applied', 'transferred'].includes(input.understandingDepth)) cs.correctCount += 1;
@@ -455,21 +514,22 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
 
   // ── 4. Strategy outcome (per-concept, existing) + eventId + ladder.
   const eventId = makeEventId();
+  const creditStrategy = input.creditStrategy !== false;
   let so = cs.strategyOutcomes.find(s => s.strategy === input.strategyInUse);
   if (!so) {
     so = { strategy: input.strategyInUse, timesUsed: 0, timesFollowedByGain: 0 };
-    cs.strategyOutcomes.push(so);
+    if (creditStrategy) cs.strategyOutcomes.push(so);
   }
-  so.timesUsed += 1;
+  if (creditStrategy) so.timesUsed += 1;
   const ladderLevel = ladderLevelForDepth(input.understandingDepth);
   const prevLadderLevel = cs.ladder?.highestLevel ?? 0;
   // A "gain" credits the teaching strategy that was in use, so it must come from the child's answer, not from BKT's
   // learning-transition term (which lifts the score even after a wrong answer): a sound observation, or a higher rung.
   const gained = bkt.supportsMastery || ladderLevel > prevLadderLevel;
-  if (gained) so.timesFollowedByGain += 1;
+  if (gained && creditStrategy) so.timesFollowedByGain += 1;
 
-  if (!cs.strategiesUsed.includes(input.strategyInUse)) cs.strategiesUsed.push(input.strategyInUse);
-  if (so.timesUsed >= 2) {
+  if (creditStrategy && !cs.strategiesUsed.includes(input.strategyInUse)) cs.strategiesUsed.push(input.strategyInUse);
+  if (creditStrategy && so.timesUsed >= 2) {
     const rate = so.timesFollowedByGain / so.timesUsed;
     const inEff = cs.effectiveStrategies.indexOf(input.strategyInUse);
     const inIneff = cs.ineffectiveStrategies.indexOf(input.strategyInUse);
@@ -511,7 +571,7 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
   if (cs.masteryStatus === 'none' && cs.masteryScore >= MASTERY_THRESHOLD) {
     cs.masteryScore = MASTERY_THRESHOLD - 1;
     cs.pKnown = Math.min(cs.pKnown, (MASTERY_THRESHOLD - 1) / 100);
-    cs.masteryLevel = scoreToLevel(cs.masteryScore);
+    cs.masteryLevel = scoreToLevel(cs.masteryScore, cs.attemptCount);
     shrunkFromUnconfirmedEvidence = true;
   }
   // Every downstream consumer (event log, the live WS update below, the
@@ -524,9 +584,11 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
     ? `${bkt.derivation} · capped to ${finalMasteryScore}% (evidence not yet sufficient to confirm -- see docs/AGENT_GUIDE.md landmine #3)`
     : bkt.derivation;
 
-  learner.strategyProfile = recordStrategyOutcome(
-    learner.strategyProfile, cs.conceptType, input.strategyInUse, gained, now,
-  );
+  if (creditStrategy) {
+    learner.strategyProfile = recordStrategyOutcome(
+      learner.strategyProfile, cs.conceptType, input.strategyInUse, gained, now,
+    );
+  }
 
   if (input.selfReportedConfusion || input.helpRequested) {
     learner.affect = learner.affect || { confusionSignals: {}, frustrationEvents: 0 };
@@ -539,9 +601,9 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
     timestamp: now,
     conceptId: input.conceptId,
     promptType: input.promptType,
-    questionAsked: input.questionAsked,
-    childAnswer: input.childAnswer,
-    childReasoning: input.childReasoning,
+    questionAsked: clip(input.questionAsked, 400) as string,
+    childAnswer: clip(input.childAnswer, 400) as string,
+    childReasoning: clip(input.childReasoning, 400) as string,
     classification: input.classification,
     understandingDepth: input.understandingDepth,
     candidateMisconceptionIds: input.candidateMisconceptions.map(m => m.id),
@@ -555,7 +617,7 @@ export async function recordReasoningEvidence(input: RecordEvidenceInput): Promi
     derivation: finalDerivation,
   };
   cs.evidenceLog.push(evidence);
-  if (cs.evidenceLog.length > 200) cs.evidenceLog = cs.evidenceLog.slice(-200);
+  if (cs.evidenceLog.length > EVIDENCE_MIRROR_CAP) cs.evidenceLog = cs.evidenceLog.slice(-EVIDENCE_MIRROR_CAP);
 
   learner.updatedAt = now;
   await repo.saveProfile(learner);

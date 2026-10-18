@@ -256,6 +256,6 @@ Chapter 1 pictures are withheld by design.
 
 ## Open questions (owner decisions)
 - **OQ-1** ~~Persona name~~ - RESOLVED 2026-10-07: the child names the tutor at login (default "Dr. Marcus"); see docs/TUTOR_PERSONA.md §2.
-- **OQ-2** ~~Theme framing~~ - RESOLVED 2026-10-15: Media, Content & Digital Experiences (D-2026-10-15-1); confirm label on the submission form.
+- **OQ-2** ~~Theme framing~~ - RESOLVED: theme Media, Content & Digital Experiences (D-2026-10-15-1), category Education (D-2026-10-18-1).
 - **OQ-3** Second subject for the "works across subjects" proof (suggest a science concept in text mode).
 - **OQ-4** Do the configured Gemini model IDs resolve? (T01 answers it.)

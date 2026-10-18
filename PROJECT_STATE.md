@@ -1,6 +1,14 @@
 # PROJECT STATE
 
-_Last updated: 2026-10-17 (see the 2026-10-17 update first)_
+_Last updated: 2026-10-18 (see the 2026-10-18 update first)_
+
+
+## UPDATE 2026-10-18 — Filing confirmed; cloud learning loop fixed
+- **Filing (D-2026-10-18-1):** theme **Media, Content & Digital Experiences**, category **Education**. Firm, no longer conditional on the submission form. Use "Media, Content & Digital Experiences — Education" in the deck, video and portal.
+- **Live lessons now produce evidence on Cloud Run (D-2026-10-17-7):** Firestore had been rejecting every assessment write (`undefined` fields); fixed. The live observer's judgement of each child answer is now recorded as evidence (`src/adaptive/observerEvidence.ts`, `OBSERVER_EVIDENCE=off` to disable), so a lesson no longer depends on the voice model calling `assess_child_reasoning` (about 1 in 9 answers).
+- **The approach actually used gets the credit (D-2026-10-17-8):** tutor's `representationUsed`, else the board action, else the guided beat's kind; unknown → no credit. The observer can also trigger in-lesson re-teaching. `/api/health` build `adaptive-loop-2026-10-18`. `npm run test:cloud` 4/4 (offline, Gemini and Firestore mocked).
+- **Submission artefacts exist:** `docs/Ananta_Submission_Deck.pptx/.pdf`, `docs/Submission_Template_AI_Builder_Cup_Filled.pptx/.pdf`, `docs/DEMO_VIDEO_SCRIPT.md`, `docs/PRESENTER_VIDEO_SCRIPT.md`, `docs/SUBMISSION_DESCRIPTION.md` (older lines saying "not started" are superseded). **Check the decks' title slide shows the category "Education"**; the .pptx/.pdf files were not edited in this update.
+- **Still open:** spaced review has no writer for live learners (mastery reaches "provisional", never "durable"); EV-02/EV-03 not built; `DEMO_MODE=true` exposes all learners; first real lesson on the redeployed cloud build is the check for D-2026-10-17-7/8.
 
 
 ## UPDATE 2026-10-17 — Docs reconciled: region, EV-01, tool counts
@@ -50,7 +58,7 @@ _Last updated: 2026-10-17 (see the 2026-10-17 update first)_
 - **Not built:** T12 confidence capture, T15 spaced review/decay, T19 latency spike, T24–T26 eval harnesses.
 
 ## Theme
-**Filed under: Media, Content & Digital Experiences** (decided 2026-10-15, see DECISIONS.md D-2026-10-15-1).
+**Filed under: Media, Content & Digital Experiences — category Education** (theme decided 2026-10-15, D-2026-10-15-1; category confirmed 2026-10-18, D-2026-10-18-1).
 
 Official wording (aibuildercup.com/themes.html, re-fetched 2026-10-15): "transforms how content is
 created, discovered, personalized, understood, or experienced" across "media, entertainment,
@@ -66,8 +74,8 @@ How Ananta maps to the theme's verbs:
 Social-impact points (fear of asking, language switching, cost of tuition) go in the deck's impact
 section, not in the theme choice.
 
-**Still to verify:** the Hack2skill submission form may show the five "category" labels instead
-(Healthcare, Education, Sustainability, Accessibility, Social Good). If so, pick **Education**.
+**Category:** the themes page also asks for one of five categories (Healthcare, Education,
+Sustainability, Accessibility, Social Good). Ours is **Education** (confirmed 2026-10-18, D-2026-10-18-1).
 Superseded earlier text: "file under Sustainability & Social Impact".
 
 ## Problem statement
@@ -131,7 +139,7 @@ and has been removed.
 - Person-vs-process praise literature for the feedback rules
 
 ## Known risks
-- **Theme fit** — resolved 2026-10-15: Media, Content & Digital Experiences (confirm label on the submission form)
+- **Theme fit** — resolved: Media, Content & Digital Experiences, category Education (D-2026-10-15-1, D-2026-10-18-1)
 - **Model IDs unverified** — `gemini-3.8-live`, `gemini-3.6-flash`, `gemini-3.8-flash`,
   `gemini-3.1-flash-image` have NOT been confirmed to resolve. The lesson endpoint falls
   back silently to a local generator, so a broken model ID looks like a working demo

@@ -910,6 +910,9 @@ const AppInner: React.FC<{ tutorName: string; setTutorName: (n: string) => void 
 
     // Start session
     try {
+      // A failed attempt can leave its socket and microphone open (status "error"): close them before starting again.
+      if (wsRef.current) { try { wsRef.current.close(); } catch { /* ignore */ } wsRef.current = null; }
+      if (audioManagerRef.current) { try { audioManagerRef.current.stop(); } catch { /* ignore */ } audioManagerRef.current = null; }
       setConnectionStatus('connecting');
 
       // 1. Initialize Audio Manager
@@ -980,7 +983,9 @@ const AppInner: React.FC<{ tutorName: string; setTutorName: (n: string) => void 
               diagnosis,
               evidence,
             }].slice(-40));
-            if (diagnosis) {
+            // Evidence saved from the live observer (msg.fromObserver) is already on screen via 'learner_update';
+            // only a tutor-requested diagnosis moves the bar, so it does not jump between two numbers.
+            if (diagnosis && !msg.fromObserver) {
               setLiveMastery(evidence.masteryAfter);
               setLiveMisconceptions(evidence.ledger.map(m => ({ id: m.id, text: m.text, status: m.status })));
             }
@@ -1042,7 +1047,13 @@ const AppInner: React.FC<{ tutorName: string; setTutorName: (n: string) => void 
 
       socket.onclose = () => {
         console.log('[WebSocket] Connection closed');
-        setConnectionStatus('disconnected');
+        // Stop the microphone with the connection (it used to keep running after a server-side close, so the next
+        // Start added a second recorder on top of the first).
+        if (wsRef.current === socket) {
+          wsRef.current = null;
+          if (audioManagerRef.current) { try { audioManagerRef.current.stop(); } catch { /* already stopped */ } audioManagerRef.current = null; }
+        }
+        setConnectionStatus(prev => (prev === 'error' ? 'error' : 'disconnected'));
         setMicLevel(0);
       };
     } catch (err: any) {

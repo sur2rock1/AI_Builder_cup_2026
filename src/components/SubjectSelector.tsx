@@ -59,7 +59,7 @@ const MASTERY_COLORS: Record<string, string> = {
 
 const MASTERY_LABELS: Record<string, string> = {
   not_started: 'Not started',
-  exposed:     'Exposed',
+  exposed:     'In progress',
   partial:     'Partial',
   developing:  'Developing',
   proficient:  'Proficient',
@@ -277,7 +277,8 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({
                         <div className="px-2 pb-2 space-y-2">
                           {ch.concepts.map(concept => {
                             const prog = conceptProgress[concept.id];
-                            const level = prog?.masteryLevel || 'not_started';
+                            // Answered but nothing secure yet is "in progress", never "not started" (older profiles stored not_started at 0%).
+                            const level = prog?.masteryLevel && !(prog.masteryLevel === 'not_started' && (prog.attemptCount || 0) > 0) ? prog.masteryLevel : (prog && (prog.attemptCount || 0) > 0 ? 'exposed' : 'not_started');
                             const score = prog?.masteryScore || 0;
                             const done = isDone(prog);
                             const buildsOn = (concept.prerequisites || []).map(id => labelById.get(id)).filter(Boolean) as string[];

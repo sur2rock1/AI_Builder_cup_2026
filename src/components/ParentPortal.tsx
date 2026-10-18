@@ -473,7 +473,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ onBack, initialStude
                                     <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden max-w-[120px]">
                                       <div className={`h-full ${MASTERY_BAR[concept.masteryLevel] || 'bg-slate-600'} rounded-full`} style={{ width: `${concept.masteryScore}%` }} />
                                     </div>
-                                    <span className="text-slate-500 text-xs capitalize">{concept.masteryLevel?.replace('_',' ')}</span>
+                                    <span className="text-slate-500 text-xs capitalize">{(concept.masteryLevel === 'not_started' && (concept.attemptCount || 0) > 0 ? 'in progress' : concept.masteryLevel)?.replace('_',' ')}</span>
                                     <span className="text-slate-600 text-xs">· {concept.attemptCount || 0} attempts</span>
                                   </div>
                                 </div>

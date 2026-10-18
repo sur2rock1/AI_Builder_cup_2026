@@ -47,6 +47,10 @@ export function initFirebaseAdmin() {
   }
 
   initialized = true;
+  // Firestore rejects documents containing `undefined`; the app builds objects with optional fields left undefined.
+  // Must run before the first Firestore call (this is the first place the app is created), and only once.
+  try { admin.firestore().settings({ ignoreUndefinedProperties: true }); }
+  catch (err: any) { console.warn('[Firebase Admin] could not set ignoreUndefinedProperties:', err?.message); }
   console.log('[Firebase Admin] Initialized for project', admin.app().options.projectId);
   return admin.app();
 }

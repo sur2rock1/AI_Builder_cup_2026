@@ -7,6 +7,10 @@
 
 ## Ananta — Adaptive AI Tutor
 
+**Theme:** Media, Content & Digital Experiences · **Category:** Education
+
+**Tagline: A personal, voice-based tutor that adapts to how each child learns.**
+
 Ananta is a voice-first adaptive AI tutor that diagnoses HOW a child reasons — not just whether their answer is right — and adapts its teaching in real time. A correct answer reached by a wrong method is caught and flagged. Mastery requires genuine understanding backed by evidence, not just passing a quiz.
 
 Built entirely on Google Cloud AI, Ananta ingests real textbook PDFs, builds structured curricula with prerequisite graphs and known misconceptions, pre-generates quality-reviewed lessons and visual materials, and delivers them through real-time voice tutoring. Parents see every learning claim backed by the child's own words.

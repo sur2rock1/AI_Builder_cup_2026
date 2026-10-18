@@ -9,8 +9,9 @@
 ## Slide 1: Cover
 
 **Title:** Ananta — Adaptive AI Tutoring That Diagnoses, Adapts & Proves Its Work
+**Tagline (on the title slide):** A personal, voice-based tutor that adapts to how each child learns
 
-**Subtitle:** AI Builder Cup 2026 | Media, Content & Digital Experiences
+**Subtitle:** AI Builder Cup 2026 | Media, Content & Digital Experiences — Education
 
 **Visual:** App screenshot or logo + team name + GitHub link + live URL
 
